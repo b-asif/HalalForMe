@@ -1,0 +1,30 @@
+[
+  {
+    "osm_id": "node/2669556319",
+    "name": "El Halal Amigos",
+    "lat": 37.3081602,
+    "lng": -121.9006497,
+    "cuisine": "mexican",
+    "phone": null,
+    "website": null,
+    "address": "1100 Lincoln Avenue San Jose",
+    "source": "osm_import",
+    "status": "pending_review",
+    "confidence": "high",
+    "reason": "diet:halal=only"
+  },
+  {
+    "osm_id": "node/7693317482",
+    "name": "Küsan Uyghur Cuisine",
+    "lat": 37.3656372,
+    "lng": -121.907927,
+    "cuisine": "chinese;mediterranean",
+    "phone": "+1-855-695-8726",
+    "website": "https://www.kusancuisine.com",
+    "address": "1516 North 4th Street San Jose",
+    "source": "osm_import",
+    "status": "pending_review",
+    "confidence": "high",
+    "reason": "diet:halal=only"
+  }
+]

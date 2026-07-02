@@ -1,0 +1,300 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated, Image, Modal, StyleSheet, Text, View,
+} from 'react-native';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession } from '../lib/guestLoginIntent';
+
+// Force Expo Router to always start at (tabs), never restoring a stale auth screen
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// ─── Animated loading dots ─────────────────────────────────────────────────────
+
+function LoadingDots() {
+  const dot0 = useRef(new Animated.Value(0.25)).current;
+  const dot1 = useRef(new Animated.Value(0.25)).current;
+  const dot2 = useRef(new Animated.Value(0.25)).current;
+
+  useEffect(() => {
+    const anim = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.25, duration: 350, useNativeDriver: true }),
+          Animated.delay(540 - delay),
+        ]),
+      );
+
+    const a0 = anim(dot0, 0);
+    const a1 = anim(dot1, 180);
+    const a2 = anim(dot2, 360);
+    a0.start(); a1.start(); a2.start();
+    return () => { a0.stop(); a1.stop(); a2.stop(); };
+  }, []);
+
+  return (
+    <View style={sp.dotsRow}>
+      {[dot0, dot1, dot2].map((dot, i) => (
+        <Animated.View key={i} style={[sp.dot, { opacity: dot }]} />
+      ))}
+    </View>
+  );
+}
+
+// ─── Splash — rendered inside a Modal so it's always above native nav layers ──
+
+function SplashOverlay({ show }: { show: boolean }) {
+  const fadeOut  = useRef(new Animated.Value(1)).current;
+  const scale    = useRef(new Animated.Value(0.86)).current;
+  const contentO = useRef(new Animated.Value(0)).current;
+  const [visible, setVisible] = useState(true);
+
+  // Entrance animation
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, tension: 58, friction: 10, useNativeDriver: true }),
+      Animated.timing(contentO, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  // Exit: fade out then hide Modal
+  useEffect(() => {
+    if (show) return;
+    Animated.timing(fadeOut, {
+      toValue: 0,
+      duration: 500,
+      delay: 80,
+      useNativeDriver: true,
+    }).start(() => setVisible(false));
+  }, [show]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+    >
+      <Animated.View style={[StyleSheet.absoluteFillObject, sp.root, { opacity: fadeOut }]}>
+        <View style={sp.topGlow} />
+
+        <Animated.View
+          style={[sp.content, { opacity: contentO, transform: [{ scale }] }]}
+        >
+          <View style={sp.iconWrap}>
+            <Image
+              source={require('../assets/icon.png')}
+              style={sp.icon}
+              resizeMode="cover"
+            />
+          </View>
+          <Text style={sp.title}>HalalForMe</Text>
+          <Text style={sp.tagline}>Find halal food near you</Text>
+        </Animated.View>
+
+        <LoadingDots />
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── Root nav ──────────────────────────────────────────────────────────────────
+
+function RootLayoutNav() {
+  const { session, loading, isPasswordRecovery } = useAuth();
+  const router   = useRouter();
+  const segments = useSegments();
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
+  const [onboardingChecking, setOnboardingChecking] = useState(false);
+
+  const [appReady, setAppReady] = useState(false);
+
+  // Minimum time before we allow the splash to dismiss.
+  // This gives Expo Router enough time to finish restoring persisted navigation
+  // state from AsyncStorage — without this, auth loading can complete while
+  // segments are still at the default '(tabs)' initial value, causing appReady
+  // to be set before the stale auth nav state is restored and redirected away.
+  const [minSplashElapsed, setMinSplashElapsed] = useState(false);
+
+  // Let the native splash go immediately — our Modal takes over
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+    const t = setTimeout(() => setMinSplashElapsed(true), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Onboarding check (guests use a shared key; logged-in users use their own).
+  // If the user-specific key is missing but the guest key is set, the user saw
+  // onboarding as a guest before signing in — treat it as already seen and
+  // backfill the user-specific key so future launches are fast.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    const key = userId ? `onboarding_seen_${userId}` : 'onboarding_seen_guest';
+    setOnboardingChecking(true);
+    AsyncStorage.getItem(key)
+      .then(async (v) => {
+        if (v === 'true') {
+          setHasSeenOnboarding(true);
+        } else if (userId) {
+          // Fallback: check if user already saw onboarding as a guest on this device
+          const guestVal = await AsyncStorage.getItem('onboarding_seen_guest');
+          if (guestVal === 'true') {
+            // Backfill so next launch is immediate
+            await AsyncStorage.setItem(key, 'true').catch(() => {});
+            setHasSeenOnboarding(true);
+          } else {
+            setHasSeenOnboarding(false);
+          }
+        } else {
+          setHasSeenOnboarding(false);
+        }
+      })
+      .catch(() => setHasSeenOnboarding(false))
+      .finally(() => setOnboardingChecking(false));
+  }, [session?.user?.id]);
+
+  // Routing
+  useEffect(() => {
+    if (loading) return;
+    if (onboardingChecking) return;
+    if (hasSeenOnboarding === null) return;
+
+    const inAuthGroup  = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
+
+    let redirecting = false;
+
+    if (isPasswordRecovery) {
+      // Only redirect if not already on reset-password — avoids an infinite redirect loop
+      if (segments[0] !== '(auth)') {
+        router.replace('/(auth)/reset-password');
+        redirecting = true;
+      }
+    } else if (!session) {
+      if (!hasSeenOnboarding && !getGuestOnboardingSeen() && !inOnboarding && !inAuthGroup) {
+        // First-time guest — show onboarding before the restaurant list.
+        router.replace('/onboarding');
+        redirecting = true;
+      } else if (inAuthGroup && !getGuestLoginIntent()) {
+        // On auth screen with no explicit intent — covers stale Expo Router nav state restoration.
+        // Use router.replace (not CommonActions.reset) so Expo Router's URL tracking updates and
+        // useSegments() reflects the new route, allowing !redirecting to become true quickly.
+        router.replace('/(tabs)');
+        redirecting = true;
+      }
+    } else if (!hasSeenOnboarding && !getOnboardingSeenThisSession()) {
+      if (!inOnboarding) { router.replace('/onboarding'); redirecting = true; }
+    } else if (inAuthGroup || inOnboarding) {
+      router.replace('/(tabs)');
+      redirecting = true;
+    }
+
+    // Clear guest login intent once they navigate away from auth (e.g. pressed back).
+    // Legal screens (privacy-policy, terms-of-service) are reachable from the sign-up
+    // form, so don't clear the intent there — swiping back should return to sign-up.
+    const isLegalScreen = segments[0] === 'privacy-policy' || segments[0] === 'terms-of-service';
+    if (!redirecting && !session && !inAuthGroup && !isLegalScreen) setGuestLoginIntent(false);
+
+    // Dismiss the splash once auth state is settled, no redirect is in flight,
+    // and the minimum branding time has elapsed.
+    // router.replace (used above instead of CommonActions.reset) keeps Expo Router's URL
+    // tracking in sync, so segments update quickly and !redirecting becomes true before
+    // minSplashElapsed fires in the typical case. If segments is still empty (router not yet
+    // initialised), inAuthGroup is false so no redirect fires and we dismiss correctly onto
+    // the (tabs) initial route set by unstable_settings.
+    if (!redirecting && minSplashElapsed) setAppReady(true);
+  }, [session, loading, segments, isPasswordRecovery, hasSeenOnboarding, onboardingChecking, minSplashElapsed]);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      <SplashOverlay show={!appReady} />
+    </View>
+  );
+}
+
+// ─── Root layout ───────────────────────────────────────────────────────────────
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
+
+const GREEN = '#245737';
+
+const sp = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: GREEN,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topGlow: {
+    position: 'absolute',
+    top: -130,
+    width: 440,
+    height: 440,
+    borderRadius: 220,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  content: {
+    alignItems: 'center',
+    marginBottom: 64,
+  },
+  iconWrap: {
+    width: 118,
+    height: 118,
+    borderRadius: 28,
+    overflow: 'hidden',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 16,
+  },
+  icon: { width: '100%', height: '100%' },
+  title: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.8,
+    marginBottom: 6,
+  },
+  tagline: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.62)',
+    fontWeight: '500',
+  },
+  dotsRow: {
+    position: 'absolute',
+    bottom: 64,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+});

@@ -1,0 +1,772 @@
+{
+  "type": "FeatureCollection",
+  "generator": "overpass-turbo",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2026-04-28T15:51:15Z",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/35823765",
+        "addr:city": "San Jose",
+        "addr:housenumber": "6239",
+        "addr:postcode": "95119",
+        "addr:state": "CA",
+        "addr:street": "Santa Teresa Boulevard",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "mexican;middle_eastern",
+        "ele": "63.44",
+        "height": "4.80",
+        "name": "¡Así!",
+        "ref": "0595",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8016027,
+          37.2365441
+        ]
+      },
+      "id": "way/35823765"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/44333656",
+        "addr:city": "San Jose",
+        "addr:housenumber": "43",
+        "addr:postcode": "95112",
+        "addr:state": "CA",
+        "addr:street": "East Gish Road",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "moroccan",
+        "ele": "28.83",
+        "height": "3.96",
+        "name": "Menara Moroccan",
+        "phone": "+1 408 453 1983",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9091626,
+          37.3623374
+        ]
+      },
+      "id": "way/44333656"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/104920066",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1138",
+        "addr:postcode": "95117",
+        "addr:street": "Saratoga Avenue",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "persian",
+        "ele": "61.65",
+        "height": "4.15",
+        "name": "Yas Restaurant",
+        "website": "https://yasrestaurant.net/",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9787458,
+          37.3041427
+        ]
+      },
+      "id": "way/104920066"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/202352388",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1625",
+        "addr:postcode": "95125",
+        "addr:state": "CA",
+        "addr:street": "Almaden Road",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "persian",
+        "description": "House of Kabob",
+        "ele": "43.46",
+        "height": "4.19",
+        "name": "Reyhan Restaurant",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8790133,
+          37.3067239
+        ]
+      },
+      "id": "way/202352388"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/205774893",
+        "addr:city": "San Jose",
+        "addr:housenumber": "2551",
+        "addr:postcode": "95131",
+        "addr:state": "CA",
+        "addr:street": "North 1st Street",
+        "amenity": "restaurant",
+        "brand": "Dish N Dash",
+        "building": "retail",
+        "cuisine": "middle_eastern",
+        "ele": "14.78",
+        "height": "4.33",
+        "level": "0",
+        "name": "Dish N Dash",
+        "opening_hours": "Mo-Sa 11:00-21:00",
+        "operator": "Dish Dash Restaurant Group",
+        "outdoor_seating": "yes",
+        "takeaway": "yes",
+        "toilets": "yes",
+        "website": "https://www.dishdash.com/dishndash/",
+        "wheelchair": "yes",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9273069,
+          37.3843997
+        ]
+      },
+      "id": "way/205774893"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/355360090",
+        "addr:city": "San Jose",
+        "addr:housenumber": "498",
+        "addr:postcode": "95112",
+        "addr:state": "CA",
+        "addr:street": "North 13th Street",
+        "amenity": "restaurant",
+        "building": "retail",
+        "cuisine": "pakistani;indian",
+        "diet:halal": "yes",
+        "disused:website": "http://swaadindiancuisine.com/",
+        "ele": "25.22",
+        "height": "3.73",
+        "name": "Peppertales",
+        "old_name": "Swaad Indian Cuisine",
+        "old_name:signed": "yes",
+        "phone": "+1-408-947-2030",
+        "website": "https://peppertales.us/",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8842344,
+          37.3506784
+        ]
+      },
+      "id": "way/355360090"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/357150436",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1202",
+        "addr:postcode": "95116",
+        "addr:street": "East Santa Clara Street",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "afghan",
+        "ele": "38.32",
+        "name": "Maiwand Kabob House",
+        "website": "http://maiwandkabob.net/",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8666789,
+          37.3473138
+        ]
+      },
+      "id": "way/357150436"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/563361294",
+        "addr:city": "San Jose",
+        "addr:housenumber": "3730",
+        "addr:postcode": "95134",
+        "addr:street": "North 1st Street",
+        "addr:unit": "150",
+        "amenity": "restaurant",
+        "cuisine": "gyros",
+        "diet:halal": "yes",
+        "name": "Gyro Express"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9455854,
+          37.4106675
+        ]
+      },
+      "id": "node/563361294"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/885003823",
+        "addr:city": "San Jose",
+        "addr:housenumber": "2982",
+        "addr:postcode": "95125",
+        "addr:state": "CA",
+        "addr:street": "Almaden Expressway",
+        "amenity": "fast_food",
+        "building": "yes",
+        "cuisine": "persian",
+        "ele": "50.60",
+        "height": "3.46",
+        "name": "Real Kabob",
+        "@geometry": "center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8798415,
+          37.2787121
+        ]
+      },
+      "id": "way/885003823"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/2669556319",
+        "addr:city": "San Jose",
+        "addr:country": "US",
+        "addr:housenumber": "1100",
+        "addr:postcode": "95125",
+        "addr:state": "CA",
+        "addr:street": "Lincoln Avenue",
+        "addr:unit": "160",
+        "amenity": "restaurant",
+        "cuisine": "mexican",
+        "diet:halal": "only",
+        "diet:vegan": "yes",
+        "diet:vegetarian": "yes",
+        "level": "0",
+        "name": "El Halal Amigos",
+        "opening_hours": "Su-Th 11:30-21:00; Fr,Sa 11:30-22:00",
+        "outdoor_seating": "yes",
+        "takeaway": "yes",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9006497,
+          37.3081602
+        ]
+      },
+      "id": "node/2669556319"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/2888487500",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1759",
+        "addr:postcode": "95110",
+        "addr:street": "Technology Drive",
+        "amenity": "restaurant",
+        "cuisine": "burger",
+        "diet:halal": "yes",
+        "name": "Fred's Burger",
+        "opening_hours": "Mo-Fr 8:00-20:00, Sa 11:00-20:00",
+        "phone": "+1-408-415-0146",
+        "website": "https://fredsburger.com/"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.920517,
+          37.3692349
+        ]
+      },
+      "id": "node/2888487500"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/3540148726",
+        "addr:city": "San Jose",
+        "addr:floor": "1",
+        "addr:housenumber": "530",
+        "addr:postcode": "95110",
+        "addr:street": "Newhall Drive",
+        "amenity": "restaurant",
+        "check_date": "2025-12-02",
+        "cuisine": "chicken;fries",
+        "diet:halal": "yes",
+        "level": "0",
+        "name": "Chikin Drip",
+        "opening_hours": "Su-Th 11:00-01:00; Fr-Sa 11:00-01:30",
+        "payment:cash": "yes",
+        "payment:credit_cards": "yes",
+        "payment:debit_cards": "yes",
+        "phone": "+1-669-900-3829",
+        "website": "https://www.instagram.com/chikindrip",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.922448,
+          37.350651
+        ]
+      },
+      "id": "node/3540148726"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/3562591794",
+        "addr:city": "San Jose",
+        "addr:housenumber": "5330",
+        "addr:postcode": "95136",
+        "addr:state": "CA",
+        "addr:street": "Terner Way",
+        "addr:unit": "40",
+        "amenity": "restaurant",
+        "cuisine": "african;somali",
+        "name": "Jubba Restaurant",
+        "phone": "+1-408-440-1504"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8605434,
+          37.2573631
+        ]
+      },
+      "id": "node/3562591794"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/4029528410",
+        "amenity": "restaurant",
+        "cuisine": "middle_eastern",
+        "name": "Robee's Falafel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8026354,
+          37.2482994
+        ]
+      },
+      "id": "node/4029528410"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/4297226989",
+        "addr:city": "San Jose",
+        "addr:housenumber": "5560",
+        "addr:postcode": "95138",
+        "addr:state": "CA",
+        "addr:street": "Monterey Road",
+        "amenity": "restaurant",
+        "cuisine": "vietnamese",
+        "diet:halal": "yes",
+        "name": "Champa Kitchen",
+        "old_name": "Barrio Fiesta"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.7970914,
+          37.2534615
+        ]
+      },
+      "id": "node/4297226989"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/4946354641",
+        "addr:city": "San Jose",
+        "addr:housenumber": "4628",
+        "addr:postcode": "95124",
+        "addr:state": "CA",
+        "addr:street": "Meridian Avenue",
+        "amenity": "restaurant",
+        "cuisine": "persian",
+        "delivery": "no",
+        "name": "Ziba Restaurant",
+        "opening_hours": "Tu-Th 11:30-20:30, Fr-Sa 11:30-21:30, Su 12:00-20:30",
+        "phone": "+1 408-267-1288",
+        "smoking": "no",
+        "website": "http://ww.sjziba.com",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8979467,
+          37.2573221
+        ]
+      },
+      "id": "node/4946354641"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/5020538571",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1086",
+        "addr:postcode": "95112",
+        "addr:street": "North 1st Street",
+        "amenity": "restaurant",
+        "cuisine": "indian;pakistani",
+        "disused:cuisine": "vietnamese",
+        "disused:phone": "+1-408-477-2914",
+        "name": "Karimi Restaurant",
+        "old_name": "Phở Việt;Zaza Grill",
+        "old_name:vi": "Phở Việt",
+        "phone": "+1-408-477-2914"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9048481,
+          37.355892
+        ]
+      },
+      "id": "node/5020538571"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/6131436185",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1715",
+        "addr:postcode": "95131",
+        "addr:state": "CA",
+        "addr:street": "Lundy Avenue",
+        "addr:unit": "168",
+        "amenity": "restaurant",
+        "cuisine": "chinese",
+        "diet:halal": "yes",
+        "indoor_seating": "yes",
+        "name": "Ma’s Restaurant",
+        "name:en": "Ma's Restaurant",
+        "name:zh-Hans": "清真马家馆",
+        "name:zh-Hant": "清真馬家館",
+        "name:zh-Latn-pinyin": "Qīngzhēn Mǎ Jiā Guǎn",
+        "phone": "+1 408-437-2499;+1 408-437-1638;+1 408-437-0748"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8874428,
+          37.3878559
+        ]
+      },
+      "id": "node/6131436185"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/7094840019",
+        "addr:city": "San Jose",
+        "addr:housenumber": "3001",
+        "addr:postcode": "95124",
+        "addr:state": "CA",
+        "addr:street": "Meridian Avenue",
+        "amenity": "restaurant",
+        "cuisine": "chicken",
+        "diet:halal": "yes",
+        "name": "Angry Chickz",
+        "opening_hours": "Mo-Su 10:00-24:00",
+        "phone": "+1-408-622-6969",
+        "website": "https://angrychickz.com/",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9066703,
+          37.2702805
+        ]
+      },
+      "id": "node/7094840019"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/7120584720",
+        "addr:city": "San Jose",
+        "addr:housenumber": "387",
+        "addr:postcode": "95126",
+        "addr:state": "CA",
+        "addr:street": "Delmas Avenue",
+        "amenity": "cafe",
+        "bar": "no",
+        "check_date": "2024-01-22",
+        "contact:facebook": "https://facebook.com/ijavacafe1",
+        "cuisine": "coffee_shop;breakfast",
+        "delivery": "no",
+        "diet:halal": "yes",
+        "diet:pescetarian": "yes",
+        "diet:vegan": "yes",
+        "diet:vegetarian": "yes",
+        "drive_through": "no",
+        "email": "info@ijavacafe.com",
+        "indoor_seating": "yes",
+        "internet_access": "wlan",
+        "internet_access:fee": "customers",
+        "mapillary": "1078225683315447",
+        "name": "iJAVA Cafe",
+        "opening_hours": "08:00-14:00",
+        "outdoor_seating": "sidewalk",
+        "payment:credit_cards": "yes",
+        "payment:discover_card": "yes",
+        "payment:mastercard": "yes",
+        "payment:visa": "yes",
+        "phone": "+1 408-753-9732",
+        "reservation": "no",
+        "takeaway": "yes",
+        "toilets": "yes",
+        "website": "https://ijavacafe.com/delmas",
+        "website:menu": "https://ijavacafe.com/delmas"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.894739,
+          37.3260423
+        ]
+      },
+      "id": "node/7120584720"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/7693317482",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1516",
+        "addr:postcode": "95112",
+        "addr:state": "CA",
+        "addr:street": "North 4th Street",
+        "amenity": "restaurant",
+        "contact:instagram": "kusanuyghurcuisine",
+        "cuisine": "chinese;mediterranean",
+        "diet:halal": "only",
+        "disused:cuisine": "sushi",
+        "email": "order@kusancuisine.com",
+        "name": "Küsan Uyghur Cuisine",
+        "old_name": "Sushi Coast Japanese Cuisine",
+        "opening_hours": "Fr-Su 10:30-21:00; Mo-Th 10:30-14:30, 16:30-21:00",
+        "phone": "+1-855-695-8726",
+        "website": "https://www.kusancuisine.com",
+        "website:menu": "https://www.kusanuyghur.com/eat"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.907927,
+          37.3656372
+        ]
+      },
+      "id": "node/7693317482"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/8363056264",
+        "addr:city": "San Jose",
+        "addr:housenumber": "81",
+        "addr:postcode": "95125",
+        "addr:state": "CA",
+        "addr:street": "Curtner Avenue",
+        "addr:unit": "20",
+        "amenity": "fast_food",
+        "branch": "San Jose",
+        "brand": "The Halal Guys",
+        "brand:wikidata": "Q10846129",
+        "cuisine": "chicken;falafel;gyros",
+        "diet:halal": "yes",
+        "name": "The Halal Guys",
+        "takeaway": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8645534,
+          37.3029425
+        ]
+      },
+      "id": "node/8363056264"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/8695206346",
+        "addr:city": "San Jose",
+        "addr:housenumber": "2567",
+        "addr:postcode": "95131",
+        "addr:state": "CA",
+        "addr:street": "North 1st Street",
+        "amenity": "fast_food",
+        "cuisine": "greek",
+        "diet:halal": "yes",
+        "level": "0",
+        "name": "Halal Gyro Express",
+        "outdoor_seating": "yes",
+        "takeaway": "yes",
+        "toilets": "yes",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.9278409,
+          37.3848847
+        ]
+      },
+      "id": "node/8695206346"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/8740733641",
+        "addr:city": "San Jose",
+        "addr:housenumber": "949",
+        "addr:postcode": "95110",
+        "addr:state": "CA",
+        "addr:street": "Ruff Drive",
+        "amenity": "fast_food",
+        "cuisine": "falafel;middle_eastern",
+        "delivery": "yes",
+        "name": "Falafel Flame",
+        "takeaway": "only"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.912189,
+          37.3494743
+        ]
+      },
+      "id": "node/8740733641"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/10048459127",
+        "addr:city": "San Jose",
+        "addr:housenumber": "17",
+        "addr:postcode": "95112",
+        "addr:state": "CA",
+        "addr:street": "South 4th Street",
+        "amenity": "restaurant",
+        "cuisine": "indian",
+        "diet:halal": "yes",
+        "level": "0",
+        "name": "Briyani & Beyond"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.887296,
+          37.3372028
+        ]
+      },
+      "id": "node/10048459127"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/10720284546",
+        "addr:city": "San Jose",
+        "addr:housenumber": "1477",
+        "addr:postcode": "95133",
+        "addr:state": "CA",
+        "addr:street": "Berryessa Road",
+        "addr:unit": "30",
+        "amenity": "fast_food",
+        "check_date": "2025-03-14",
+        "cuisine": "taiwanese",
+        "diet:halal": "yes",
+        "drive_through": "no",
+        "name": "Shihlin",
+        "name:en": "Shihlin",
+        "name:zh": "士林",
+        "name:zh-Hant": "士林",
+        "opening_hours": "Mo-Th,Su 11:30-21:30; Fr-Sa 11:30-22:00",
+        "payment:american_express": "yes",
+        "payment:contactless": "yes",
+        "payment:discover_card": "yes",
+        "payment:mastercard": "yes",
+        "payment:unionpay": "yes",
+        "payment:visa": "yes",
+        "phone": "+1-408-490-4590",
+        "website": "https://order.toasttab.com/online/san-jose-berryessa",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8801652,
+          37.3696492
+        ]
+      },
+      "id": "node/10720284546"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/13320048215",
+        "addr:city": "San Jose",
+        "addr:housenumber": "2863",
+        "addr:postcode": "95111-1149",
+        "addr:state": "CA",
+        "addr:street": "Senter Road",
+        "amenity": "restaurant",
+        "check_date": "2025-11-20",
+        "cuisine": "malaysian",
+        "currency:XBT": "yes",
+        "name": "Chicken Licious",
+        "opening_hours": "Tu-Sa 11:00-19:00; Su 11:00-15:00",
+        "payment:lightning": "yes",
+        "payment:lightning:operator": "square",
+        "payment:lightning_contactless": "no",
+        "payment:onchain": "no"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8395844,
+          37.2988425
+        ]
+      },
+      "id": "node/13320048215"
+    }
+  ]
+}
