@@ -2,8 +2,14 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 export const PP_SECTIONS = [
   {
@@ -12,11 +18,11 @@ export const PP_SECTIONS = [
   },
   {
     title: '2. Information We Collect',
-    body: 'Information you provide directly:\n• Full name\n• Email address\n• Username\n• Profile photo (optional)\n• Restaurant submissions, reviews, ratings, and photos you upload\n• Halal certification documents you submit as part of a restaurant claim\n• Content reports you submit — including the content type, reason (spam, inappropriate, harassment, or other), and any optional comment you provide\n• User block relationships — a record of the user IDs you have chosen to block\n• Your acceptance of these Terms of Service and Privacy Policy, including the timestamp of acceptance\n• Contribution activity — a log of approved restaurant submissions, approved reviews, and approved photos used to calculate points and award badges\n• Your leaderboard display preference — whether you have chosen to appear under your real name or a generated pseudonym on the public Community leaderboard\n\nInformation collected automatically:\n• Location data — used only to show nearby restaurants and is not stored on our servers\n• Camera and photo library access — used only for barcode scanning and photo uploads\n• Device push notification token — used to send you in-app notifications (e.g. review approvals, account alerts)',
+    body: 'Information you provide directly:\n• Full name\n• Email address\n• Username\n• Profile photo (optional)\n• Restaurant submissions, reviews, ratings, and photos you upload\n• Halal certification documents you submit as part of a restaurant claim\n• Content reports you submit — including the content type, reason (spam, inappropriate, harassment, or other), and any optional comment you provide\n• User block relationships — a record of the user IDs you have chosen to block\n• Your acceptance of these Terms of Service and Privacy Policy, including the timestamp of acceptance\n• Contribution activity — a log of approved restaurant submissions, approved reviews, and approved photos used to calculate points and award badges\n• Your leaderboard display preference — whether you have chosen to appear under your real name or a generated pseudonym on the public Community leaderboard\n\nInformation collected automatically:\n• Location data — used to show nearby restaurants, calculate your local prayer times, and determine the Qibla direction from your position. Location is not stored on our servers.\n• Compass/heading data — used only to point the Qibla compass in the correct direction; not stored anywhere\n• Prayer settings — your location mode, saved city, calculation method, madhab (juristic school), and reminder preferences are stored only on your device and are never transmitted to or stored on our servers\n• Camera and photo library access — used only for barcode scanning and photo uploads\n• Device push notification token — used only to deliver notifications that require our servers (e.g. review approvals, account alerts). Prayer time reminders do not use this token — see Section 7.',
   },
   {
     title: '3. How We Use Your Information',
-    body: 'We use the information we collect to:\n• Create and manage your account\n• Deliver the core features of the App (restaurant discovery, reviews, barcode scanning)\n• Process and display your submitted restaurants and reviews\n• Send account-related notifications (e.g. email verification, password reset)\n• Send push notifications related to your activity in the App\n• Respond to support requests and copyright complaints\n• Protect the integrity of our services through admin moderation\n• Review and action content reports submitted by users to maintain community safety\n• Maintain user block relationships to personalise your content experience and protect you from unwanted interactions\n• Record your acceptance of our Terms of Service and Privacy Policy for legal compliance\n• Track approved contributions (restaurant submissions, reviews, and photos) to award points and badges and display your rank on the Community leaderboard\n• Display your name and avatar on the public Community leaderboard — if you enable the anonymity option, a generated pseudonym is shown instead of your real name\n• Comply with legal obligations\n• Improve the App based on usage and feedback',
+    body: 'We use the information we collect to:\n• Create and manage your account\n• Deliver the core features of the App (restaurant discovery, reviews, barcode scanning, prayer times, and Qibla direction)\n• Calculate your prayer times and Qibla direction based on your location\n• Schedule prayer time reminders locally on your device\n• Process and display your submitted restaurants and reviews\n• Send account-related notifications (e.g. email verification, password reset)\n• Send push notifications related to your activity in the App\n• Respond to support requests and copyright complaints\n• Protect the integrity of our services through admin moderation\n• Review and action content reports submitted by users to maintain community safety\n• Maintain user block relationships to personalise your content experience and protect you from unwanted interactions\n• Record your acceptance of our Terms of Service and Privacy Policy for legal compliance\n• Track approved contributions (restaurant submissions, reviews, and photos) to award points and badges and display your rank on the Community leaderboard\n• Display your name and avatar on the public Community leaderboard — if you enable the anonymity option, a generated pseudonym is shown instead of your real name\n• Comply with legal obligations\n• Improve the App based on usage and feedback',
   },
   {
     title: '4. Legal Basis for Processing (California & US Users)',
@@ -31,8 +37,8 @@ export const PP_SECTIONS = [
     body: 'We use the following third-party services to operate the App. Each has its own privacy policy and terms:\n\n• Supabase — authentication, database storage, and file storage. Your data is stored on Supabase\'s servers with industry-standard encryption.\n\n• Open Food Facts — barcode and ingredient lookups. Queries are made anonymously without sharing your personal information.\n\n• Nominatim / OpenStreetMap — used for address autocomplete when submitting a restaurant. Queries are made anonymously.\n\n• Expo — app framework and push notification delivery via the Expo push notification service.\n\nWe do not sell, trade, rent, or share your personal information with any third party for advertising or marketing purposes.',
   },
   {
-    title: '7. Push Notifications',
-    body: 'If you grant permission, HalalForMe may send you push notifications regarding:\n• The status of your restaurant submissions or reviews\n• Account-related alerts\n• App updates or important announcements\n\nYour device push token is stored securely in our database and shared only with Expo\'s push notification service for delivery. You can disable push notifications at any time in your device settings.',
+    title: '7. Prayer Times, Qibla & Notifications',
+    body: 'Prayer time and Qibla calculations happen entirely on your device using your location and standard, open-source astronomical formulas. We do not send your location or prayer settings to any server to perform this calculation.\n\nPrayer reminder notifications are scheduled locally on your device by the operating system. No network request, server call, or push token is involved in delivering these reminders — they work independently of our servers, and continue to function without an internet connection, provided your device and notification permissions allow it.\n\nSeparately, if you grant permission, HalalForMe may send push notifications — which do require a device push token registered with our servers and delivered via Expo\'s push notification service — regarding:\n• The status of your restaurant submissions or reviews\n• Account-related alerts\n• App updates or important announcements\n\nYour device push token is stored securely in our database and shared only with Expo\'s push notification service for delivery. You can disable either type of notification at any time in your device settings.',
   },
   {
     title: '8. User-Uploaded Photos',
@@ -79,7 +85,7 @@ export default function PrivacyPolicyScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Privacy Policy</Text>
         <View style={{ width: 38 }} />
@@ -90,7 +96,7 @@ export default function PrivacyPolicyScreen() {
         <View style={s.introCard}>
           <Ionicons name="shield-checkmark" size={32} color={GREEN} style={{ marginBottom: 10 }} />
           <Text style={s.introTitle}>Your Privacy Matters</Text>
-          <Text style={s.introText}>Last updated: June 2026</Text>
+          <Text style={s.introText}>Last updated: July 2026</Text>
           <Text style={[s.introText, { marginTop: 8 }]}>
             We built HalalForMe to serve the Muslim community. We take your privacy seriously and will never sell or misuse your data.
           </Text>
@@ -117,15 +123,15 @@ export default function PrivacyPolicyScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   content: { padding: 16, paddingBottom: 40 },
 
@@ -135,22 +141,22 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  introTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 },
-  introText: { fontSize: 13, color: '#666', lineHeight: 20, textAlign: 'center' },
+  introTitle: { fontSize: 18, fontWeight: '700', color: TEXT_DARK, marginBottom: 4 },
+  introText: { fontSize: 13, color: TEXT_MUTED, lineHeight: 20, textAlign: 'center' },
 
   section: {
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 8 },
-  sectionBody: { fontSize: 13, color: '#555', lineHeight: 21 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 8 },
+  sectionBody: { fontSize: 13, color: TEXT_MUTED, lineHeight: 21 },
 
   contactCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#f0faf6', borderRadius: 12, padding: 14, marginTop: 6,
     borderWidth: 1, borderColor: '#c6e8d6',
   },
-  contactText: { flex: 1, fontSize: 13, color: '#555', lineHeight: 20 },
+  contactText: { flex: 1, fontSize: 13, color: TEXT_MUTED, lineHeight: 20 },
   contactEmail: { color: GREEN, fontWeight: '600' },
 });

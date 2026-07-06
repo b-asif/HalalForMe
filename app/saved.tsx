@@ -11,8 +11,14 @@ import { formatError } from '../lib/errors';
 import { useAuth } from '../contexts/AuthContext';
 import { setGuestLoginIntent } from '../lib/guestLoginIntent';
 import RestaurantCard, { Restaurant } from '../components/RestaurantCard';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 type HoursRange = { open: string; close: string };
 type OpeningHours = Record<string, HoursRange | HoursRange[]> | null;
@@ -121,12 +127,12 @@ export default function SavedRestaurantsScreen() {
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.title}>Saved Restaurants</Text>
         </View>
         <View style={s.centered}>
-          <Ionicons name="heart-outline" size={56} color="#ddd" />
+          <Ionicons name="heart-outline" size={56} color={TEXT_MUTED} />
           <Text style={s.emptyTitle}>Sign in to see saved restaurants</Text>
           <Text style={s.emptyText}>Create a free account to save your favourite halal spots.</Text>
           <TouchableOpacity style={s.signInBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}>
@@ -141,7 +147,7 @@ export default function SavedRestaurantsScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Saved Restaurants</Text>
       </View>
@@ -152,7 +158,7 @@ export default function SavedRestaurantsScreen() {
         </View>
       ) : error ? (
         <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={36} color="#ddd" />
+          <Ionicons name="alert-circle-outline" size={36} color={TEXT_MUTED} />
           <Text style={s.errorText}>{error}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={load}>
             <Text style={s.retryText}>Try again</Text>
@@ -160,7 +166,7 @@ export default function SavedRestaurantsScreen() {
         </View>
       ) : cards.length === 0 ? (
         <View style={s.centered}>
-          <Ionicons name="heart-outline" size={56} color="#ddd" />
+          <Ionicons name="heart-outline" size={56} color={TEXT_MUTED} />
           <Text style={s.emptyTitle}>No saved restaurants</Text>
           <Text style={s.emptyText}>
             Tap the heart icon on any restaurant to save it here.
@@ -190,25 +196,25 @@ export default function SavedRestaurantsScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f7f7f7' },
+  flex: { flex: 1, backgroundColor: CREAM },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#111' },
+  title: { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 },
-  errorText: { fontSize: 13, color: '#888', textAlign: 'center' },
-  retryBtn: { backgroundColor: GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+  errorText: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
+  retryBtn: { backgroundColor: DEEP_GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
   retryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#ccc' },
-  emptyText: { fontSize: 14, color: '#bbb', textAlign: 'center', lineHeight: 20 },
-  signInBtn: { marginTop: 8, backgroundColor: GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: TEXT_MUTED },
+  emptyText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
+  signInBtn: { marginTop: 8, backgroundColor: DEEP_GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
   signInText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   list: { paddingTop: 8, paddingBottom: 24 },
-  count: { fontSize: 13, color: '#999', paddingHorizontal: 16, marginBottom: 8, fontWeight: '500' },
+  count: { fontSize: 13, color: TEXT_MUTED, paddingHorizontal: 16, marginBottom: 8, fontWeight: '500' },
 });

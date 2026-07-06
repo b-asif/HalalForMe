@@ -11,10 +11,16 @@ import { supabase } from '../lib/supabase';
 import { formatError } from '../lib/errors';
 import { useAuth } from '../contexts/AuthContext';
 import { setGuestLoginIntent } from '../lib/guestLoginIntent';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
-const AMBER = '#d97706';
-const RED   = '#e53e3e';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const AMBER = Brand.amber;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 
@@ -69,13 +75,13 @@ export default function MySubmissionsScreen() {
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.title}>My Submissions</Text>
           <View style={{ width: 38 }} />
         </View>
         <View style={s.centered}>
-          <Ionicons name="storefront-outline" size={56} color="#ddd" />
+          <Ionicons name="storefront-outline" size={56} color={TEXT_MUTED} />
           <Text style={s.emptyTitle}>Sign in to see your submissions</Text>
           <Text style={s.emptyText}>Restaurants you've submitted will appear here once you're signed in.</Text>
           <TouchableOpacity style={s.signInBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}>
@@ -91,7 +97,7 @@ export default function MySubmissionsScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>My Submissions</Text>
         <TouchableOpacity
@@ -108,7 +114,7 @@ export default function MySubmissionsScreen() {
         </View>
       ) : error ? (
         <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={36} color="#ddd" />
+          <Ionicons name="alert-circle-outline" size={36} color={TEXT_MUTED} />
           <Text style={s.errorText}>{error}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={load}>
             <Text style={s.retryText}>Try again</Text>
@@ -116,7 +122,7 @@ export default function MySubmissionsScreen() {
         </View>
       ) : rows.length === 0 ? (
         <View style={s.centered}>
-          <Ionicons name="storefront-outline" size={52} color="#ddd" />
+          <Ionicons name="storefront-outline" size={52} color={TEXT_MUTED} />
           <Text style={s.emptyTitle}>No submissions yet</Text>
           <Text style={s.emptyText}>
             Know a halal restaurant? Add it and we'll verify it for the community.
@@ -178,19 +184,19 @@ export default function MySubmissionsScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f7f7f7' },
+  flex: { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10,
+    backgroundColor: CREAM, paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111', textAlign: 'center' },
+  title: { flex: 1, fontSize: 17, fontWeight: '700', color: TEXT_DARK, textAlign: 'center' },
   addBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
@@ -206,10 +212,10 @@ const s = StyleSheet.create({
   },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   cardInfo: { flex: 1, gap: 2 },
-  cardName:    { fontSize: 16, fontWeight: '700', color: '#111' },
-  cardCuisine: { fontSize: 13, color: '#777' },
-  cardAddress: { fontSize: 12, color: '#999', marginTop: 2 },
-  cardDate:    { fontSize: 11, color: '#bbb', marginTop: 4 },
+  cardName:    { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
+  cardCuisine: { fontSize: 13, color: TEXT_MUTED },
+  cardAddress: { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
+  cardDate:    { fontSize: 11, color: TEXT_MUTED, marginTop: 4 },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -222,29 +228,29 @@ const s = StyleSheet.create({
   approvedNote: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginTop: 10, paddingTop: 10,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0',
+    borderTopWidth: 1, borderTopColor: HAIRLINE,
   },
   approvedNoteText: { fontSize: 12, color: GREEN, fontWeight: '600' },
 
   rejectedNote: {
     marginTop: 10, paddingTop: 10,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0',
+    borderTopWidth: 1, borderTopColor: HAIRLINE,
   },
-  rejectedNoteLabel: { fontSize: 11, color: '#999', fontWeight: '600', marginBottom: 2 },
-  rejectedNoteText:  { fontSize: 13, color: '#555', lineHeight: 18 },
+  rejectedNoteLabel: { fontSize: 11, color: TEXT_MUTED, fontWeight: '600', marginBottom: 2 },
+  rejectedNoteText:  { fontSize: 13, color: TEXT_MUTED, lineHeight: 18 },
 
-  errorText:  { fontSize: 14, color: '#999', textAlign: 'center' },
-  retryBtn:   { marginTop: 4, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10, backgroundColor: GREEN },
+  errorText:  { fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
+  retryBtn:   { marginTop: 4, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10, backgroundColor: DEEP_GREEN },
   retryText:  { fontSize: 13, color: '#fff', fontWeight: '700' },
 
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#ccc' },
-  emptyText:  { fontSize: 14, color: '#bbb', textAlign: 'center', lineHeight: 20 },
-  signInBtn: { marginTop: 8, backgroundColor: GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: TEXT_MUTED },
+  emptyText:  { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
+  signInBtn: { marginTop: 8, backgroundColor: DEEP_GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
   signInText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 13, paddingHorizontal: 24, marginTop: 8,
   },
   submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },

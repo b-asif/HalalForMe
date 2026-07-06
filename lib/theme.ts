@@ -108,6 +108,23 @@ export function getCuisineTheme(cuisine: string | null | undefined): {
   return { emoji: '🍽️', color: '#245737' };
 }
 
+// ── Brand palette (prayer-first redesign) ─────────────────────────────────────
+// Used by Home, Qibla, and onboarding. Cream/deep-green/gold, distinct from the
+// legacy `Colors` above — extend this one as more screens get restyled to match.
+
+export const Brand = {
+  cream:     '#F7F2E7',
+  deepGreen: '#1F3D2B',
+  green:     '#245737',
+  gold:      '#B08D57',
+  textDark:  '#20241F',
+  textMuted: '#8C8776',
+  hairline:  '#EAE3D3',
+  red:       '#C0392B',
+  amber:     '#B7791F',
+  white:     '#FFFFFF',
+};
+
 // ── Shadows ───────────────────────────────────────────────────────────────────
 
 export const Shadow = {

@@ -10,8 +10,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 type Role = 'owner' | 'manager' | 'franchisee';
 
@@ -145,7 +152,7 @@ export default function ClaimRestaurantScreen() {
       <SafeAreaView style={s.flex}>
         <View style={[s.header, { paddingTop: insets.top > 0 ? 0 : 12 }]}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Claim Submitted</Text>
           <View style={{ width: 36 }} />
@@ -183,7 +190,7 @@ export default function ClaimRestaurantScreen() {
     <SafeAreaView style={s.flex}>
       <View style={[s.header, { paddingTop: insets.top > 0 ? 0 : 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Claim Listing</Text>
         <View style={{ width: 36 }} />
@@ -235,7 +242,7 @@ export default function ClaimRestaurantScreen() {
           <TextInput
             style={s.input}
             placeholder="e.g. Ahmed Hassan"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={contactName}
             onChangeText={setContactName}
             autoCapitalize="words"
@@ -246,7 +253,7 @@ export default function ClaimRestaurantScreen() {
           <TextInput
             style={s.input}
             placeholder="you@yourrestaurant.com"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={contactEmail}
             onChangeText={setContactEmail}
             keyboardType="email-address"
@@ -261,7 +268,7 @@ export default function ClaimRestaurantScreen() {
           <TextInput
             style={[s.input, s.textarea]}
             placeholder="Tell us anything that helps verify your claim — years in business, social media handles, etc."
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={message}
             onChangeText={setMessage}
             multiline
@@ -277,14 +284,14 @@ export default function ClaimRestaurantScreen() {
               <Image source={proofUri} style={s.proofPreview} contentFit="cover" />
             ) : (
               <>
-                <Ionicons name="document-attach-outline" size={28} color="#bbb" />
+                <Ionicons name="document-attach-outline" size={28} color={TEXT_MUTED} />
                 <Text style={s.proofPickerText}>Tap to attach document or photo</Text>
               </>
             )}
           </TouchableOpacity>
           {proofUri && (
             <TouchableOpacity onPress={() => { setProofUri(null); setProofBase64(null); }} style={s.removeProof}>
-              <Ionicons name="close-circle-outline" size={16} color="#e53e3e" />
+              <Ionicons name="close-circle-outline" size={16} color={RED} />
               <Text style={s.removeProofText}>Remove</Text>
             </TouchableOpacity>
           )}
@@ -316,19 +323,19 @@ export default function ClaimRestaurantScreen() {
 }
 
 const s = StyleSheet.create({
-  flex:    { flex: 1, backgroundColor: '#f7f7f7' },
+  flex:    { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111', textAlign: 'center' },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: TEXT_DARK, textAlign: 'center' },
 
   content: { padding: 20 },
 
@@ -341,45 +348,45 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
   },
-  restaurantCardLabel: { fontSize: 11, color: '#aaa', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
-  restaurantCardName:  { fontSize: 16, fontWeight: '700', color: '#111', marginTop: 2 },
+  restaurantCardLabel: { fontSize: 11, color: TEXT_MUTED, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
+  restaurantCardName:  { fontSize: 16, fontWeight: '700', color: TEXT_DARK, marginTop: 2 },
 
-  infoText: { fontSize: 13, color: '#777', lineHeight: 19, marginBottom: 24 },
+  infoText: { fontSize: 13, color: TEXT_MUTED, lineHeight: 19, marginBottom: 24 },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 8 },
-  hint:  { fontSize: 12, color: '#aaa', lineHeight: 17, marginBottom: 16, marginTop: -8 },
+  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 8 },
+  hint:  { fontSize: 12, color: TEXT_MUTED, lineHeight: 17, marginBottom: 16, marginTop: -8 },
 
   input: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e8e8e8',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 15, color: '#111', marginBottom: 16,
+    fontSize: 15, color: TEXT_DARK, marginBottom: 16,
   },
   textarea: { minHeight: 100, textAlignVertical: 'top' },
 
   roleGrid: { gap: 10, marginBottom: 20 },
   roleChip: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e8e8e8',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
     borderRadius: 14, padding: 14,
   },
   roleChipActive:      { backgroundColor: '#e6f9f2', borderColor: GREEN },
-  roleChipLabel:       { fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 2 },
+  roleChipLabel:       { fontSize: 15, fontWeight: '700', color: TEXT_DARK, marginBottom: 2 },
   roleChipLabelActive: { color: GREEN },
-  roleChipDesc:        { fontSize: 13, color: '#aaa' },
+  roleChipDesc:        { fontSize: 13, color: TEXT_MUTED },
   roleChipDescActive:  { color: '#4aad8a' },
 
   proofPicker: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e8e8e8',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
     borderStyle: 'dashed', borderRadius: 14,
     height: 110, alignItems: 'center', justifyContent: 'center',
     gap: 8, marginBottom: 8,
   },
-  proofPickerText: { fontSize: 14, color: '#bbb' },
+  proofPickerText: { fontSize: 14, color: TEXT_MUTED },
   proofPreview:    { width: '100%', height: '100%', borderRadius: 12 },
   removeProof: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 20 },
-  removeProofText: { fontSize: 13, color: '#e53e3e' },
+  removeProofText: { fontSize: 13, color: RED },
 
   submitBtn: {
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 16, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 8,
@@ -388,17 +395,17 @@ const s = StyleSheet.create({
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   disclaimer: {
-    fontSize: 12, color: '#bbb', textAlign: 'center',
+    fontSize: 12, color: TEXT_MUTED, textAlign: 'center',
     lineHeight: 17, marginTop: 14, paddingHorizontal: 8,
   },
 
   // success
   successBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   successIcon: { marginBottom: 20 },
-  successTitle: { fontSize: 26, fontWeight: '800', color: '#111', marginBottom: 14 },
-  successBody:  { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22 },
+  successTitle: { fontSize: 26, fontWeight: '800', color: TEXT_DARK, marginBottom: 14 },
+  successBody:  { fontSize: 15, color: TEXT_MUTED, textAlign: 'center', lineHeight: 22 },
   doneBtn: {
-    marginTop: 32, backgroundColor: GREEN, borderRadius: 14,
+    marginTop: 32, backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, paddingHorizontal: 40,
   },
   doneBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

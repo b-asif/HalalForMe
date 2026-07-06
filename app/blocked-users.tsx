@@ -9,8 +9,13 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM = Brand.cream;
+const GREEN = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 interface BlockedUser {
   id: string;
@@ -89,7 +94,7 @@ export default function BlockedUsersScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Blocked Users</Text>
         <View style={{ width: 38 }} />
@@ -101,7 +106,7 @@ export default function BlockedUsersScreen() {
         </View>
       ) : blocks.length === 0 ? (
         <View style={s.centered}>
-          <Ionicons name="people-outline" size={52} color="#ddd" />
+          <Ionicons name="people-outline" size={52} color={TEXT_MUTED} />
           <Text style={s.emptyTitle}>No blocked users</Text>
           <Text style={s.emptySub}>Users you block on reviews will appear here</Text>
         </View>
@@ -144,22 +149,22 @@ export default function BlockedUsersScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#111' },
+  title: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#999' },
-  emptySub:   { fontSize: 13, color: '#bbb', textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: TEXT_MUTED },
+  emptySub:   { fontSize: 13, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
 
   list: { padding: 16, paddingBottom: 40 },
 
@@ -172,12 +177,12 @@ const s = StyleSheet.create({
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  initials:   { fontSize: 16, fontWeight: '700', color: '#999' },
+  initials:   { fontSize: 16, fontWeight: '700', color: TEXT_MUTED },
   meta:       { flex: 1 },
-  name:       { fontSize: 15, fontWeight: '600', color: '#111' },
-  date:       { fontSize: 12, color: '#bbb', marginTop: 2 },
+  name:       { fontSize: 15, fontWeight: '600', color: TEXT_DARK },
+  date:       { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
 
   unblockBtn: {
     paddingHorizontal: 14, paddingVertical: 7,

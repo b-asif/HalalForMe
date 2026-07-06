@@ -6,8 +6,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM = Brand.cream;
+const GREEN = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -45,7 +50,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         <Ionicons
           name={open ? 'chevron-up' : 'chevron-down'}
           size={16}
-          color="#aaa"
+          color={TEXT_MUTED}
         />
       </View>
       {open ? <Text style={s.faqA}>{a}</Text> : null}
@@ -60,7 +65,7 @@ export default function HelpScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Help & Support</Text>
       </View>
@@ -89,7 +94,7 @@ export default function HelpScreen() {
             <Text style={s.contactLabel}>Email Support</Text>
             <Text style={s.contactValue}>infor.halalforme@gmail.com</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#d0d0d0" />
+          <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
         </TouchableOpacity>
 
         <Text style={s.version}>HalalForMe v1.0.0</Text>
@@ -99,21 +104,21 @@ export default function HelpScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#111' },
+  title: { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
   scroll: { padding: 16, paddingBottom: 40 },
 
   sectionTitle: {
-    fontSize: 13, fontWeight: '700', color: '#aaa',
+    fontSize: 13, fontWeight: '700', color: TEXT_MUTED,
     textTransform: 'uppercase', letterSpacing: 0.5,
     marginTop: 16, marginBottom: 10, marginLeft: 4,
   },
@@ -126,9 +131,9 @@ const s = StyleSheet.create({
   },
   faqItem: { paddingHorizontal: 16, paddingVertical: 14 },
   faqHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  faqQ: { flex: 1, fontSize: 15, fontWeight: '600', color: '#111', lineHeight: 20 },
-  faqA: { fontSize: 14, color: '#555', lineHeight: 21, marginTop: 10 },
-  divider: { height: 1, backgroundColor: '#f5f5f5', marginHorizontal: 16 },
+  faqQ: { flex: 1, fontSize: 15, fontWeight: '600', color: TEXT_DARK, lineHeight: 20 },
+  faqA: { fontSize: 14, color: TEXT_MUTED, lineHeight: 21, marginTop: 10 },
+  divider: { height: 1, backgroundColor: HAIRLINE, marginHorizontal: 16 },
 
   contactCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
@@ -141,8 +146,8 @@ const s = StyleSheet.create({
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
   },
   contactInfo: { flex: 1 },
-  contactLabel: { fontSize: 15, fontWeight: '600', color: '#111' },
-  contactValue: { fontSize: 13, color: '#aaa', marginTop: 2 },
+  contactLabel: { fontSize: 15, fontWeight: '600', color: TEXT_DARK },
+  contactValue: { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
 
-  version: { textAlign: 'center', fontSize: 12, color: '#ccc', marginTop: 32 },
+  version: { textAlign: 'center', fontSize: 12, color: TEXT_MUTED, marginTop: 32 },
 });

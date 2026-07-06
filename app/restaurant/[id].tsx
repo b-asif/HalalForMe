@@ -5,7 +5,7 @@ import {
   ScrollView, Share, StyleSheet, Switch, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
-import { getCuisineTheme } from '../../lib/theme';
+import { getCuisineTheme, Brand } from '../../lib/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,14 +18,20 @@ import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const AMBER = Brand.amber;
+const GOLD  = Brand.gold;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 const PLACEHOLDER_BLURHASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // ─── cert config ──────────────────────────────────────────────────────────────
-
-const AMBER = '#b7791f';
 
 const CERT: Record<string, { label: string; color: string; bg: string; certified: boolean; description: string }> = {
   ISNA:           { label: 'ISNA Certified',   color: GREEN,  bg: '#e6f9f2', certified: true,
@@ -44,9 +50,9 @@ const CERT: Record<string, { label: string; color: string; bg: string; certified
     description: "Indonesia's leading Islamic authority. MUI certification is one of the most recognised halal standards in the world, particularly in South-East Asia. Many global brands carry MUI certification." },
   self_certified: { label: 'Self Certified',   color: AMBER,  bg: '#fefce8', certified: false,
     description: 'The restaurant claims to serve halal food but has not been independently verified by a third-party certifier. The owner may be Muslim and follow halal practices, but there is no external audit. Ask staff about sourcing if in doubt.' },
-  uncertified:    { label: 'Not Certified',    color: '#888', bg: '#f5f5f5', certified: false,
+  uncertified:    { label: 'Not Certified',    color: TEXT_MUTED, bg: CREAM, certified: false,
     description: 'No halal certification information is available for this restaurant. We recommend contacting the restaurant directly to ask about their halal status before visiting.' },
-  unknown:        { label: 'Cert. Unknown',    color: '#888', bg: '#f5f5f5', certified: false,
+  unknown:        { label: 'Cert. Unknown',    color: TEXT_MUTED, bg: CREAM, certified: false,
     description: 'The certification status of this restaurant is not yet confirmed. It may have been added by a community member without full details. Contact the restaurant directly for more information.' },
 };
 
@@ -147,7 +153,7 @@ const badge = StyleSheet.create({
   text: { fontSize: 13, fontWeight: '600' },
 });
 
-function Stars({ value, max = 5, color = '#f6a623', size = 13 }: {
+function Stars({ value, max = 5, color = GOLD, size = 13 }: {
   value: number; max?: number; color?: string; size?: number;
 }) {
   const full  = Math.min(max, Math.max(0, Math.round(value)));
@@ -159,14 +165,14 @@ function Stars({ value, max = 5, color = '#f6a623', size = 13 }: {
   );
 }
 
-function StarPicker({ value, onChange, color = '#f6a623' }: {
+function StarPicker({ value, onChange, color = GOLD }: {
   value: number; onChange: (v: number) => void; color?: string;
 }) {
   return (
     <View style={{ flexDirection: 'row', gap: 4 }}>
       {[1, 2, 3, 4, 5].map(n => (
         <TouchableOpacity key={n} onPress={() => onChange(n)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-          <Text style={{ fontSize: 28, color: n <= value ? color : '#ddd' }}>★</Text>
+          <Text style={{ fontSize: 28, color: n <= value ? color : TEXT_MUTED }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -220,7 +226,7 @@ function ReviewCard({ review, onPhotoPress, onEdit, onDelete, onReport, onBlock 
             ])}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="ellipsis-horizontal" size={16} color="#aaa" />
+            <Ionicons name="ellipsis-horizontal" size={16} color={TEXT_MUTED} />
           </TouchableOpacity>
         )}
       </View>
@@ -228,10 +234,10 @@ function ReviewCard({ review, onPhotoPress, onEdit, onDelete, onReport, onBlock 
       <View style={rc.ratingsGrid}>
         {([
           { label: 'Halal',    value: review.halal_compliance_rating, color: GREEN },
-          { label: 'Food',     value: review.food_rating,             color: '#f6a623' },
-          { label: 'Ambiance', value: review.ambiance_rating,         color: '#f6a623' },
-          { label: 'Service',  value: review.service_rating,          color: '#f6a623' },
-          { label: 'Value',    value: review.value_rating,            color: '#f6a623' },
+          { label: 'Food',     value: review.food_rating,             color: GOLD },
+          { label: 'Ambiance', value: review.ambiance_rating,         color: GOLD },
+          { label: 'Service',  value: review.service_rating,          color: GOLD },
+          { label: 'Value',    value: review.value_rating,            color: GOLD },
         ] as { label: string; value: number | null; color: string }[])
           .filter(r => r.value != null && r.value > 0)
           .map(r => (
@@ -266,7 +272,7 @@ function ReviewCard({ review, onPhotoPress, onEdit, onDelete, onReport, onBlock 
           )}
           {onDelete && (
             <TouchableOpacity style={rc.deleteAction} onPress={onDelete} activeOpacity={0.7}>
-              <Ionicons name="trash-outline" size={13} color="#e53e3e" />
+              <Ionicons name="trash-outline" size={13} color={RED} />
               <Text style={rc.deleteActionText}>Delete</Text>
             </TouchableOpacity>
           )}
@@ -290,21 +296,21 @@ const rc = StyleSheet.create({
   },
   initials:  { fontSize: 13, fontWeight: '700', color: GREEN },
   meta:      { flex: 1 },
-  name:      { fontSize: 14, fontWeight: '600', color: '#111' },
-  date:      { fontSize: 11, color: '#bbb', marginTop: 1 },
+  name:      { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  date:      { fontSize: 11, color: TEXT_MUTED, marginTop: 1 },
   ratingsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   ratingPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#f7f7f7', borderRadius: 20,
+    backgroundColor: CREAM, borderRadius: 20,
     paddingHorizontal: 8, paddingVertical: 3,
   },
-  ratingPillLabel: { fontSize: 10, color: '#888', fontWeight: '600' },
-  comment:   { fontSize: 14, color: '#444', lineHeight: 20 },
+  ratingPillLabel: { fontSize: 10, color: TEXT_MUTED, fontWeight: '600' },
+  comment:   { fontSize: 14, color: TEXT_DARK, lineHeight: 20 },
   photoStrip: { marginTop: 10 },
   photo: { width: 90, height: 90, borderRadius: 10, marginRight: 8 },
   actions: {
     flexDirection: 'row', gap: 8, marginTop: 10,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: HAIRLINE,
   },
   editAction: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -317,7 +323,7 @@ const rc = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
     backgroundColor: '#fff5f5', borderWidth: 1, borderColor: '#fca5a5',
   },
-  deleteActionText: { fontSize: 12, color: '#e53e3e', fontWeight: '600' },
+  deleteActionText: { fontSize: 12, color: RED, fontWeight: '600' },
   menuBtn: { padding: 4, marginLeft: 4 },
 });
 
@@ -338,8 +344,8 @@ function ListingCompletenessCard({
   if (completed >= total) return null;
 
   const items = [
-    { done: hasPhotos,  label: 'Community photos', action: 'Add a photo',    pts: '+10 pts if approved', onPress: onAddPhoto },
-    { done: hasReviews, label: 'Reviews',          action: 'Write a review', pts: '+15 pts if approved', onPress: onWriteReview },
+    { done: hasPhotos,  label: 'Community photos', action: 'Add a photo',    onPress: onAddPhoto },
+    { done: hasReviews, label: 'Reviews',          action: 'Write a review', onPress: onWriteReview },
   ];
 
   return (
@@ -355,14 +361,13 @@ function ListingCompletenessCard({
             <Ionicons
               name={item.done ? 'checkmark-circle' : 'ellipse-outline'}
               size={18}
-              color={item.done ? GREEN : '#ccc'}
+              color={item.done ? GREEN : TEXT_MUTED}
             />
             {item.done ? (
               <Text style={comp.doneText}>{item.label}</Text>
             ) : (
               <TouchableOpacity style={comp.actionWrap} onPress={item.onPress} activeOpacity={0.7}>
                 <Text style={comp.actionText}>{item.action}</Text>
-                {item.pts ? <Text style={comp.ptsText}>{item.pts}</Text> : null}
               </TouchableOpacity>
             )}
           </View>
@@ -380,18 +385,17 @@ const comp = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
     borderLeftWidth: 3, borderLeftColor: GREEN,
   },
-  heading:  { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 10 },
+  heading:  { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 10 },
   barTrack: {
-    height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 4,
+    height: 6, backgroundColor: HAIRLINE, borderRadius: 3, overflow: 'hidden', marginBottom: 4,
   },
   barFill:  { height: '100%', backgroundColor: GREEN, borderRadius: 3 },
-  barLabel: { fontSize: 11, color: '#999', marginBottom: 12 },
+  barLabel: { fontSize: 11, color: TEXT_MUTED, marginBottom: 12 },
   list:     { gap: 10 },
   row:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  doneText: { fontSize: 13, color: '#999', textDecorationLine: 'line-through' },
+  doneText: { fontSize: 13, color: TEXT_MUTED, textDecorationLine: 'line-through' },
   actionWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   actionText: { fontSize: 13, fontWeight: '600', color: GREEN },
-  ptsText:    { fontSize: 11, color: '#b7791f', fontWeight: '500' },
 });
 
 // ─── screen ───────────────────────────────────────────────────────────────────
@@ -810,7 +814,7 @@ export default function RestaurantDetailScreen() {
       <SafeAreaView style={s.flex}>
         <View style={[s.header, { paddingTop: 12 }]}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
         </View>
         <View style={s.centered}>
@@ -825,11 +829,11 @@ export default function RestaurantDetailScreen() {
       <SafeAreaView style={s.flex}>
         <View style={[s.header, { paddingTop: 12 }]}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
         </View>
         <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color="#ddd" />
+          <Ionicons name="alert-circle-outline" size={48} color={TEXT_MUTED} />
           <Text style={s.errTitle}>Could not load restaurant</Text>
           <Text style={s.errDetail}>{error}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={loadData}>
@@ -904,7 +908,7 @@ export default function RestaurantDetailScreen() {
           {/* back button + save button overlaid on hero */}
           <View style={[s.heroHeader, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={20} color="#111" />
+              <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
             </TouchableOpacity>
             <View style={s.heroActions}>
               {isAdmin && (
@@ -912,17 +916,17 @@ export default function RestaurantDetailScreen() {
                   style={s.backBtn}
                   onPress={() => router.push(`/(admin)/edit/${id}`)}
                 >
-                  <Ionicons name="create-outline" size={20} color="#111" />
+                  <Ionicons name="create-outline" size={20} color={TEXT_DARK} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={s.backBtn} onPress={handleShare}>
-                <Ionicons name="share-outline" size={20} color="#111" />
+                <Ionicons name="share-outline" size={20} color={TEXT_DARK} />
               </TouchableOpacity>
               <TouchableOpacity style={s.backBtn} onPress={toggleSave} disabled={saveLoading}>
                 <Ionicons
                   name={saved ? 'heart' : 'heart-outline'}
                   size={20}
-                  color={saved ? '#e53e3e' : '#111'}
+                  color={saved ? RED : TEXT_DARK}
                 />
               </TouchableOpacity>
             </View>
@@ -956,7 +960,7 @@ export default function RestaurantDetailScreen() {
               </>
             ) : (
               <>
-                <Ionicons name="star-outline" size={13} color="#ccc" />
+                <Ionicons name="star-outline" size={13} color={TEXT_MUTED} />
                 <Text style={s.noRating}>No reviews yet</Text>
               </>
             )}
@@ -967,7 +971,7 @@ export default function RestaurantDetailScreen() {
           {/* ── trust disclaimer for unverified certifications ── */}
           {restaurant.primary_certifier === 'self_certified' && (
             <View style={s.trustBanner}>
-              <Ionicons name="warning-outline" size={16} color="#92400e" style={{ marginTop: 1 }} />
+              <Ionicons name="warning-outline" size={16} color={AMBER} style={{ marginTop: 1 }} />
               <Text style={s.trustBannerText}>
                 This restaurant has <Text style={s.trustBannerBold}>not been independently verified</Text> by a third-party halal authority. We recommend asking staff directly about their halal sourcing and practices before dining.
               </Text>
@@ -975,8 +979,8 @@ export default function RestaurantDetailScreen() {
           )}
           {(restaurant.primary_certifier === 'uncertified' || restaurant.primary_certifier === 'unknown') && (
             <View style={[s.trustBanner, s.trustBannerGrey]}>
-              <Ionicons name="information-circle-outline" size={16} color="#555" style={{ marginTop: 1 }} />
-              <Text style={[s.trustBannerText, { color: '#444' }]}>
+              <Ionicons name="information-circle-outline" size={16} color={TEXT_MUTED} style={{ marginTop: 1 }} />
+              <Text style={[s.trustBannerText, { color: TEXT_DARK }]}>
                 No halal certification information is available for this restaurant. Contact them directly to confirm their halal status before visiting.
               </Text>
             </View>
@@ -1052,7 +1056,7 @@ export default function RestaurantDetailScreen() {
           if (existingClaim === 'pending') {
             return (
               <View style={s.claimPendingBanner}>
-                <Ionicons name="time-outline" size={15} color="#b7791f" />
+                <Ionicons name="time-outline" size={15} color={AMBER} />
                 <Text style={s.claimPendingText}>Your ownership claim is under review</Text>
               </View>
             );
@@ -1100,7 +1104,7 @@ export default function RestaurantDetailScreen() {
               <Ionicons
                 name={photoTab === 'menu' ? 'receipt-outline' : 'images-outline'}
                 size={36}
-                color="#ddd"
+                color={TEXT_MUTED}
               />
               <Text style={s.photoTabEmptyTitle}>
                 {photoTab === 'menu' ? 'No menu photos yet' : `No ${photoTab} photos yet`}
@@ -1139,7 +1143,7 @@ export default function RestaurantDetailScreen() {
 
           {reviews.length === 0 ? (
             <View style={s.noReviewsBox}>
-              <Ionicons name="chatbubble-outline" size={36} color="#ddd" />
+              <Ionicons name="chatbubble-outline" size={36} color={TEXT_MUTED} />
               <Text style={s.noReviewsText}>No reviews yet. Be the first!</Text>
             </View>
           ) : (
@@ -1297,7 +1301,7 @@ export default function RestaurantDetailScreen() {
                       />
                     </View>
                     <TouchableOpacity onPress={() => setCertPopupType(null)} hitSlop={12}>
-                      <Ionicons name="close" size={20} color="#aaa" />
+                      <Ionicons name="close" size={20} color={TEXT_MUTED} />
                     </TouchableOpacity>
                   </View>
                   <Text style={cp.label}>{cfg.label}</Text>
@@ -1381,7 +1385,7 @@ export default function RestaurantDetailScreen() {
             {/* handle + close */}
             <View style={m.handle} />
             <TouchableOpacity style={m.closeBtn} onPress={() => { setModalVisible(false); resetModal(); }}>
-              <Ionicons name="close" size={18} color="#999" />
+              <Ionicons name="close" size={18} color={TEXT_MUTED} />
             </TouchableOpacity>
 
             <ScrollView
@@ -1423,7 +1427,7 @@ export default function RestaurantDetailScreen() {
               <TextInput
                 style={m.commentInput}
                 placeholder="Share your experience…"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={TEXT_MUTED}
                 value={comment}
                 onChangeText={setComment}
                 multiline
@@ -1465,13 +1469,13 @@ export default function RestaurantDetailScreen() {
                           onPress={() => setReviewPhotos(prev => prev.filter((_, idx) => idx !== i))}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <Ionicons name="close-circle" size={20} color="#e53e3e" />
+                          <Ionicons name="close-circle" size={20} color={RED} />
                         </TouchableOpacity>
                       </View>
                     ))}
                     {reviewPhotos.length < 3 && (
                       <TouchableOpacity style={m.photoAdd} onPress={pickReviewPhoto}>
-                        <Ionicons name="camera-outline" size={22} color="#bbb" />
+                        <Ionicons name="camera-outline" size={22} color={TEXT_MUTED} />
                         <Text style={m.photoAddText}>Add photo</Text>
                       </TouchableOpacity>
                     )}
@@ -1482,7 +1486,7 @@ export default function RestaurantDetailScreen() {
               {/* anonymous toggle */}
               <View style={m.anonRow}>
                 <View style={m.anonLeft}>
-                  <Ionicons name="eye-off-outline" size={17} color="#555" />
+                  <Ionicons name="eye-off-outline" size={17} color={TEXT_MUTED} />
                   <View>
                     <Text style={m.anonLabel}>Post anonymously</Text>
                     <Text style={m.anonSub}>Your name won't be shown publicly</Text>
@@ -1491,7 +1495,7 @@ export default function RestaurantDetailScreen() {
                 <Switch
                   value={isAnonymous}
                   onValueChange={setIsAnonymous}
-                  trackColor={{ false: '#e0e0e0', true: GREEN }}
+                  trackColor={{ false: HAIRLINE, true: GREEN }}
                   thumbColor="#fff"
                 />
               </View>
@@ -1567,14 +1571,14 @@ export default function RestaurantDetailScreen() {
           <View style={rp.sheet}>
             <View style={rp.header}>
               <View style={rp.headerIcon}>
-                <Ionicons name="flag-outline" size={20} color="#e53e3e" />
+                <Ionicons name="flag-outline" size={20} color={RED} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={rp.headerTitle}>Report Content</Text>
                 <Text style={rp.headerSub}>Help us keep the community safe</Text>
               </View>
               <TouchableOpacity onPress={() => setReportingReviewId(null)} hitSlop={12}>
-                <Ionicons name="close" size={20} color="#aaa" />
+                <Ionicons name="close" size={20} color={TEXT_MUTED} />
               </TouchableOpacity>
             </View>
 
@@ -1601,7 +1605,7 @@ export default function RestaurantDetailScreen() {
                 multiline
                 numberOfLines={3}
                 placeholder="Describe the issue..."
-                placeholderTextColor="#bbb"
+                placeholderTextColor={TEXT_MUTED}
                 value={reportComment}
                 onChangeText={setReportComment}
                 textAlignVertical="top"
@@ -1631,13 +1635,13 @@ export default function RestaurantDetailScreen() {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex:    { flex: 1, backgroundColor: '#f7f7f7' },
+  flex:    { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 },
 
   // header / back
   header: {
     paddingHorizontal: 16, paddingBottom: 12,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
@@ -1686,20 +1690,20 @@ const s = StyleSheet.create({
   // info section
   infoSection: {
     backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 18,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  name:    { flex: 1, fontSize: 22, fontWeight: '800', color: '#111' },
+  name:    { flex: 1, fontSize: 22, fontWeight: '800', color: TEXT_DARK },
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#e6f9f2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
   },
   verifiedText: { fontSize: 11, color: GREEN, fontWeight: '600' },
-  cuisine:      { fontSize: 14, color: '#777', marginBottom: 8 },
+  cuisine:      { fontSize: 14, color: TEXT_MUTED, marginBottom: 8 },
   ratingRow:    { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
-  ratingNum:    { fontSize: 14, fontWeight: '700', color: '#111' },
-  reviewCount:  { fontSize: 13, color: '#aaa' },
-  noRating:     { fontSize: 13, color: '#ccc' },
+  ratingNum:    { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
+  reviewCount:  { fontSize: 13, color: TEXT_MUTED },
+  noRating:     { fontSize: 13, color: TEXT_MUTED },
 
   // trust disclaimer banner
   trustBanner: {
@@ -1708,10 +1712,10 @@ const s = StyleSheet.create({
     borderRadius: 10, padding: 12, marginTop: 12,
   },
   trustBannerGrey: {
-    backgroundColor: '#f5f5f5', borderColor: '#e0e0e0',
+    backgroundColor: CREAM, borderColor: HAIRLINE,
   },
   trustBannerText: {
-    flex: 1, fontSize: 13, color: '#92400e', lineHeight: 19,
+    flex: 1, fontSize: 13, color: AMBER, lineHeight: 19,
   },
   trustBannerBold: { fontWeight: '700' },
 
@@ -1724,16 +1728,16 @@ const s = StyleSheet.create({
     gap: 12,
   },
   detailRow:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  detailText: { flex: 1, fontSize: 14, color: '#444', lineHeight: 20 },
+  detailText: { flex: 1, fontSize: 14, color: TEXT_DARK, lineHeight: 20 },
   link:       { color: GREEN, textDecorationLine: 'underline' },
 
   // hours
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: TEXT_DARK, marginBottom: 4 },
   hoursRow:      { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   hoursRowToday: { backgroundColor: '#f0faf6', marginHorizontal: -16, paddingHorizontal: 16, borderRadius: 8 },
-  hoursDay:      { fontSize: 14, color: '#555', width: 100 },
+  hoursDay:      { fontSize: 14, color: TEXT_MUTED, width: 100 },
   hoursDayToday: { color: GREEN, fontWeight: '700' },
-  hoursTime:     { fontSize: 14, color: '#555' },
+  hoursTime:     { fontSize: 14, color: TEXT_MUTED },
   hoursTimeToday:{ color: GREEN, fontWeight: '700' },
 
   // claim
@@ -1750,7 +1754,7 @@ const s = StyleSheet.create({
     backgroundColor: '#fefce8', borderWidth: 1.5, borderColor: '#f6d860',
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12,
   },
-  claimPendingText: { fontSize: 13, fontWeight: '600', color: '#b7791f' },
+  claimPendingText: { fontSize: 13, fontWeight: '600', color: AMBER },
 
   // community photos
   communitySection: {
@@ -1760,29 +1764,29 @@ const s = StyleSheet.create({
   // reviews
   reviewsSection: { paddingHorizontal: 16, paddingTop: 20 },
   noReviewsBox: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  noReviewsText: { fontSize: 14, color: '#bbb' },
+  noReviewsText: { fontSize: 14, color: TEXT_MUTED },
 
   // FAB
   fab: { position: 'absolute', left: 16, right: 16 },
   fabBtn: {
-    backgroundColor: GREEN, borderRadius: 16,
+    backgroundColor: DEEP_GREEN, borderRadius: 16,
     paddingVertical: 15, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: GREEN, shadowOpacity: 0.35, shadowRadius: 12,
+    shadowColor: DEEP_GREEN, shadowOpacity: 0.35, shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 }, elevation: 8,
   },
   fabText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // error
-  errTitle:  { fontSize: 17, fontWeight: '700', color: '#c0392b' },
-  errDetail: { fontSize: 13, color: '#888', textAlign: 'center' },
-  retryBtn:  { marginTop: 8, backgroundColor: GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+  errTitle:  { fontSize: 17, fontWeight: '700', color: RED },
+  errDetail: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
+  retryBtn:  { marginTop: 8, backgroundColor: DEEP_GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
   retryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // photo tabs
   photoTabsSection: {
     backgroundColor: '#fff', marginTop: 12,
-    borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f0f0f0',
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: HAIRLINE,
     paddingBottom: 16,
   },
   photoTabBar: {
@@ -1791,13 +1795,13 @@ const s = StyleSheet.create({
   },
   photoTab: {
     paddingHorizontal: 16, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: '#e5e5e5',
-    backgroundColor: '#fafafa',
+    borderRadius: 20, borderWidth: 1.5, borderColor: HAIRLINE,
+    backgroundColor: CREAM,
   },
   photoTabActive: {
     backgroundColor: GREEN, borderColor: GREEN,
   },
-  photoTabText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  photoTabText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
   photoTabTextActive: { color: '#fff' },
 
   photoTabAddBtn: {
@@ -1819,9 +1823,9 @@ const s = StyleSheet.create({
     alignItems: 'center', gap: 8,
     paddingVertical: 36, paddingHorizontal: 16,
   },
-  photoTabEmptyTitle: { fontSize: 14, fontWeight: '600', color: '#ccc' },
+  photoTabEmptyTitle: { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   photoTabEmptyBtn: {
-    marginTop: 4, backgroundColor: GREEN,
+    marginTop: 4, backgroundColor: DEEP_GREEN,
     paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
   },
   photoTabEmptyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
@@ -1846,8 +1850,8 @@ const cp = StyleSheet.create({
     width: 48, height: 48, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center',
   },
-  label:       { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 10 },
-  description: { fontSize: 14, color: '#555', lineHeight: 21, marginBottom: 18 },
+  label:       { fontSize: 17, fontWeight: '700', color: TEXT_DARK, marginBottom: 10 },
+  description: { fontSize: 14, color: TEXT_MUTED, lineHeight: 21, marginBottom: 18 },
   guideBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
@@ -1900,59 +1904,59 @@ const m = StyleSheet.create({
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 16,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 16,
   },
   closeBtn: {
     position: 'absolute', top: 14, right: 20,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title:          { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 2 },
-  restaurantName: { fontSize: 13, color: '#aaa', marginBottom: 20 },
-  label:          { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 8 },
-  divider:        { height: 1, backgroundColor: '#f0f0f0', marginVertical: 20 },
-  categoryHeading: { fontSize: 12, fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 },
+  title:          { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginBottom: 2 },
+  restaurantName: { fontSize: 13, color: TEXT_MUTED, marginBottom: 20 },
+  label:          { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 8 },
+  divider:        { height: 1, backgroundColor: HAIRLINE, marginVertical: 20 },
+  categoryHeading: { fontSize: 12, fontWeight: '700', color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 },
   commentInput: {
-    borderWidth: 1.5, borderColor: '#e8e8e8', borderRadius: 12,
-    padding: 12, fontSize: 14, color: '#111', minHeight: 90,
-    backgroundColor: '#fafafa',
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 12,
+    padding: 12, fontSize: 14, color: TEXT_DARK, minHeight: 90,
+    backgroundColor: CREAM,
   },
-  photoHint: { fontSize: 12, color: '#bbb', marginBottom: 12, marginTop: 2 },
+  photoHint: { fontSize: 12, color: TEXT_MUTED, marginBottom: 12, marginTop: 2 },
   photoList: { gap: 10, marginBottom: 4 },
   photoItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fafafa', borderRadius: 12,
-    padding: 10, borderWidth: 1, borderColor: '#f0f0f0',
+    backgroundColor: CREAM, borderRadius: 12,
+    padding: 10, borderWidth: 1, borderColor: HAIRLINE,
   },
   photoThumb: { width: 60, height: 60, borderRadius: 8 },
   photoCategoryRow: { flex: 1, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   photoCatPill: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#e0e0e0', backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: HAIRLINE, backgroundColor: '#fff',
   },
   photoCatPillActive: { backgroundColor: GREEN, borderColor: GREEN },
-  photoCatText:       { fontSize: 12, fontWeight: '600', color: '#888' },
+  photoCatText:       { fontSize: 12, fontWeight: '600', color: TEXT_MUTED },
   photoCatTextActive: { color: '#fff' },
   photoRemove: { padding: 2 },
   photoAdd: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1.5, borderColor: '#e5e5e5', borderStyle: 'dashed',
-    borderRadius: 12, padding: 14, backgroundColor: '#fafafa',
+    borderWidth: 1.5, borderColor: HAIRLINE, borderStyle: 'dashed',
+    borderRadius: 12, padding: 14, backgroundColor: CREAM,
   },
-  photoAddText: { fontSize: 13, color: '#bbb', fontWeight: '500' },
+  photoAddText: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500' },
 
   anonRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 20, paddingVertical: 12, paddingHorizontal: 14,
-    backgroundColor: '#f7f7f7', borderRadius: 12,
-    borderWidth: 1, borderColor: '#ebebeb',
+    backgroundColor: CREAM, borderRadius: 12,
+    borderWidth: 1, borderColor: HAIRLINE,
   },
   anonLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  anonLabel: { fontSize: 14, fontWeight: '600', color: '#222' },
-  anonSub:   { fontSize: 12, color: '#999', marginTop: 1 },
+  anonLabel: { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  anonSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
 
   submitBtn: {
-    marginTop: 16, backgroundColor: GREEN, borderRadius: 14,
+    marginTop: 16, backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.6 },
@@ -1969,43 +1973,43 @@ const rp = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   headerIcon: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: '#fff5f5', alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: '#111' },
-  headerSub:   { fontSize: 12, color: '#999', marginTop: 1 },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
+  headerSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
   rpScroll:    { flexGrow: 0 },
-  reasonLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 10 },
+  reasonLabel: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 10 },
   reasonOption: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 12, paddingHorizontal: 14,
-    borderRadius: 12, borderWidth: 1.5, borderColor: '#f0f0f0',
-    backgroundColor: '#fafafa', marginBottom: 8,
+    borderRadius: 12, borderWidth: 1.5, borderColor: HAIRLINE,
+    backgroundColor: CREAM, marginBottom: 8,
   },
-  reasonOptionSelected: { borderColor: '#e53e3e', backgroundColor: '#fff5f5' },
+  reasonOptionSelected: { borderColor: RED, backgroundColor: '#fff5f5' },
   radio: {
     width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: '#ddd',
+    borderWidth: 2, borderColor: TEXT_MUTED,
     alignItems: 'center', justifyContent: 'center',
   },
-  radioSelected: { borderColor: '#e53e3e' },
-  radioDot:      { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e53e3e' },
-  reasonText:         { fontSize: 14, color: '#444', fontWeight: '500' },
-  reasonTextSelected: { color: '#e53e3e', fontWeight: '600' },
+  radioSelected: { borderColor: RED },
+  radioDot:      { width: 10, height: 10, borderRadius: 5, backgroundColor: RED },
+  reasonText:         { fontSize: 14, color: TEXT_DARK, fontWeight: '500' },
+  reasonTextSelected: { color: RED, fontWeight: '600' },
   commentInput: {
-    borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
-    padding: 14, fontSize: 14, color: '#111',
-    backgroundColor: '#fafafa', minHeight: 80, marginBottom: 20,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
+    padding: 14, fontSize: 14, color: TEXT_DARK,
+    backgroundColor: CREAM, minHeight: 80, marginBottom: 20,
   },
   rpSubmitBtn: {
-    backgroundColor: '#e53e3e', borderRadius: 14,
+    backgroundColor: RED, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginBottom: 10,
   },
   rpSubmitBtnDisabled: { opacity: 0.4 },
   rpSubmitText:  { color: '#fff', fontSize: 15, fontWeight: '700' },
   rpCancelBtn:   { alignItems: 'center', paddingVertical: 8 },
-  rpCancelText:  { fontSize: 14, color: '#999' },
+  rpCancelText:  { fontSize: 14, color: TEXT_MUTED },
 });

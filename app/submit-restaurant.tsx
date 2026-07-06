@@ -14,9 +14,15 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { setGuestLoginIntent } from '../lib/guestLoginIntent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
-const RED   = '#e53e3e';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 const MAX_GALLERY = 4;
 
@@ -237,13 +243,13 @@ export default function SubmitRestaurantScreen() {
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.title}>Submit a Restaurant</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={s.guestWrap}>
-          <Ionicons name="storefront-outline" size={56} color="#ddd" />
+          <Ionicons name="storefront-outline" size={56} color={TEXT_MUTED} />
           <Text style={s.guestTitle}>Sign in to add a restaurant</Text>
           <Text style={s.guestSub}>Create a free account to submit halal restaurants for the community.</Text>
           <TouchableOpacity style={s.guestBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}>
@@ -259,7 +265,7 @@ export default function SubmitRestaurantScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Submit a Restaurant</Text>
         <View style={{ width: 36 }} />
@@ -307,11 +313,11 @@ export default function SubmitRestaurantScreen() {
           ) : (
             <View style={s.photoPickerRow}>
               <TouchableOpacity style={s.photoPickerBox} onPress={pickPhoto}>
-                <Ionicons name="image-outline" size={28} color="#bbb" />
+                <Ionicons name="image-outline" size={28} color={TEXT_MUTED} />
                 <Text style={s.photoPickerLabel}>Choose from Library</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.photoPickerBox} onPress={takePhoto}>
-                <Ionicons name="camera-outline" size={28} color="#bbb" />
+                <Ionicons name="camera-outline" size={28} color={TEXT_MUTED} />
                 <Text style={s.photoPickerLabel}>Take Photo</Text>
               </TouchableOpacity>
             </View>
@@ -346,7 +352,7 @@ export default function SubmitRestaurantScreen() {
             <TextInput
               style={s.input}
               placeholder="e.g. Al-Madina Grill"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={name}
               onChangeText={v => { setName(v); setError(null); }}
               onFocus={() => setFocused('name')}
@@ -380,7 +386,7 @@ export default function SubmitRestaurantScreen() {
               ref={cuisineRef}
               style={s.input}
               placeholder="e.g. Pakistani, Turkish, Lebanese"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={cuisine}
               onChangeText={setCuisine}
               onFocus={() => setFocused('cuisine')}
@@ -395,7 +401,7 @@ export default function SubmitRestaurantScreen() {
               ref={phoneRef}
               style={s.input}
               placeholder="e.g. (408) 555-0123"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={phone}
               onChangeText={setPhone}
               onFocus={() => setFocused('phone')}
@@ -411,7 +417,7 @@ export default function SubmitRestaurantScreen() {
               ref={websiteRef}
               style={s.input}
               placeholder="e.g. https://restaurant.com"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={website}
               onChangeText={setWebsite}
               onFocus={() => setFocused('website')}
@@ -428,7 +434,7 @@ export default function SubmitRestaurantScreen() {
               ref={notesRef}
               style={[s.input, s.textArea]}
               placeholder="e.g. Zabiha only, owner showed certificate on request"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={notes}
               onChangeText={setNotes}
               onFocus={() => setFocused('notes')}
@@ -498,7 +504,7 @@ function GalleryPicker({
         ListFooterComponent={
           photos.length < MAX_GALLERY ? (
             <TouchableOpacity style={s.galleryAddBtn} onPress={onAdd}>
-              <Ionicons name="add" size={28} color="#bbb" />
+              <Ionicons name="add" size={28} color={TEXT_MUTED} />
               <Text style={s.galleryAddLabel}>Add</Text>
             </TouchableOpacity>
           ) : null
@@ -509,7 +515,7 @@ function GalleryPicker({
       />
       {photos.length === 0 && (
         <TouchableOpacity style={s.galleryEmptyBtn} onPress={onAdd}>
-          <Ionicons name="images-outline" size={24} color="#bbb" />
+          <Ionicons name="images-outline" size={24} color={TEXT_MUTED} />
           <Text style={s.galleryAddLabel}>Tap to add photos</Text>
         </TouchableOpacity>
       )}
@@ -533,29 +539,29 @@ function Field({ label, focused, children }: {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f7f7f7' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   guestWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },
-  guestTitle: { fontSize: 18, fontWeight: '700', color: '#ccc', textAlign: 'center' },
-  guestSub:   { fontSize: 14, color: '#bbb', textAlign: 'center', lineHeight: 20 },
-  guestBtn:   { marginTop: 8, backgroundColor: GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
+  guestTitle: { fontSize: 18, fontWeight: '700', color: TEXT_MUTED, textAlign: 'center' },
+  guestSub:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
+  guestBtn:   { marginTop: 8, backgroundColor: DEEP_GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
   guestBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10,
+    backgroundColor: CREAM, paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111', textAlign: 'center' },
+  title: { flex: 1, fontSize: 17, fontWeight: '700', color: TEXT_DARK, textAlign: 'center' },
 
   content: { padding: 20, paddingBottom: 48 },
 
   intro: {
-    fontSize: 14, color: '#777', lineHeight: 20,
+    fontSize: 14, color: TEXT_MUTED, lineHeight: 20,
     marginBottom: 20,
   },
 
@@ -568,19 +574,19 @@ const s = StyleSheet.create({
   errorText: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
 
   sectionLabel: {
-    fontSize: 13, fontWeight: '700', color: '#111',
+    fontSize: 13, fontWeight: '700', color: TEXT_DARK,
     marginTop: 8, marginBottom: 10, letterSpacing: 0.2,
   },
-  optionalTag: { fontSize: 12, fontWeight: '400', color: '#aaa' },
+  optionalTag: { fontSize: 12, fontWeight: '400', color: TEXT_MUTED },
 
   // Cert photo
   photoPickerRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   photoPickerBox: {
     flex: 1, height: 110, borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed',
-    backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderStyle: 'dashed',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center', gap: 6,
   },
-  photoPickerLabel: { fontSize: 12, color: '#999', textAlign: 'center' },
+  photoPickerLabel: { fontSize: 12, color: TEXT_MUTED, textAlign: 'center' },
 
   photoPreviewWrap: { marginBottom: 20, borderRadius: 14, overflow: 'hidden' },
   photoPreview: { width: '100%', height: 180 },
@@ -602,16 +608,16 @@ const s = StyleSheet.create({
   },
   galleryAddBtn: {
     width: 90, height: 90, borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed',
-    backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', gap: 2,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderStyle: 'dashed',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center', gap: 2,
   },
   galleryEmptyBtn: {
     height: 90, borderRadius: 14, marginBottom: 20,
-    borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed',
-    backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: HAIRLINE, borderStyle: 'dashed',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
     flexDirection: 'row', gap: 8,
   },
-  galleryAddLabel: { fontSize: 12, color: '#999' },
+  galleryAddLabel: { fontSize: 12, color: TEXT_MUTED },
 
   // Fields
   addressWrap: {
@@ -619,18 +625,18 @@ const s = StyleSheet.create({
   },
   fieldWrap: {
     backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#e5e5e5',
+    borderWidth: 1.5, borderColor: HAIRLINE,
     paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4,
     marginBottom: 12,
   },
   fieldWrapFocused: { borderColor: GREEN, backgroundColor: '#fff' },
-  fieldLabel: { fontSize: 11, fontWeight: '600', color: '#999', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
-  input: { fontSize: 15, color: '#111', paddingVertical: 6, minHeight: 36 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', color: TEXT_MUTED, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
+  input: { fontSize: 15, color: TEXT_DARK, paddingVertical: 6, minHeight: 36 },
   textArea: { minHeight: 72, textAlignVertical: 'top' },
 
   // Submit
   submitBtn: {
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, marginTop: 8, marginBottom: 12,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
@@ -638,6 +644,6 @@ const s = StyleSheet.create({
   submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   disclaimer: {
-    fontSize: 12, color: '#bbb', textAlign: 'center', lineHeight: 17,
+    fontSize: 12, color: TEXT_MUTED, textAlign: 'center', lineHeight: 17,
   },
 });

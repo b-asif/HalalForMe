@@ -11,11 +11,17 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { registerPushToken } from '../lib/notifications';
 import { setGuestLoginIntent } from '../lib/guestLoginIntent';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
-const AMBER = '#d97706';
-const RED   = '#e53e3e';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const AMBER = Brand.amber;
+const RED   = Brand.red;
 const BLUE  = '#3b82f6';
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -215,7 +221,7 @@ export default function NotificationsScreen() {
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.title}>Notifications</Text>
         </View>
@@ -237,7 +243,7 @@ export default function NotificationsScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Notifications</Text>
       </View>
@@ -248,7 +254,7 @@ export default function NotificationsScreen() {
         </View>
       ) : error ? (
         <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={40} color="#ddd" />
+          <Ionicons name="alert-circle-outline" size={40} color={TEXT_MUTED} />
           <Text style={s.errorText}>{error}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={() => load()}>
             <Text style={s.retryText}>Try Again</Text>
@@ -287,22 +293,22 @@ export default function NotificationsScreen() {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#111' },
+  title: { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
-  errorText: { fontSize: 14, color: '#999', textAlign: 'center' },
-  retryBtn: { backgroundColor: GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12 },
+  errorText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
+  retryBtn: { backgroundColor: DEEP_GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12 },
   retryText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   emptyIcon: {
@@ -310,9 +316,9 @@ const s = StyleSheet.create({
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#ccc' },
-  emptyText: { fontSize: 14, color: '#bbb', textAlign: 'center', lineHeight: 20 },
-  signInBtn: { marginTop: 8, backgroundColor: GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: TEXT_MUTED },
+  emptyText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
+  signInBtn: { marginTop: 8, backgroundColor: DEEP_GREEN, paddingHorizontal: 32, paddingVertical: 13, borderRadius: 14 },
   signInText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   list: { padding: 16, gap: 10 },
@@ -329,7 +335,7 @@ const s = StyleSheet.create({
   },
   cardBody: { flex: 1, gap: 4 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: '#111', lineHeight: 19 },
-  cardTime:  { fontSize: 12, color: '#bbb', flexShrink: 0, marginTop: 1 },
-  cardBody2: { fontSize: 13, color: '#666', lineHeight: 19 },
+  cardTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: TEXT_DARK, lineHeight: 19 },
+  cardTime:  { fontSize: 12, color: TEXT_MUTED, flexShrink: 0, marginTop: 1 },
+  cardBody2: { fontSize: 13, color: TEXT_MUTED, lineHeight: 19 },
 });

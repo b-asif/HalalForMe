@@ -3,7 +3,7 @@
     "name": "HalalForMe",
     "slug": "HalalForMe",
     "scheme": "halalforme",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -61,7 +61,9 @@
           "photosPermission": "HalalForMe needs access to your photos to upload restaurant and food images."
         }
       ],
-      "expo-camera"
+      "expo-camera",
+      "expo-background-task",
+      "expo-localization"
     ],
     "extra": {
       "router": {},

@@ -5,8 +5,14 @@ import {
 } from 'react-native';
 import { fetchWithTimeout } from '../lib/errors';
 import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM = Brand.cream;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 export interface AddressSuggestion {
   displayName: string;
@@ -108,7 +114,7 @@ export default function AddressAutocomplete({
           value={value}
           onChangeText={text => { onChangeText(text); }}
           placeholder={placeholder}
-          placeholderTextColor="#bbb"
+          placeholderTextColor={TEXT_MUTED}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType={returnKeyType}
@@ -123,7 +129,7 @@ export default function AddressAutocomplete({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.clearBtn}
           >
-            <Ionicons name="close-circle" size={16} color="#ccc" />
+            <Ionicons name="close-circle" size={16} color={TEXT_MUTED} />
           </TouchableOpacity>
         )}
       </View>
@@ -166,16 +172,16 @@ export default function AddressAutocomplete({
 const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#e5e5e5', borderRadius: 10,
-    backgroundColor: '#fafafa', paddingHorizontal: 12,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 10,
+    backgroundColor: CREAM, paddingHorizontal: 12,
   },
   inputRowFocused: { borderColor: GREEN, backgroundColor: '#fff' },
-  input: { flex: 1, paddingVertical: 12, fontSize: 14, color: '#111' },
+  input: { flex: 1, paddingVertical: 12, fontSize: 14, color: TEXT_DARK },
   spinner:  { marginLeft: 8 },
   clearBtn: { marginLeft: 6 },
 
   dropdown: {
-    borderWidth: 1, borderColor: '#e8e8e8', borderRadius: 10,
+    borderWidth: 1, borderColor: HAIRLINE, borderRadius: 10,
     backgroundColor: '#fff', marginTop: 4,
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 }, elevation: 4,
@@ -185,8 +191,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: 12, paddingVertical: 11,
   },
-  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
   pinIcon: { marginRight: 8, marginTop: 1 },
-  suggestionText: { flex: 1, fontSize: 13, color: '#333', lineHeight: 18 },
-  searchErrorText: { fontSize: 12, color: '#e53e3e', marginTop: 6, paddingHorizontal: 2 },
+  suggestionText: { flex: 1, fontSize: 13, color: TEXT_DARK, lineHeight: 18 },
+  searchErrorText: { fontSize: 12, color: RED, marginTop: 6, paddingHorizontal: 2 },
 });

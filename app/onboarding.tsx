@@ -1,85 +1,34 @@
-import { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useWindowDimensions } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { setGuestOnboardingSeen, setOnboardingSeenThisSession } from '../lib/guestLoginIntent';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const GOLD = Brand.gold;
+const TEXT_DARK = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
 
-const SLIDES = [
+const FEATURES: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
   {
-    icon: 'leaf' as const,
-    iconColor: GREEN,
-    bg: '#E8F5F0',
-    title: 'Welcome to HalalForMe',
-    description:
-      'Your trusted guide to finding halal-certified restaurants and verifying halal ingredients — wherever you are.',
+    icon: 'time-outline',
+    title: 'Prayer times & reminders',
+    body: 'Calculated on your device — your location is never sent to us or sold to anyone. Calculation method is set automatically for where you are, and adjustable anytime in Settings.',
   },
   {
-    icon: 'map' as const,
-    iconColor: '#2196F3',
-    bg: '#E3F2FD',
-    title: 'Discover Halal Restaurants',
-    description:
-      'Browse restaurants on an interactive map or scroll a list sorted by distance. Find certified halal spots near you in seconds.',
+    icon: 'compass-outline',
+    title: 'Qibla direction',
+    body: 'A live compass pointing the way to pray, wherever you are.',
   },
   {
-    icon: 'funnel' as const,
-    iconColor: '#9C27B0',
-    bg: '#F3E5F5',
-    title: 'Search & Filter by Certifier',
-    description:
-      'Filter by certification body — ISNA, IFANCA, HMA, HFSAA, MUI, and more — so you always know exactly which standard applies.',
-  },
-  {
-    icon: 'shield-checkmark' as const,
-    iconColor: '#059669',
-    bg: '#ECFDF5',
-    title: 'How We Verify',
-    description:
-      'Every submitted restaurant is reviewed by our admin team before it goes live. Certification photos are checked against the claimed certifier. Listings that slip through can be flagged by the community — keeping the directory honest.',
-  },
-  {
-    icon: 'scan' as const,
-    iconColor: '#FF5722',
-    bg: '#FBE9E7',
-    title: 'Scan Ingredients',
-    description:
-      "Unsure about a product? Scan its barcode to instantly check E-numbers and ingredients — Halal, Haram, or Needs Review.",
-  },
-  {
-    icon: 'storefront' as const,
-    iconColor: '#FF9800',
-    bg: '#FFF3E0',
-    title: 'Submit, Save & Review',
-    description:
-      "Know a halal spot we're missing? Submit it. Bookmark your favourites, write reviews, and help the community grow.",
-  },
-  {
-    icon: 'trophy' as const,
-    iconColor: '#F59E0B',
-    bg: '#FFFBEB',
-    title: 'Earn Points & Badges',
-    description:
-      'Every approved submission earns 50 pts, reviews 15 pts, and photos 10 pts. Climb the Community leaderboard and unlock badges as you contribute.',
-  },
-  {
-    icon: 'business' as const,
-    iconColor: '#0EA5E9',
-    bg: '#E0F2FE',
-    title: 'Own a Restaurant?',
-    description:
-      'Claim your listing to keep your details accurate. Open any restaurant page, tap "Claim this listing", and our team will verify you within 1–3 days.',
+    icon: 'scan-outline',
+    title: 'Halal ingredient scanner',
+    body: "Scan any product's barcode to check if it's halal, haram, or needs a closer look.",
   },
 ];
 
@@ -89,9 +38,6 @@ export function markOnboardingSeen(userId?: string) {
 }
 
 export default function OnboardingScreen() {
-  const { width } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -102,71 +48,37 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const goNext = () => {
-    if (currentIndex < SLIDES.length - 1) {
-      const next = currentIndex + 1;
-      scrollRef.current?.scrollTo({ x: next * width, animated: true });
-      setCurrentIndex(next);
-    } else {
-      finish();
-    }
-  };
-
-  const onScroll = (e: any) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    setCurrentIndex(index);
-  };
-
-  const isLast = currentIndex === SLIDES.length - 1;
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Skip */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={finish} style={styles.skipBtn} hitSlop={12}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={styles.content}>
+        <View style={styles.iconWrap}>
+          <Ionicons name="moon" size={40} color={GREEN} />
+        </View>
 
-      {/* Slides */}
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScroll}
-        scrollEventThrottle={16}
-        style={{ flex: 1 }}
-      >
-        {SLIDES.map((slide, i) => (
-          <View key={i} style={[styles.slide, { width }]}>
-            <View style={[styles.iconCircle, { backgroundColor: slide.bg }]}>
-              <Ionicons name={slide.icon} size={76} color={slide.iconColor} />
+        <Text style={styles.title}>Assalamu Alaikum</Text>
+        <Text style={styles.subtitle}>
+          HalalForMe helps you stay on top of your prayers, find the Qibla, and eat with confidence — wherever you are.
+        </Text>
+
+        <View style={styles.features}>
+          {FEATURES.map(f => (
+            <View key={f.title} style={styles.featureRow}>
+              <View style={styles.featureIconWrap}>
+                <Ionicons name={f.icon} size={20} color={GREEN} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>{f.title}</Text>
+                <Text style={styles.featureBody}>{f.body}</Text>
+              </View>
             </View>
-            <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.description}>{slide.description}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === currentIndex && styles.dotActive]}
-            />
           ))}
         </View>
 
-        <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
-          <Text style={styles.nextBtnText}>
-            {isLast ? 'Get Started' : 'Next'}
-          </Text>
-          {!isLast && (
-            <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
-          )}
+        <View style={{ flex: 1 }} />
+
+        <TouchableOpacity style={styles.ctaBtn} onPress={finish} activeOpacity={0.85}>
+          <Text style={styles.ctaBtnText}>Get Started</Text>
+          <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -174,74 +86,29 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: CREAM },
+  content: { flex: 1, paddingHorizontal: 28, paddingTop: 24, paddingBottom: 28 },
 
-  header: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
+  iconWrap: {
+    width: 76, height: 76, borderRadius: 38, backgroundColor: '#EFF6F1',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-  skipBtn: { padding: 8 },
-  skipText: { color: '#888', fontSize: 15, fontWeight: '600' },
+  title: { fontSize: 26, fontWeight: '800', color: TEXT_DARK, marginBottom: 10, letterSpacing: -0.3 },
+  subtitle: { fontSize: 15, color: TEXT_MUTED, lineHeight: 22, marginBottom: 32 },
 
-  slide: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 36,
-    paddingBottom: 32,
+  features: { gap: 20 },
+  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  featureIconWrap: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1,
   },
-  iconCircle: {
-    width: 172,
-    height: 172,
-    borderRadius: 86,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 44,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 25,
-    color: '#555',
-    textAlign: 'center',
-  },
+  featureTitle: { fontSize: 15, fontWeight: '700', color: TEXT_DARK, marginBottom: 2 },
+  featureBody: { fontSize: 13, color: TEXT_MUTED, lineHeight: 19 },
 
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 28,
-    alignItems: 'center',
-    gap: 20,
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: DEEP_GREEN, paddingVertical: 16, borderRadius: 30, width: '100%',
   },
-  dots: { flexDirection: 'row', gap: 8 },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
-  },
-  dotActive: {
-    width: 26,
-    backgroundColor: GREEN,
-  },
-  nextBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: GREEN,
-    paddingVertical: 16,
-    borderRadius: 30,
-    width: '100%',
-  },
-  nextBtnText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-  },
+  ctaBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 });

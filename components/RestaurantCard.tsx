@@ -1,21 +1,26 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
-const AMBER = '#b7791f';
+const GREEN = Brand.green;
+const AMBER = Brand.amber;
+const TEXT_DARK = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const GOLD = Brand.gold;
+const RED = Brand.red;
 
 const CERT: Record<string, { label: string; color: string; bg: string }> = {
-  ISNA:           { label: 'ISNA Certified',   color: GREEN,  bg: '#e6f9f2' },
-  IFANCA:         { label: 'IFANCA Certified', color: GREEN,  bg: '#e6f9f2' },
-  HMA:            { label: 'HMA Certified',    color: GREEN,  bg: '#e6f9f2' },
-  HFA:            { label: 'HFA Certified',    color: GREEN,  bg: '#e6f9f2' },
-  HFSAA:          { label: 'HFSAA Certified',  color: GREEN,  bg: '#e6f9f2' },
-  HMS:            { label: 'HMS Certified',    color: GREEN,  bg: '#e6f9f2' },
-  MUI:            { label: 'MUI Certified',    color: GREEN,  bg: '#e6f9f2' },
-  self_certified: { label: 'Self Certified',   color: AMBER,  bg: '#fefce8' },
-  uncertified:    { label: 'Not Certified',    color: '#888', bg: '#f5f5f5' },
-  unknown:        { label: 'Cert. Unknown',    color: '#888', bg: '#f5f5f5' },
+  ISNA:           { label: 'ISNA Certified',   color: GREEN,      bg: '#e6f9f2' },
+  IFANCA:         { label: 'IFANCA Certified', color: GREEN,      bg: '#e6f9f2' },
+  HMA:            { label: 'HMA Certified',    color: GREEN,      bg: '#e6f9f2' },
+  HFA:            { label: 'HFA Certified',    color: GREEN,      bg: '#e6f9f2' },
+  HFSAA:          { label: 'HFSAA Certified',  color: GREEN,      bg: '#e6f9f2' },
+  HMS:            { label: 'HMS Certified',    color: GREEN,      bg: '#e6f9f2' },
+  MUI:            { label: 'MUI Certified',    color: GREEN,      bg: '#e6f9f2' },
+  self_certified: { label: 'Self Certified',   color: AMBER,      bg: '#fefce8' },
+  uncertified:    { label: 'Not Certified',    color: TEXT_MUTED, bg: Brand.cream },
+  unknown:        { label: 'Cert. Unknown',    color: TEXT_MUTED, bg: Brand.cream },
 };
 
 export interface Restaurant {
@@ -85,8 +90,12 @@ export default function RestaurantCard({ restaurant, onPress }: Props) {
         {/* cuisine · distance */}
         <View style={styles.metaRow}>
           <Text style={styles.cuisine} numberOfLines={1}>{restaurant.cuisine}</Text>
-          <Text style={styles.dot}>·</Text>
-          <Text style={styles.distance}>{restaurant.distance}</Text>
+          {restaurant.distance ? (
+            <>
+              <Text style={styles.dot}>·</Text>
+              <Text style={styles.distance}>{restaurant.distance}</Text>
+            </>
+          ) : null}
         </View>
 
         {/* certifier badge */}
@@ -102,7 +111,7 @@ export default function RestaurantCard({ restaurant, onPress }: Props) {
         {/* today's hours */}
         {restaurant.todayHours ? (
           <View style={styles.hoursRow}>
-            <Ionicons name="time-outline" size={11} color="#aaa" />
+            <Ionicons name="time-outline" size={11} color={TEXT_MUTED} />
             <Text style={styles.hoursText} numberOfLines={1}>{restaurant.todayHours}</Text>
           </View>
         ) : null}
@@ -117,7 +126,7 @@ export default function RestaurantCard({ restaurant, onPress }: Props) {
             </View>
           ) : (
             <View style={styles.ratingRow}>
-              <Ionicons name="star-outline" size={12} color="#ccc" />
+              <Ionicons name="star-outline" size={12} color={TEXT_MUTED} />
               <Text style={styles.noRating}>No ratings yet</Text>
             </View>
           )}
@@ -158,19 +167,19 @@ const styles = StyleSheet.create({
   body: { flex: 1, padding: 12, gap: 4 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 0 },
-  name: { flex: 1, fontSize: 15, fontWeight: '700', color: '#111', marginRight: 8 },
+  name: { flex: 1, fontSize: 15, fontWeight: '700', color: TEXT_DARK, marginRight: 8 },
 
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   openBg:    { backgroundColor: '#e6f9f2' },
   closedBg:  { backgroundColor: '#fef2f2' },
   statusText: { fontSize: 11, fontWeight: '600' },
   openTxt:   { color: GREEN },
-  closedTxt: { color: '#e53e3e' },
+  closedTxt: { color: RED },
 
   metaRow: { flexDirection: 'row', alignItems: 'center' },
-  cuisine:  { fontSize: 12, color: '#777', flex: 1, flexShrink: 1 },
-  dot:      { fontSize: 12, color: '#ddd', marginHorizontal: 4 },
-  distance: { fontSize: 12, color: '#777' },
+  cuisine:  { fontSize: 12, color: TEXT_MUTED, flex: 1, flexShrink: 1 },
+  dot:      { fontSize: 12, color: TEXT_MUTED, marginHorizontal: 4 },
+  distance: { fontSize: 12, color: TEXT_MUTED },
 
   certBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -179,14 +188,14 @@ const styles = StyleSheet.create({
   certText: { fontSize: 11, fontWeight: '600' },
 
   hoursRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  hoursText: { fontSize: 11, color: '#aaa', flex: 1 },
+  hoursText: { fontSize: 11, color: TEXT_MUTED, flex: 1 },
 
   bottomRow: { flexDirection: 'row', alignItems: 'center' },
   ratingRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  stars:     { color: '#f6a623', fontSize: 11, letterSpacing: -0.5 },
-  ratingNum: { fontSize: 12, fontWeight: '700', color: '#111', marginLeft: 4 },
-  reviewCount: { fontSize: 11, color: '#aaa', marginLeft: 2 },
-  noRating:  { fontSize: 11, color: '#ccc', marginLeft: 4 },
+  stars:     { color: GOLD, fontSize: 11, letterSpacing: -0.5 },
+  ratingNum: { fontSize: 12, fontWeight: '700', color: TEXT_DARK, marginLeft: 4 },
+  reviewCount: { fontSize: 11, color: TEXT_MUTED, marginLeft: 2 },
+  noRating:  { fontSize: 11, color: TEXT_MUTED, marginLeft: 4 },
 
-  address: { fontSize: 11, color: '#bbb' },
+  address: { fontSize: 11, color: TEXT_MUTED },
 });

@@ -3,13 +3,15 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// The notification handler (what happens when a notification arrives while
+// the app is in the foreground) is registered once, centrally, in
+// lib/prayer/notifications.ts — that module is guaranteed to load at app
+// startup (imported unconditionally from app/_layout.tsx via
+// backgroundRefresh.ts), whereas this file only loads if/when a user visits
+// the in-app Notifications screen. Registering it here too would silently
+// overwrite that handler for anyone who happens to visit this screen,
+// creating two competing registrations depending on load order — so it
+// belongs in exactly one place, not both.
 
 export async function registerPushToken(userId: string): Promise<void> {
   if (!Device.isDevice) return; // simulators don't support push

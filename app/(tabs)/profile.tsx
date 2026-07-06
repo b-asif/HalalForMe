@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, ScrollView,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Switch,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,8 +14,16 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatError } from '../../lib/errors';
 import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const AMBER = Brand.amber;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 interface MenuItem {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -42,35 +50,18 @@ export default function ProfileScreen() {
   const [saving,      setSaving]      = useState(false);
   const [saveError,   setSaveError]   = useState<string | null>(null);
 
-  // Contribution stats
-  const [totalPoints,          setTotalPoints]          = useState<number>(0);
-  const [monthlyRank,          setMonthlyRank]          = useState<number | null>(null);
-  const [badges,               setBadges]               = useState<string[]>([]);
-  const [leaderboardAnonymous, setLeaderboardAnonymous] = useState(false);
-  const [anonSaving,           setAnonSaving]           = useState(false);
-
   // Load profile from DB
   const loadProfile = useCallback(async () => {
     if (!user) return;
     setProfileLoading(true);
-    const [profileRes, pointsRes, rankRes, badgeRes] = await Promise.all([
-      supabase.from('profiles').select('name, avatar_url, leaderboard_anonymous').eq('id', user.id).maybeSingle(),
-      supabase.from('alltime_leaderboard').select('total_points').eq('user_id', user.id).maybeSingle(),
-      supabase.from('monthly_leaderboard').select('rank').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_badges').select('badge_type').eq('user_id', user.id),
-    ]);
+    const { data } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle();
 
-    if (profileRes.data) {
-      setProfileName(profileRes.data.name ?? user.user_metadata?.name ?? '');
-      setProfileAvatarUrl(profileRes.data.avatar_url ?? null);
-      setLeaderboardAnonymous(profileRes.data.leaderboard_anonymous ?? false);
+    if (data) {
+      setProfileName(data.name ?? user.user_metadata?.name ?? '');
+      setProfileAvatarUrl(data.avatar_url ?? null);
     } else {
       setProfileName(user.user_metadata?.name ?? '');
     }
-
-    setTotalPoints(pointsRes.data?.total_points ?? 0);
-    setMonthlyRank(rankRes.data?.rank ?? null);
-    setBadges((badgeRes.data ?? []).map((b: { badge_type: string }) => b.badge_type));
 
     setProfileLoading(false);
   }, [user]);
@@ -238,20 +229,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const toggleAnonymous = async (value: boolean) => {
-    if (!user || anonSaving) return;
-    setLeaderboardAnonymous(value); // optimistic update
-    setAnonSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ leaderboard_anonymous: value })
-      .eq('id', user.id);
-    setAnonSaving(false);
-    if (error) {
-      setLeaderboardAnonymous(!value); // rollback
-      Alert.alert('Error', 'Could not save preference. Please try again.');
-    }
-  };
 
   // ── Guest screen ─────────────────────────────────────────────────────────
   if (!user) {
@@ -261,7 +238,7 @@ export default function ProfileScreen() {
           <Text style={s.title}>Profile</Text>
         </View>
         <ScrollView contentContainerStyle={s.guestWrap} showsVerticalScrollIndicator={false}>
-          <Ionicons name="person-circle-outline" size={80} color="#d0d0d0" />
+          <Ionicons name="person-circle-outline" size={80} color={TEXT_MUTED} />
           <Text style={s.guestTitle}>Sign in to your account</Text>
           <Text style={s.guestSub}>
             Save restaurants, submit new spots, write reviews, and track your contributions.
@@ -276,17 +253,17 @@ export default function ProfileScreen() {
             <TouchableOpacity style={s.guestLink} onPress={() => router.push('/certification-guide')}>
               <Ionicons name="shield-checkmark-outline" size={16} color={GREEN} />
               <Text style={s.guestLinkText}>Halal Certification Guide</Text>
-              <Ionicons name="chevron-forward" size={14} color="#d0d0d0" />
+              <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
             </TouchableOpacity>
             <TouchableOpacity style={s.guestLink} onPress={() => router.push('/privacy-policy')}>
               <Ionicons name="document-text-outline" size={16} color={GREEN} />
               <Text style={s.guestLinkText}>Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={14} color="#d0d0d0" />
+              <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
             </TouchableOpacity>
             <TouchableOpacity style={s.guestLink} onPress={() => router.push('/terms-of-service')}>
               <Ionicons name="reader-outline" size={16} color={GREEN} />
               <Text style={s.guestLinkText}>Terms of Service</Text>
-              <Ionicons name="chevron-forward" size={14} color="#d0d0d0" />
+              <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -308,7 +285,6 @@ export default function ProfileScreen() {
     { icon: 'shield-checkmark-outline', label: 'Halal Certification Guide', onPress: () => router.push('/certification-guide') },
     { icon: 'notifications-outline',    label: 'Notifications',             onPress: () => router.push('/notifications') },
     { icon: 'help-circle-outline',      label: 'Help & Support',            onPress: () => router.push('/help') },
-    { icon: 'play-circle-outline',      label: 'App Tour',                  onPress: () => router.push('/app-tour') },
     { icon: 'document-text-outline',    label: 'Privacy Policy',            onPress: () => router.push('/privacy-policy') },
     { icon: 'reader-outline',           label: 'Terms of Service',          onPress: () => router.push('/terms-of-service') },
     ...(isAdmin ? [{ icon: 'settings-outline' as const, label: 'Admin Panel', onPress: () => router.push('/(admin)') }] : []),
@@ -354,9 +330,9 @@ export default function ProfileScreen() {
               <Ionicons
                 name={isVerified ? 'checkmark-circle' : 'time-outline'}
                 size={13}
-                color={isVerified ? GREEN : '#f6a623'}
+                color={isVerified ? GREEN : AMBER}
               />
-              <Text style={[s.verifiedText, { color: isVerified ? GREEN : '#f6a623' }]}>
+              <Text style={[s.verifiedText, { color: isVerified ? GREEN : AMBER }]}>
                 {isVerified ? 'Verified account' : 'Email not verified'}
               </Text>
             </View>
@@ -365,58 +341,6 @@ export default function ProfileScreen() {
           <TouchableOpacity style={s.editBtn} onPress={openEdit}>
             <Ionicons name="pencil-outline" size={17} color={GREEN} />
           </TouchableOpacity>
-        </View>
-
-        {/* ── Contribution stats ── */}
-        <View style={s.statsCard}>
-          {(totalPoints > 0 || badges.length > 0) ? (
-            <>
-              <View style={s.statsRow}>
-                <Ionicons name="trophy-outline" size={16} color={GREEN} />
-                <Text style={s.statsPoints}>{totalPoints} pts</Text>
-                {monthlyRank ? (
-                  <Text style={s.statsRank}>· #{monthlyRank} this month</Text>
-                ) : null}
-              </View>
-              {badges.length > 0 ? (
-                <View style={s.badgeRow}>
-                  {badges.map(b => {
-                    const meta: Record<string, { emoji: string; label: string; color: string; bg: string }> = {
-                      first_scout:    { emoji: '🔍', label: 'First Scout',    color: GREEN,     bg: '#e6f9f2' },
-                      scout:          { emoji: '🗺️', label: 'Scout',          color: '#2b6cb0', bg: '#ebf8ff' },
-                      super_scout:    { emoji: '⭐', label: 'Super Scout',    color: '#b7791f', bg: '#fefce8' },
-                      lensman:        { emoji: '📸', label: 'Lensman',        color: '#6b46c1', bg: '#faf5ff' },
-                      community_star: { emoji: '🏆', label: 'Community Star', color: '#c05621', bg: '#fff7ed' },
-                    };
-                    const m = meta[b];
-                    if (!m) return null;
-                    return (
-                      <View key={b} style={[s.badgeChip, { backgroundColor: m.bg }]}>
-                        <Text style={s.badgeEmoji}>{m.emoji}</Text>
-                        <Text style={[s.badgeLabel, { color: m.color }]}>{m.label}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : null}
-              <View style={s.statsDivider} />
-            </>
-          ) : null}
-          <View style={s.anonRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.anonLabel}>Hide my name on leaderboard</Text>
-              <Text style={s.anonSub}>
-                {leaderboardAnonymous ? 'You appear as a random name' : 'Your name is visible publicly'}
-              </Text>
-            </View>
-            <Switch
-              value={leaderboardAnonymous}
-              onValueChange={toggleAnonymous}
-              disabled={anonSaving}
-              trackColor={{ false: '#e0e0e0', true: '#c3e8d8' }}
-              thumbColor={leaderboardAnonymous ? GREEN : '#f4f4f4'}
-            />
-          </View>
         </View>
 
         {/* ── Menu ── */}
@@ -432,7 +356,7 @@ export default function ProfileScreen() {
                 <Ionicons name={item.icon} size={19} color={GREEN} />
               </View>
               <Text style={s.menuLabel}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#d0d0d0" />
+              <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
             </TouchableOpacity>
           ))}
         </View>
@@ -445,10 +369,10 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
         >
           {signingOut ? (
-            <ActivityIndicator size="small" color="#e53e3e" />
+            <ActivityIndicator size="small" color={RED} />
           ) : (
             <View style={s.menuIconDanger}>
-              <Ionicons name="log-out-outline" size={19} color="#e53e3e" />
+              <Ionicons name="log-out-outline" size={19} color={RED} />
             </View>
           )}
           <Text style={s.signOutLabel}>
@@ -464,10 +388,10 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
         >
           {deleting ? (
-            <ActivityIndicator size="small" color="#e53e3e" style={{ marginRight: 13 }} />
+            <ActivityIndicator size="small" color={RED} style={{ marginRight: 13 }} />
           ) : (
             <View style={s.menuIconDanger}>
-              <Ionicons name="trash-outline" size={19} color="#e53e3e" />
+              <Ionicons name="trash-outline" size={19} color={RED} />
             </View>
           )}
           <Text style={s.signOutLabel}>
@@ -493,7 +417,7 @@ export default function ProfileScreen() {
             <View style={m.sheet}>
               <View style={m.handle} />
               <TouchableOpacity style={m.closeBtn} onPress={() => setEditVisible(false)}>
-                <Ionicons name="close" size={18} color="#999" />
+                <Ionicons name="close" size={18} color={TEXT_MUTED} />
               </TouchableOpacity>
 
               <Text style={m.title}>Edit Profile</Text>
@@ -522,7 +446,7 @@ export default function ProfileScreen() {
                 value={newName}
                 onChangeText={setNewName}
                 placeholder="Your name"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={TEXT_MUTED}
                 autoCapitalize="words"
                 returnKeyType="next"
               />
@@ -534,7 +458,7 @@ export default function ProfileScreen() {
                 value={newEmail}
                 onChangeText={setNewEmail}
                 placeholder="your@email.com"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={TEXT_MUTED}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 returnKeyType="done"
@@ -544,7 +468,7 @@ export default function ProfileScreen() {
 
               {saveError ? (
                 <View style={m.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={14} color="#e53e3e" />
+                  <Ionicons name="alert-circle-outline" size={14} color={RED} />
                   <Text style={m.errorText}>{saveError}</Text>
                 </View>
               ) : null}
@@ -567,12 +491,12 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   header: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
-  title: { fontSize: 22, fontWeight: '800', color: '#111' },
+  title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
 
   profileCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -596,35 +520,14 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: '#fff',
   },
   userInfo: { flex: 1, gap: 2 },
-  displayName: { fontSize: 16, fontWeight: '700', color: '#111' },
-  email: { fontSize: 13, color: '#777' },
+  displayName: { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
+  email: { fontSize: 13, color: TEXT_MUTED },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   verifiedText: { fontSize: 12, fontWeight: '500' },
   editBtn: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
   },
-
-  statsCard: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 12,
-    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 }, elevation: 3,
-  },
-  statsRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  statsPoints: { fontSize: 15, fontWeight: '700', color: '#111' },
-  statsRank:   { fontSize: 13, color: '#888' },
-  statsDivider: { height: 1, backgroundColor: '#f0f0f0', marginTop: 12, marginBottom: 10 },
-  badgeRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  badgeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20,
-  },
-  badgeEmoji: { fontSize: 12 },
-  badgeLabel: { fontSize: 11, fontWeight: '600' },
-  anonRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  anonLabel:  { fontSize: 14, fontWeight: '600', color: '#111', marginBottom: 2 },
-  anonSub:    { fontSize: 11, color: '#999' },
 
   menuCard: {
     backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 16,
@@ -635,12 +538,12 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 15,
   },
-  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
   menuIcon: {
     width: 34, height: 34, borderRadius: 9,
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center', marginRight: 13,
   },
-  menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: '#111' },
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: TEXT_DARK },
 
   signOutCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -653,7 +556,7 @@ const s = StyleSheet.create({
     width: 34, height: 34, borderRadius: 9,
     backgroundColor: '#fff5f5', alignItems: 'center', justifyContent: 'center', marginRight: 13,
   },
-  signOutLabel: { fontSize: 15, fontWeight: '600', color: '#e53e3e' },
+  signOutLabel: { fontSize: 15, fontWeight: '600', color: RED },
   deleteCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10, borderRadius: 16,
@@ -661,16 +564,16 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  version: { textAlign: 'center', fontSize: 12, color: '#ccc', marginTop: 24, marginBottom: 32 },
+  version: { textAlign: 'center', fontSize: 12, color: TEXT_MUTED, marginTop: 24, marginBottom: 32 },
 
   // guest state
   guestWrap: {
     alignItems: 'center', paddingTop: 52, paddingHorizontal: 28, paddingBottom: 40,
   },
-  guestTitle: { fontSize: 20, fontWeight: '800', color: '#111', marginTop: 20, marginBottom: 8, textAlign: 'center' },
-  guestSub:   { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
+  guestTitle: { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginTop: 20, marginBottom: 8, textAlign: 'center' },
+  guestSub:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 28 },
   guestSignInBtn: {
-    width: '100%', backgroundColor: GREEN, borderRadius: 14,
+    width: '100%', backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center', marginBottom: 12,
   },
   guestSignInText: { color: '#fff', fontSize: 16, fontWeight: '700' },
@@ -689,9 +592,9 @@ const s = StyleSheet.create({
   guestLink: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 15,
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
-  guestLinkText: { flex: 1, fontSize: 15, fontWeight: '500', color: '#111' },
+  guestLinkText: { flex: 1, fontSize: 15, fontWeight: '500', color: TEXT_DARK },
 });
 
 const m = StyleSheet.create({
@@ -703,14 +606,14 @@ const m = StyleSheet.create({
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 16,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 16,
   },
   closeBtn: {
     position: 'absolute', top: 14, right: 20,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 24 },
+  title: { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginBottom: 24 },
 
   avatarPicker: {
     width: 96, height: 96, borderRadius: 48,
@@ -730,21 +633,21 @@ const m = StyleSheet.create({
   },
   avatarPickerLabel: { fontSize: 11, color: '#fff', fontWeight: '600' },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 8 },
+  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 8 },
   input: {
-    borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
     paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 15, color: '#111', backgroundColor: '#fafafa',
+    fontSize: 15, color: TEXT_DARK, backgroundColor: CREAM,
   },
-  emailNote: { fontSize: 11, color: '#bbb', marginTop: 6, marginBottom: 4 },
+  emailNote: { fontSize: 11, color: TEXT_MUTED, marginTop: 6, marginBottom: 4 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#fff5f5', borderRadius: 10, padding: 10,
     marginTop: 10, borderWidth: 1, borderColor: '#fca5a5',
   },
-  errorText: { flex: 1, fontSize: 13, color: '#e53e3e' },
+  errorText: { flex: 1, fontSize: 13, color: RED },
   saveBtn: {
-    marginTop: 24, backgroundColor: GREEN, borderRadius: 14,
+    marginTop: 24, backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.6 },

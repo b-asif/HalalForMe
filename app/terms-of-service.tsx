@@ -2,8 +2,14 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 export const TOS_SECTIONS = [
   {
@@ -12,7 +18,7 @@ export const TOS_SECTIONS = [
   },
   {
     title: '2. Description of Service',
-    body: 'HalalForMe is a community-driven mobile application designed to help Muslim consumers:\n• Discover halal-certified and halal-friendly restaurants\n• Verify halal ingredient compliance in packaged food products via barcode scanning\n• Submit and review restaurant listings for the benefit of the community\n• Earn points, unlock badges, and appear on the Community leaderboard by contributing approved content\n\nRestaurant listings are submitted by users and are subject to review by our admin team. HalalForMe does not independently verify or certify the halal status of any establishment or product.',
+    body: 'HalalForMe is a mobile application designed to help Muslim consumers:\n• View accurate, location-based prayer times and Qibla direction, with reminder notifications\n• Discover halal-certified and halal-friendly restaurants\n• Verify halal ingredient compliance in packaged food products via barcode scanning\n• Submit and review restaurant listings for the benefit of the community\n• Earn points, unlock badges, and appear on the Community leaderboard by contributing approved content\n\nRestaurant listings are submitted by users and are subject to review by our admin team. HalalForMe does not independently verify or certify the halal status of any establishment or product.',
   },
   {
     title: '3. Eligibility & Age Requirement',
@@ -35,8 +41,8 @@ export const TOS_SECTIONS = [
     body: 'If you believe that content on HalalForMe infringes your copyright or intellectual property rights, please notify us promptly at:\n\nEmail: infor.halalforme@gmail.com\nSubject line: "Copyright Complaint"\n\nYour notice must include:\n• Your name and contact information\n• A description of the copyrighted work you claim has been infringed\n• The specific content in the App you believe is infringing (include screenshots if possible)\n• A statement that you have a good-faith belief that the use is not authorised by the copyright owner\n• A statement, under penalty of perjury, that the information in your notice is accurate and that you are the copyright owner or authorised to act on their behalf\n\nWe will review all valid complaints and aim to respond within 7 business days. We reserve the right to remove content and/or suspend the accounts of repeat infringers.',
   },
   {
-    title: '8. Halal Accuracy Disclaimer',
-    body: 'HalalForMe makes no guarantee, representation, or warranty regarding the halal status of any restaurant, product, or ingredient listed in the App.\n\nAll certification statuses, halal claims, and ingredient analyses are provided for informational purposes only. They are based on community submissions and publicly available data and have not been independently verified by HalalForMe.\n\nYou should always:\n• Verify halal status directly with the restaurant or certifying authority\n• Check the physical product label before consumption\n• Consult a qualified Islamic scholar if you have specific religious dietary concerns\n\nHalalForMe expressly disclaims all liability for any harm, illness, religious concern, or other loss arising from reliance on information within the App.',
+    title: '8. Accuracy Disclaimers',
+    body: 'HALAL STATUS\nHalalForMe makes no guarantee, representation, or warranty regarding the halal status of any restaurant, product, or ingredient listed in the App.\n\nAll certification statuses, halal claims, and ingredient analyses are provided for informational purposes only. They are based on community submissions and publicly available data and have not been independently verified by HalalForMe.\n\nYou should always:\n• Verify halal status directly with the restaurant or certifying authority\n• Check the physical product label before consumption\n• Consult a qualified Islamic scholar if you have specific religious dietary concerns\n\nPRAYER TIMES & QIBLA DIRECTION\nPrayer times and Qibla direction are calculated using your device\'s location and standard, publicly available astronomical calculation methods. These are estimates and may not exactly match the times announced by your local mosque or religious authority, particularly at high latitudes or during certain times of year.\n\nQibla compass accuracy depends on your device\'s magnetic sensor and can be affected by magnetic interference, nearby metal objects, or the need to recalibrate your device.\n\nFor matters of religious obligation, always verify prayer times and Qibla direction against your local mosque or a qualified Islamic authority.\n\nNOTIFICATION DELIVERY\nPrayer time reminders depend on your device\'s operating system, notification permissions, battery optimization settings, Focus/Do Not Disturb modes, and background app refresh settings — all of which are outside our control and may prevent a notification from being delivered on time or at all.\n\nHalalForMe does not guarantee the delivery of any notification. Do not rely solely on the App\'s notifications for time-sensitive religious obligations.\n\nHalalForMe expressly disclaims all liability for any harm, illness, missed religious obligation, or other loss arising from reliance on information or notifications within the App.',
   },
   {
     title: '9. Barcode Scanner & Ingredient Data',
@@ -103,7 +109,7 @@ export default function TermsOfServiceScreen() {
     <SafeAreaView style={s.flex}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Terms of Service</Text>
         <View style={{ width: 38 }} />
@@ -114,7 +120,7 @@ export default function TermsOfServiceScreen() {
         <View style={s.introCard}>
           <Ionicons name="reader" size={32} color={GREEN} style={{ marginBottom: 10 }} />
           <Text style={s.introTitle}>Terms of Service</Text>
-          <Text style={s.introText}>Last updated: June 2026</Text>
+          <Text style={s.introText}>Last updated: July 2026</Text>
           <Text style={[s.introText, { marginTop: 8 }]}>
             Please read these terms carefully before using HalalForMe. By using the App you agree to be bound by these Terms of Service.
           </Text>
@@ -141,15 +147,15 @@ export default function TermsOfServiceScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   content: { padding: 16, paddingBottom: 40 },
 
@@ -159,22 +165,22 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  introTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 4 },
-  introText: { fontSize: 13, color: '#666', lineHeight: 20, textAlign: 'center' },
+  introTitle: { fontSize: 18, fontWeight: '700', color: TEXT_DARK, marginBottom: 4 },
+  introText: { fontSize: 13, color: TEXT_MUTED, lineHeight: 20, textAlign: 'center' },
 
   section: {
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 8 },
-  sectionBody: { fontSize: 13, color: '#555', lineHeight: 21 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 8 },
+  sectionBody: { fontSize: 13, color: TEXT_MUTED, lineHeight: 21 },
 
   contactCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#f0faf6', borderRadius: 12, padding: 14, marginTop: 6,
     borderWidth: 1, borderColor: '#c6e8d6',
   },
-  contactText: { flex: 1, fontSize: 13, color: '#555', lineHeight: 20 },
+  contactText: { flex: 1, fontSize: 13, color: TEXT_MUTED, lineHeight: 20 },
   contactEmail: { color: GREEN, fontWeight: '600' },
 });

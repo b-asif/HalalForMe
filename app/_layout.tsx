@@ -10,6 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession } from '../lib/guestLoginIntent';
 
+// Side-effect import only — this calls TaskManager.defineTask() at module
+// load time, which MUST happen unconditionally on every app launch,
+// including background launches the OS uses to run the task itself. It
+// cannot be imported lazily from a settings screen or the background
+// refresh will silently never fire. See lib/prayer/backgroundRefresh.ts.
+import '../lib/prayer/backgroundRefresh';
+
 // Force Expo Router to always start at (tabs), never restoring a stale auth screen
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -101,7 +108,7 @@ function SplashOverlay({ show }: { show: boolean }) {
             />
           </View>
           <Text style={sp.title}>HalalForMe</Text>
-          <Text style={sp.tagline}>Find halal food near you</Text>
+          <Text style={sp.tagline}>Your daily prayer companion</Text>
         </Animated.View>
 
         <LoadingDots />

@@ -9,8 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { formatError } from '../../lib/errors';
 import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const AMBER = Brand.amber;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -33,7 +41,7 @@ export default function ResetPasswordScreen() {
     return score;
   })();
   const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength];
-  const strengthColor = ['#e5e5e5', '#e53e3e', '#f6a623', '#3b82f6', GREEN][passwordStrength];
+  const strengthColor = [HAIRLINE, RED, AMBER, '#3b82f6', GREEN][passwordStrength];
 
   const handleUpdate = async () => {
     if (password.length < 6) {
@@ -84,7 +92,7 @@ export default function ResetPasswordScreen() {
 
         {error && (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={16} color="#c0392b" />
+            <Ionicons name="alert-circle-outline" size={16} color={RED} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -95,7 +103,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.passwordInput}
             placeholder="Min. 6 characters"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={password}
             onChangeText={v => { setPassword(v); setError(null); }}
             onFocus={() => setFocused('password')}
@@ -112,7 +120,7 @@ export default function ResetPasswordScreen() {
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#aaa"
+              color={TEXT_MUTED}
             />
           </TouchableOpacity>
         </View>
@@ -126,7 +134,7 @@ export default function ResetPasswordScreen() {
                   key={i}
                   style={[
                     styles.strengthBar,
-                    { backgroundColor: i <= passwordStrength ? strengthColor : '#e5e5e5' },
+                    { backgroundColor: i <= passwordStrength ? strengthColor : HAIRLINE },
                   ]}
                 />
               ))}
@@ -143,7 +151,7 @@ export default function ResetPasswordScreen() {
           <TextInput
             style={styles.passwordInput}
             placeholder="••••••••"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={confirmPassword}
             onChangeText={v => { setConfirmPassword(v); setError(null); }}
             onFocus={() => setFocused('confirm')}
@@ -160,7 +168,7 @@ export default function ResetPasswordScreen() {
             <Ionicons
               name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#aaa"
+              color={TEXT_MUTED}
             />
           </TouchableOpacity>
         </View>
@@ -171,11 +179,11 @@ export default function ResetPasswordScreen() {
             <Ionicons
               name={password === confirmPassword ? 'checkmark-circle' : 'close-circle'}
               size={15}
-              color={password === confirmPassword ? GREEN : '#e53e3e'}
+              color={password === confirmPassword ? GREEN : RED}
             />
             <Text style={[
               styles.matchText,
-              { color: password === confirmPassword ? GREEN : '#e53e3e' },
+              { color: password === confirmPassword ? GREEN : RED },
             ]}>
               {password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}
             </Text>
@@ -198,7 +206,7 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   container: { flexGrow: 1, padding: 24, paddingTop: 64, justifyContent: 'center' },
 
   iconWrap: {
@@ -209,26 +217,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
 
-  heading:    { fontSize: 28, fontWeight: '800', color: '#111', marginBottom: 10 },
-  subheading: { fontSize: 15, color: '#777', lineHeight: 22, marginBottom: 28 },
+  heading:    { fontSize: 28, fontWeight: '800', color: TEXT_DARK, marginBottom: 10 },
+  subheading: { fontSize: 15, color: TEXT_MUTED, lineHeight: 22, marginBottom: 28 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#fdf2f2', borderWidth: 1, borderColor: '#f5c6c6',
+    backgroundColor: '#fff5f5', borderWidth: 1, borderColor: '#fca5a5',
     borderRadius: 10, padding: 12, marginBottom: 16,
   },
-  errorText: { flex: 1, fontSize: 13, color: '#c0392b', lineHeight: 18 },
+  errorText: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 7 },
+  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 7 },
 
   passwordRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
-    backgroundColor: '#fafafa', marginBottom: 10,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
+    backgroundColor: CREAM, marginBottom: 10,
   },
   inputFocused: { borderColor: GREEN, backgroundColor: '#fff' },
   passwordInput: {
-    flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: '#111',
+    flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: TEXT_DARK,
   },
   eyeBtn: { paddingHorizontal: 14 },
 
@@ -245,7 +253,7 @@ const styles = StyleSheet.create({
   matchText: { fontSize: 13, fontWeight: '500' },
 
   button: {
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center', marginTop: 4,
   },
   buttonDisabled: { opacity: 0.7 },

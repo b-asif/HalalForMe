@@ -10,8 +10,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { getGuestLoginIntent } from '../../lib/guestLoginIntent';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -88,7 +95,7 @@ export default function LoginScreen() {
         onPress={() => router.back()}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name="arrow-back" size={20} color="#555" />
+        <Ionicons name="arrow-back" size={20} color={TEXT_MUTED} />
       </TouchableOpacity>
     )}
     <KeyboardAvoidingView
@@ -108,7 +115,7 @@ export default function LoginScreen() {
             resizeMode="cover"
           />
           <Text style={styles.appName}>HalalForMe</Text>
-          <Text style={styles.tagline}>Find halal food near you</Text>
+          <Text style={styles.tagline}>Your daily prayer companion</Text>
         </View>
 
         {/* Form card */}
@@ -118,7 +125,7 @@ export default function LoginScreen() {
           {/* Inline error banner */}
           {error && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={16} color="#c0392b" />
+              <Ionicons name="alert-circle-outline" size={16} color={RED} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
@@ -128,7 +135,7 @@ export default function LoginScreen() {
           <TextInput
             style={[styles.input, focused === 'email' && styles.inputFocused]}
             placeholder="you@example.com"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={email}
             onChangeText={(v) => { setEmail(v); setError(null); }}
             onFocus={() => setFocused('email')}
@@ -150,7 +157,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.passwordInput}
               placeholder="••••••••"
-              placeholderTextColor="#bbb"
+              placeholderTextColor={TEXT_MUTED}
               value={password}
               onChangeText={(v) => { setPassword(v); setError(null); }}
               onFocus={() => setFocused('password')}
@@ -168,7 +175,7 @@ export default function LoginScreen() {
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#aaa"
+                color={TEXT_MUTED}
               />
             </TouchableOpacity>
           </View>
@@ -203,58 +210,58 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
 
   logoSection: { alignItems: 'center', marginBottom: 24 },
   logoImage: { width: 90, height: 90, marginBottom: 10, borderRadius: 20, overflow: 'hidden' },
-  appName: { fontSize: 28, fontWeight: '800', color: '#245737', letterSpacing: -0.5 },
-  tagline: { fontSize: 14, color: '#999', marginTop: 4 },
+  appName: { fontSize: 28, fontWeight: '800', color: DEEP_GREEN, letterSpacing: -0.5 },
+  tagline: { fontSize: 14, color: TEXT_MUTED, marginTop: 4 },
 
   card: {
     backgroundColor: '#fff', borderRadius: 20, padding: 24,
     shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
-  heading: { fontSize: 22, fontWeight: '700', color: '#111', marginBottom: 20 },
+  heading: { fontSize: 22, fontWeight: '700', color: TEXT_DARK, marginBottom: 20 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#fdf2f2', borderWidth: 1, borderColor: '#f5c6c6',
+    backgroundColor: '#fff5f5', borderWidth: 1, borderColor: '#fca5a5',
     borderRadius: 10, padding: 12, marginBottom: 16,
   },
-  errorText: { flex: 1, fontSize: 13, color: '#c0392b', lineHeight: 18 },
+  errorText: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
 
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
-  label: { fontSize: 13, fontWeight: '600', color: '#555' },
-  forgotLink: { fontSize: 13, color: '#245737', fontWeight: '600' },
+  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
+  forgotLink: { fontSize: 13, color: DEEP_GREEN, fontWeight: '600' },
   input: {
-    borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
     paddingVertical: 13, paddingHorizontal: 14,
-    fontSize: 15, color: '#111', marginBottom: 16, backgroundColor: '#fafafa',
+    fontSize: 15, color: TEXT_DARK, marginBottom: 16, backgroundColor: CREAM,
   },
   inputFocused: { borderColor: GREEN, backgroundColor: '#fff' },
 
   passwordRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
-    backgroundColor: '#fafafa', marginBottom: 20,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
+    backgroundColor: CREAM, marginBottom: 20,
   },
   passwordInput: {
-    flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: '#111',
+    flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: TEXT_DARK,
   },
   eyeBtn: { paddingHorizontal: 14 },
 
   button: {
-    backgroundColor: '#245737', borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center', marginBottom: 16,
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   switchRow: { alignItems: 'center', paddingVertical: 4 },
-  switchText: { fontSize: 14, color: '#888' },
-  switchLink: { color: '#245737', fontWeight: '700' },
+  switchText: { fontSize: 14, color: TEXT_MUTED },
+  switchLink: { color: DEEP_GREEN, fontWeight: '700' },
 
   backBtn: {
     position: 'absolute', left: 16, zIndex: 10,

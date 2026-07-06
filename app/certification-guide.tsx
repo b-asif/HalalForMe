@@ -3,10 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '../lib/theme';
 
-const GREEN  = '#245737';
-const AMBER  = '#b7791f';
-const GREY   = '#888';
+const CREAM = Brand.cream;
+const GREEN  = Brand.green;
+const AMBER  = Brand.amber;
+const GREY   = Brand.textMuted;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 
 // ── Certifier data ────────────────────────────────────────────────────────────
 
@@ -89,7 +94,7 @@ const CERTIFIERS = [
 
 function Badge({ tier, label }: { tier: 'certified' | 'self' | 'uncertified'; label: string }) {
   const color = tier === 'certified' ? GREEN : tier === 'self' ? AMBER : GREY;
-  const bg    = tier === 'certified' ? '#e6f4ec' : tier === 'self' ? '#fefce8' : '#f5f5f5';
+  const bg    = tier === 'certified' ? '#e6f4ec' : tier === 'self' ? '#fefce8' : CREAM;
   const icon  = tier === 'certified' ? 'checkmark-circle' : 'help-circle-outline';
   return (
     <View style={[s.badge, { backgroundColor: bg }]}>
@@ -114,7 +119,7 @@ function CertifierItem({ item }: { item: typeof CERTIFIERS[number] }) {
           <Badge tier={item.tier} label={item.badge} />
           <Text style={s.certName}>{item.name}</Text>
         </View>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#aaa" />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={TEXT_MUTED} />
       </View>
       {open && <Text style={s.certDesc}>{item.description}</Text>}
     </TouchableOpacity>
@@ -131,7 +136,7 @@ export default function CertificationGuideScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={22} color="#111" />
+          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Certification Guide</Text>
         <View style={{ width: 38 }} />
@@ -180,7 +185,7 @@ export default function CertificationGuideScreen() {
 
         {/* Footer note */}
         <View style={s.footerNote}>
-          <Ionicons name="information-circle-outline" size={16} color="#aaa" />
+          <Ionicons name="information-circle-outline" size={16} color={TEXT_MUTED} />
           <Text style={s.footerNoteText}>
             If you know a restaurant's certification status is incorrect, open its page and submit a review with updated information.
           </Text>
@@ -192,15 +197,15 @@ export default function CertificationGuideScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   content: { padding: 16, paddingBottom: 40 },
 
@@ -210,11 +215,11 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  introTitle: { fontSize: 18, fontWeight: '700', color: '#111', textAlign: 'center', marginBottom: 10 },
-  introText:  { fontSize: 14, color: '#666', lineHeight: 21, textAlign: 'center' },
+  introTitle: { fontSize: 18, fontWeight: '700', color: TEXT_DARK, textAlign: 'center', marginBottom: 10 },
+  introText:  { fontSize: 14, color: TEXT_MUTED, lineHeight: 21, textAlign: 'center' },
 
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: '#aaa',
+    fontSize: 11, fontWeight: '700', color: TEXT_MUTED,
     letterSpacing: 0.6, marginBottom: 10, marginLeft: 2,
   },
 
@@ -227,8 +232,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 14,
   },
-  tierDesc:    { flex: 1, fontSize: 13, color: '#666', lineHeight: 18 },
-  tierDivider: { height: 1, backgroundColor: '#f5f5f5', marginHorizontal: 16 },
+  tierDesc:    { flex: 1, fontSize: 13, color: TEXT_MUTED, lineHeight: 18 },
+  tierDivider: { height: 1, backgroundColor: HAIRLINE, marginHorizontal: 16 },
 
   certCard: {
     backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 16,
@@ -238,9 +243,9 @@ const s = StyleSheet.create({
   certItem:   { paddingHorizontal: 16, paddingVertical: 14 },
   certHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   certHeaderLeft: { flex: 1, gap: 6 },
-  certName:   { fontSize: 13, fontWeight: '600', color: '#333' },
-  certDesc:   { fontSize: 13, color: '#666', lineHeight: 20, marginTop: 10 },
-  certDivider: { height: 1, backgroundColor: '#f5f5f5', marginHorizontal: 16 },
+  certName:   { fontSize: 13, fontWeight: '600', color: TEXT_DARK },
+  certDesc:   { fontSize: 13, color: TEXT_MUTED, lineHeight: 20, marginTop: 10 },
+  certDivider: { height: 1, backgroundColor: HAIRLINE, marginHorizontal: 16 },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -254,5 +259,5 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  footerNoteText: { flex: 1, fontSize: 12, color: '#aaa', lineHeight: 18 },
+  footerNoteText: { flex: 1, fontSize: 12, color: TEXT_MUTED, lineHeight: 18 },
 });

@@ -8,8 +8,15 @@ import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { getGuestLoginIntent } from '../../lib/guestLoginIntent';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN = Brand.green;
+const RED   = Brand.red;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 const RESEND_COOLDOWN = 60;
 
 // Module-level: persists across remounts so navigate-away doesn't reset the timer.
@@ -154,7 +161,7 @@ export default function VerifyOtpScreen() {
 
         {error && (
           <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle-outline" size={16} color="#c0392b" />
+            <Ionicons name="alert-circle-outline" size={16} color={RED} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -207,7 +214,7 @@ export default function VerifyOtpScreen() {
         </View>
 
         <TouchableOpacity style={styles.backRow} onPress={() => router.back()}>
-          <Ionicons name="arrow-back-outline" size={15} color="#aaa" />
+          <Ionicons name="arrow-back-outline" size={15} color={TEXT_MUTED} />
           <Text style={styles.backText}>
             {type === 'email' ? 'Back to login' : 'Use a different email'}
           </Text>
@@ -218,7 +225,7 @@ export default function VerifyOtpScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   container: {
     flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32,
   },
@@ -231,30 +238,30 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
 
-  title: { fontSize: 26, fontWeight: '800', color: '#111', marginBottom: 10 },
-  subtitle: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 24, marginBottom: 24 },
-  emailText: { fontWeight: '700', color: '#111' },
+  title: { fontSize: 26, fontWeight: '800', color: TEXT_DARK, marginBottom: 10 },
+  subtitle: { fontSize: 15, color: TEXT_MUTED, textAlign: 'center', lineHeight: 24, marginBottom: 24 },
+  emailText: { fontWeight: '700', color: TEXT_DARK },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#fdf2f2', borderWidth: 1, borderColor: '#f5c6c6',
+    backgroundColor: '#fff5f5', borderWidth: 1, borderColor: '#fca5a5',
     borderRadius: 10, padding: 12, marginBottom: 20, alignSelf: 'stretch',
   },
-  errorText: { flex: 1, fontSize: 13, color: '#c0392b', lineHeight: 18 },
+  errorText: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
 
   otpRow: {
     flexDirection: 'row', gap: 10, marginBottom: 28,
   },
   otpBox: {
     width: 46, height: 56, borderRadius: 12,
-    borderWidth: 2, borderColor: '#e5e5e5',
-    backgroundColor: '#fff', fontSize: 22, fontWeight: '700', color: '#111',
+    borderWidth: 2, borderColor: HAIRLINE,
+    backgroundColor: '#fff', fontSize: 22, fontWeight: '700', color: TEXT_DARK,
   },
   otpBoxFilled: { borderColor: GREEN, backgroundColor: '#f0faf6' },
-  otpBoxError:  { borderColor: '#e53e3e', backgroundColor: '#fff5f5' },
+  otpBoxError:  { borderColor: RED, backgroundColor: '#fff5f5' },
 
   button: {
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignSelf: 'stretch',
     alignItems: 'center', marginBottom: 20,
   },
@@ -262,12 +269,12 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   resendRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  resendLabel: { fontSize: 14, color: '#888' },
-  cooldownText: { fontSize: 14, color: '#bbb', fontWeight: '600' },
+  resendLabel: { fontSize: 14, color: TEXT_MUTED },
+  cooldownText: { fontSize: 14, color: TEXT_MUTED, fontWeight: '600' },
   resendLink: { fontSize: 14, color: GREEN, fontWeight: '700' },
 
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
   },
-  backText: { fontSize: 13, color: '#aaa' },
+  backText: { fontSize: 13, color: TEXT_MUTED },
 });

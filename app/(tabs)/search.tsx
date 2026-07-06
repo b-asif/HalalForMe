@@ -13,8 +13,15 @@ import { formatError } from '../../lib/errors';
 import { useAuth } from '../../contexts/AuthContext';
 import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
 import RestaurantCard, { Restaurant } from '../../components/RestaurantCard';
+import { Brand } from '../../lib/theme';
 
-const GREEN       = '#245737';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN       = Brand.green;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const RED        = Brand.red;
 const SCREEN_H    = Dimensions.get('window').height;
 const DISTANCE_OPTIONS = [5, 10, 25, 50, 100]; // miles
 
@@ -115,14 +122,14 @@ function todayHoursStr(hours: DbRow['opening_hours']): string | null {
 
 // ─── toCard ───────────────────────────────────────────────────────────────────
 
-function toCard(r: DbRow): Restaurant {
+function toCard(r: DbRow, distanceMi?: number): Restaurant {
   return {
     id: r.id,
     name: r.name,
     cuisine: r.cuisine_type ?? '',
     rating: r.avg_rating ?? 0,
     reviewCount: r.reviews?.[0]?.count ?? 0,
-    distance: '',
+    distance: distanceMi != null ? `${distanceMi < 10 ? distanceMi.toFixed(1) : Math.round(distanceMi)} mi` : '',
     isOpen: isOpenNow(r.opening_hours),
     primaryCertifier: r.primary_certifier ?? 'unknown',
     address: r.address,
@@ -219,24 +226,47 @@ export default function SearchScreen() {
 
     const baseCols = 'id, name, address, lat, lng, cuisine_type, primary_certifier, certifiers, is_verified, image_url, categorized_photos, opening_hours';
 
-    let { data, error: err } = await supabase
+    const { data, error: err } = await supabase
       .from('restaurants')
-      .select(`${baseCols}, avg_rating, reviews(count)`)
+      .select(baseCols)
       .order('name')
       .limit(200);
 
-    if (err?.message?.includes('avg_rating')) {
-      const fallback = await supabase
-        .from('restaurants')
-        .select(`${baseCols}, reviews(count)`)
-        .order('name')
-        .limit(200);
-      data  = fallback.data as typeof data;
-      err   = fallback.error;
+    if (err) {
+      setError(formatError(err));
+      setLoading(false);
+      return;
     }
 
-    if (err) setError(formatError(err));
-    else setRows((data as DbRow[]) ?? []);
+    const restaurantRows = (data as DbRow[]) ?? [];
+
+    // Ratings are computed here from the `reviews` table directly (same
+    // source the restaurant detail screen uses) rather than trusting a
+    // restaurants.avg_rating column or a reviews(count) embed, since neither
+    // is guaranteed to exist / be embeddable depending on the schema.
+    const ids = restaurantRows.map(r => r.id);
+    if (ids.length > 0) {
+      const { data: reviewRows } = await supabase
+        .from('reviews')
+        .select('restaurant_id, rating')
+        .eq('status', 'approved')
+        .in('restaurant_id', ids);
+
+      const stats = new Map<string, { sum: number; count: number }>();
+      for (const rv of (reviewRows as { restaurant_id: string; rating: number }[]) ?? []) {
+        const entry = stats.get(rv.restaurant_id) ?? { sum: 0, count: 0 };
+        entry.sum += rv.rating;
+        entry.count += 1;
+        stats.set(rv.restaurant_id, entry);
+      }
+      for (const r of restaurantRows) {
+        const entry = stats.get(r.id);
+        r.avg_rating = entry ? entry.sum / entry.count : null;
+        r.reviews = [{ count: entry?.count ?? 0 }];
+      }
+    }
+
+    setRows(restaurantRows);
     setLoading(false);
   }, []);
 
@@ -297,7 +327,13 @@ export default function SearchScreen() {
       });
     }
 
-    return filtered.map(toCard);
+    const hasLocationSearch = searchLat !== null && searchLng !== null;
+    return filtered.map(r => {
+      const distanceMi = hasLocationSearch && r.lat != null && r.lng != null
+        ? haversineMi(searchLat!, searchLng!, r.lat, r.lng)
+        : undefined;
+      return toCard(r, distanceMi);
+    });
   }, [rows, query, searchLat, searchLng, radiusMi, filterOpenNow, filterTopRated, filterThirdParty, filterCuisines, filterCerts]);
 
   const openFilterSheet = useCallback(() => {
@@ -361,16 +397,16 @@ export default function SearchScreen() {
       <SafeAreaView style={st.safeArea} edges={['top']}>
 
         <View style={st.header}>
-          <Text style={st.title}>Search</Text>
+          <Text style={st.title}>Explore</Text>
         </View>
 
         {/* Search bar */}
         <View style={st.searchRow}>
-          <Ionicons name="search-outline" size={18} color="#aaa" style={st.searchIcon} />
+          <Ionicons name="search-outline" size={18} color={TEXT_MUTED} style={st.searchIcon} />
           <TextInput
             style={st.input}
             placeholder="Search restaurants, cuisines..."
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -378,18 +414,18 @@ export default function SearchScreen() {
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')} style={st.clearBtn}>
-              <Ionicons name="close-circle" size={18} color="#ccc" />
+              <Ionicons name="close-circle" size={18} color={TEXT_MUTED} />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Location search */}
         <View style={st.locationRow}>
-          <Ionicons name="location-outline" size={18} color="#aaa" style={st.searchIcon} />
+          <Ionicons name="location-outline" size={18} color={TEXT_MUTED} style={st.searchIcon} />
           <TextInput
             style={st.input}
             placeholder="City or zip code..."
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={locationInput}
             onChangeText={setLocationInput}
             autoCapitalize="none"
@@ -440,7 +476,7 @@ export default function SearchScreen() {
             <Ionicons
               name={filterThirdParty ? 'checkmark-circle' : 'ellipse-outline'}
               size={22}
-              color={filterThirdParty ? '#fff' : '#ccc'}
+              color={filterThirdParty ? '#fff' : TEXT_MUTED}
             />
           </View>
         </TouchableOpacity>
@@ -473,7 +509,7 @@ export default function SearchScreen() {
             <Ionicons
               name="options-outline"
               size={14}
-              color={activeFilterCount > 0 ? '#fff' : '#555'}
+              color={activeFilterCount > 0 ? '#fff' : TEXT_MUTED}
             />
             <Text style={[st.filterText, activeFilterCount > 0 && st.filterTextActive]}>
               Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
@@ -489,7 +525,7 @@ export default function SearchScreen() {
           </View>
         ) : error ? (
           <View style={st.centered}>
-            <Ionicons name="alert-circle-outline" size={36} color="#ddd" />
+            <Ionicons name="alert-circle-outline" size={36} color={TEXT_MUTED} />
             <Text style={st.errorText}>{error}</Text>
             <TouchableOpacity style={st.retryBtn} onPress={fetchRestaurants}>
               <Text style={st.retryText}>Try again</Text>
@@ -497,7 +533,7 @@ export default function SearchScreen() {
           </View>
         ) : results.length === 0 ? (
           <View style={st.empty}>
-            <Ionicons name="search-outline" size={48} color="#ddd" />
+            <Ionicons name="search-outline" size={48} color={TEXT_MUTED} />
             <Text style={st.emptyTitle}>No results</Text>
             <Text style={st.emptyText}>
               {activeFilterCount > 0
@@ -706,7 +742,7 @@ function QuickChip({ label, icon, active, onPress }: {
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Ionicons name={icon as any} size={14} color={active ? '#fff' : '#555'} />
+      <Ionicons name={icon as any} size={14} color={active ? '#fff' : TEXT_MUTED} />
       <Text style={[st.filterText, active && st.filterTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -724,7 +760,7 @@ function FilterToggle({ label, icon, active, onPress }: {
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Ionicons name={icon as any} size={16} color={active ? '#fff' : '#555'} />
+      <Ionicons name={icon as any} size={16} color={active ? '#fff' : TEXT_MUTED} />
       <Text style={[fs.toggleText, active && fs.toggleTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -733,30 +769,30 @@ function FilterToggle({ label, icon, active, onPress }: {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const st = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: '#f7f7f7' },
+  root:    { flex: 1, backgroundColor: CREAM },
   safeArea: { flex: 1 },
 
   header: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
-  title: { fontSize: 22, fontWeight: '800', color: '#111' },
+  title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, marginBottom: 8,
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#ebebeb', paddingHorizontal: 12,
+    borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE, paddingHorizontal: 12,
   },
   searchIcon: { marginRight: 8 },
-  input: { flex: 1, paddingVertical: 13, fontSize: 15, color: '#1a1a1a' },
+  input: { flex: 1, paddingVertical: 13, fontSize: 15, color: TEXT_DARK },
   clearBtn: { padding: 4 },
 
   locationRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#ebebeb', paddingHorizontal: 12,
+    borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE, paddingHorizontal: 12,
   },
-  geoError:      { fontSize: 12, color: '#c0392b', marginHorizontal: 20, marginBottom: 4 },
+  geoError:      { fontSize: 12, color: RED, marginHorizontal: 20, marginBottom: 4 },
   locationActive: { fontSize: 12, color: GREEN, marginHorizontal: 20, marginBottom: 4, fontWeight: '600' },
 
   filtersWrapper: { paddingTop: 8, paddingBottom: 6 },
@@ -766,14 +802,14 @@ const st = StyleSheet.create({
   filterChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e0e0e0',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
   },
   filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  filterText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  filterText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
   filterTextActive: { color: '#fff' },
 
   list: { paddingTop: 8, paddingBottom: 100 },
-  count: { fontSize: 13, color: '#999', paddingHorizontal: 16, marginBottom: 8, fontWeight: '500' },
+  count: { fontSize: 13, color: TEXT_MUTED, paddingHorizontal: 16, marginBottom: 8, fontWeight: '500' },
 
   communityBanner: {
     flexDirection: 'row', alignItems: 'center',
@@ -785,18 +821,18 @@ const st = StyleSheet.create({
   },
   communityBannerLeft: { flex: 1, marginRight: 12 },
   communityBannerTitle: { fontSize: 14, fontWeight: '700', color: GREEN, marginBottom: 3 },
-  communityBannerSub:   { fontSize: 12, color: '#888', lineHeight: 17 },
+  communityBannerSub:   { fontSize: 12, color: TEXT_MUTED, lineHeight: 17 },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 },
-  errorText: { fontSize: 13, color: '#888', textAlign: 'center' },
-  retryBtn: { backgroundColor: GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+  errorText: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
+  retryBtn: { backgroundColor: DEEP_GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
   retryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#ccc' },
-  emptyText: { fontSize: 14, color: '#bbb', textAlign: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: TEXT_MUTED },
+  emptyText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
   clearFiltersBtn: {
-    marginTop: 8, backgroundColor: GREEN,
+    marginTop: 8, backgroundColor: DEEP_GREEN,
     paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10,
   },
   clearFiltersText: { color: '#fff', fontSize: 13, fontWeight: '700' },
@@ -805,7 +841,7 @@ const st = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 10, marginBottom: 4,
     backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, borderWidth: 1.5, borderColor: '#e0e0e0',
+    padding: 14, borderWidth: 1.5, borderColor: HAIRLINE,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
@@ -819,9 +855,9 @@ const st = StyleSheet.create({
   },
   verifiedToggleIconActive: { backgroundColor: 'rgba(255,255,255,0.2)' },
   verifiedToggleBody: { flex: 1 },
-  verifiedToggleTitle: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 1 },
+  verifiedToggleTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 1 },
   verifiedToggleTitleActive: { color: '#fff' },
-  verifiedToggleSub: { fontSize: 12, color: '#888', lineHeight: 16 },
+  verifiedToggleSub: { fontSize: 12, color: TEXT_MUTED, lineHeight: 16 },
   verifiedToggleSubActive: { color: 'rgba(255,255,255,0.8)' },
   verifiedTogglePill: { padding: 2 },
   verifiedTogglePillActive: {},
@@ -829,7 +865,7 @@ const st = StyleSheet.create({
   fab: {
     position: 'absolute', right: 20,
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: GREEN,
+    backgroundColor: DEEP_GREEN,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 }, elevation: 6,
@@ -846,12 +882,12 @@ const st = StyleSheet.create({
   },
   sheetHandle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 14,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 14,
   },
   sheetClose: {
     position: 'absolute', top: 14, right: 16,
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
   sheetRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
   sheetThumb: {
@@ -860,16 +896,16 @@ const st = StyleSheet.create({
   },
   sheetInfo: { flex: 1 },
   sheetNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  sheetName:    { flex: 1, fontSize: 16, fontWeight: '700', color: '#111' },
+  sheetName:    { flex: 1, fontSize: 16, fontWeight: '700', color: TEXT_DARK },
   verifiedDot: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
   },
-  sheetCuisine:  { fontSize: 13, color: '#777', marginBottom: 3 },
-  sheetAddress:  { fontSize: 12, color: '#bbb', marginBottom: 6 },
+  sheetCuisine:  { fontSize: 13, color: TEXT_MUTED, marginBottom: 3 },
+  sheetAddress:  { fontSize: 12, color: TEXT_MUTED, marginBottom: 6 },
   sheetCertRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
   sheetHoursRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sheetHoursText: { fontSize: 12, color: '#aaa' },
+  sheetHoursText: { fontSize: 12, color: TEXT_MUTED },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -888,7 +924,7 @@ const st = StyleSheet.create({
 const fs = StyleSheet.create({
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50,
-    backgroundColor: '#fff',
+    backgroundColor: CREAM,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 20, paddingTop: 0,
     maxHeight: '85%',
@@ -900,17 +936,17 @@ const fs = StyleSheet.create({
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: HAIRLINE,
   },
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 20,
   },
-  title:    { fontSize: 20, fontWeight: '800', color: '#111' },
-  clearAll: { fontSize: 14, color: GREEN, fontWeight: '600' },
+  title:    { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
+  clearAll: { fontSize: 14, color: DEEP_GREEN, fontWeight: '600' },
 
   sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: '#aaa',
+    fontSize: 12, fontWeight: '700', color: TEXT_MUTED,
     textTransform: 'uppercase', letterSpacing: 0.5,
     marginBottom: 10, marginTop: 4,
   },
@@ -919,23 +955,23 @@ const fs = StyleSheet.create({
   toggle: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
-    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e8e8e8',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
   },
   toggleActive: { backgroundColor: GREEN, borderColor: GREEN },
-  toggleText: { fontSize: 14, fontWeight: '600', color: '#555' },
+  toggleText: { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   toggleTextActive: { color: '#fff' },
 
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   optionChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e8e8e8',
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
   },
   optionChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  optionChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  optionChipText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
   optionChipTextActive: { color: '#fff' },
 
   applyBtn: {
-    marginTop: 8, backgroundColor: GREEN,
+    marginTop: 8, backgroundColor: DEEP_GREEN,
     borderRadius: 14, paddingVertical: 15,
     alignItems: 'center',
   },

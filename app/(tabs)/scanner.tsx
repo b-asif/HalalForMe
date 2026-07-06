@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { lookupENumber, HalalStatus } from '../../lib/eNumbers';
 import { fetchWithTimeout, formatError } from '../../lib/errors';
+import { Brand } from '../../lib/theme';
 
 // ─── scan history ─────────────────────────────────────────────────────────────
 
@@ -46,12 +47,42 @@ async function loadScanHistory(): Promise<ScanHistoryEntry[]> {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const GREEN  = '#245737';
-const RED    = '#e53e3e';
-const AMBER  = '#d97706';
+const CREAM      = Brand.cream;
+const DEEP_GREEN = Brand.deepGreen;
+const GREEN  = Brand.green;
+const RED    = Brand.red;
+const AMBER  = Brand.amber;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
 const CORNER = 24;
 const CORNER_W = 3;
 const PLACEHOLDER_BLURHASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4';
+const FRAME_TAN = '#EDE4D2'; // soft tan backdrop behind framed product photos
+
+// Rounded viewfinder-style corner brackets — shared visual motif across the
+// idle hero, live camera overlay, and result product photo.
+function ScanCorners({ color, size = CORNER, thickness = CORNER_W }: {
+  color: string; size?: number; thickness?: number;
+}) {
+  const base = { borderColor: color, width: size, height: size, borderWidth: thickness };
+  return (
+    <>
+      <View style={[frame.corner, frame.tl, base]} />
+      <View style={[frame.corner, frame.tr, base]} />
+      <View style={[frame.corner, frame.bl, base]} />
+      <View style={[frame.corner, frame.br, base]} />
+    </>
+  );
+}
+
+const frame = StyleSheet.create({
+  corner: { position: 'absolute' },
+  tl: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 10 },
+  tr: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 10 },
+  bl: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 10 },
+  br: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 10 },
+});
 
 // ─── ingredient rules ─────────────────────────────────────────────────────────
 //
@@ -417,18 +448,20 @@ function VerdictBanner({ verdict, certifiedHalal, hasPorkAllergen, nonEnglishTex
   communityVerified: boolean;
 }) {
   const cfg = {
-    halal:   { bg: GREEN,  icon: 'checkmark-circle',  heading: 'HALAL',   sub: 'No prohibited ingredients detected' },
-    haram:   { bg: RED,    icon: 'close-circle',       heading: 'HARAM',   sub: 'Contains prohibited ingredients' },
-    unclear: { bg: AMBER,  icon: 'help-circle',        heading: 'UNCLEAR', sub: 'Some ingredients need verification' },
-    no_data: { bg: '#999', icon: 'information-circle', heading: 'NO DATA', sub: nonEnglishText ? 'Ingredient list is not in English — verify manually' : 'No ingredient information found' },
+    halal:   { color: GREEN,      icon: 'checkmark-circle',    heading: 'Halal Certified',  sub: 'No prohibited ingredients detected' },
+    haram:   { color: RED,        icon: 'close-circle',        heading: 'Contains Haram',   sub: 'Prohibited ingredients detected' },
+    unclear: { color: AMBER,      icon: 'help-circle',         heading: 'Needs Verification', sub: 'Some ingredients need verification' },
+    no_data: { color: TEXT_MUTED, icon: 'information-circle',  heading: 'No Data Found',    sub: nonEnglishText ? 'Ingredient list is not in English — verify manually' : 'No ingredient information found' },
   }[verdict];
 
   const showBadges = certifiedHalal || hasPorkAllergen || isVeganOrVegetarian || communityVerified;
 
   return (
     <View style={vb.outer}>
-      <View style={[vb.wrap, { backgroundColor: cfg.bg }]}>
-        <Ionicons name={cfg.icon as any} size={40} color="#fff" />
+      <View style={vb.wrap}>
+        <View style={[vb.iconBadge, { backgroundColor: cfg.color }]}>
+          <Ionicons name={cfg.icon as any} size={24} color="#fff" />
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={vb.heading}>{cfg.heading}</Text>
           <Text style={vb.sub}>{cfg.sub}</Text>
@@ -472,13 +505,17 @@ const vb = StyleSheet.create({
   outer: { marginHorizontal: 16, marginBottom: 12 },
   wrap: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderRadius: 18, padding: 18,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 }, elevation: 4,
+    backgroundColor: '#fff', borderRadius: 18, padding: 16,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  heading: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  sub:     { fontSize: 13, color: 'rgba(255,255,255,0.88)', marginTop: 2 },
-  badges:  { gap: 6, marginTop: 8 },
+  iconBadge: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heading: { fontSize: 17, fontWeight: '800', color: TEXT_DARK },
+  sub:     { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
+  badges:  { gap: 6, marginTop: 10 },
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
@@ -517,8 +554,8 @@ function IngredientItem({ text, flag }: { text: string; flag?: FlaggedItem }) {
 
 const ing = StyleSheet.create({
   row:        { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 5, paddingHorizontal: 4 },
-  dot:        { width: 5, height: 5, borderRadius: 3, backgroundColor: '#d0d0d0', marginTop: 7 },
-  normalText: { flex: 1, fontSize: 14, color: '#555', lineHeight: 20 },
+  dot:        { width: 5, height: 5, borderRadius: 3, backgroundColor: TEXT_MUTED, marginTop: 7 },
+  normalText: { flex: 1, fontSize: 14, color: TEXT_MUTED, lineHeight: 20 },
   flagRow: {
     borderLeftWidth: 3, borderRadius: 10,
     padding: 10, marginBottom: 6,
@@ -581,7 +618,7 @@ function ReportModal({ visible, productName, barcode, verdict, onClose }: {
         <View style={[rm.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={rm.handle} />
           <TouchableOpacity style={rm.closeBtn} onPress={handleClose}>
-            <Ionicons name="close" size={18} color="#999" />
+            <Ionicons name="close" size={18} color={TEXT_MUTED} />
           </TouchableOpacity>
 
           {submitted ? (
@@ -628,43 +665,43 @@ function ReportModal({ visible, productName, barcode, verdict, onClose }: {
 const rm = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: CREAM, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingHorizontal: 24, paddingTop: 12,
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 16,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 16,
   },
   closeBtn: {
     position: 'absolute', top: 14, right: 20,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 4 },
-  sub:   { fontSize: 13, color: '#999', marginBottom: 20 },
+  title: { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginBottom: 4 },
+  sub:   { fontSize: 13, color: TEXT_MUTED, marginBottom: 20 },
   option: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 14, borderRadius: 12, borderWidth: 1.5,
-    borderColor: '#ebebeb', marginBottom: 8, backgroundColor: '#fafafa',
+    borderColor: HAIRLINE, marginBottom: 8, backgroundColor: CREAM,
   },
   optionSelected: { borderColor: GREEN, backgroundColor: '#f0faf6' },
   radio: {
     width: 20, height: 20, borderRadius: 10, borderWidth: 2,
-    borderColor: '#ccc', alignItems: 'center', justifyContent: 'center',
+    borderColor: TEXT_MUTED, alignItems: 'center', justifyContent: 'center',
   },
   radioSelected: { borderColor: GREEN },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: GREEN },
-  optionText: { flex: 1, fontSize: 14, color: '#555' },
+  optionText: { flex: 1, fontSize: 14, color: TEXT_MUTED },
   optionTextSelected: { color: GREEN, fontWeight: '600' },
   submitBtn: {
-    marginTop: 8, backgroundColor: GREEN, borderRadius: 14,
+    marginTop: 8, backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.4 },
   submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   thanks: { alignItems: 'center', paddingVertical: 32, gap: 10 },
-  thanksTitle: { fontSize: 22, fontWeight: '800', color: '#111' },
-  thanksSub:   { fontSize: 14, color: '#777', textAlign: 'center', lineHeight: 20 },
+  thanksTitle: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
+  thanksSub:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
 });
 
 // ─── screen ───────────────────────────────────────────────────────────────────
@@ -754,7 +791,7 @@ export default function ScannerScreen() {
   if (screenState === 'error') {
     return (
       <SafeAreaView style={s.center} edges={['top', 'left', 'right']}>
-        <Ionicons name="wifi-outline" size={52} color="#ddd" />
+        <Ionicons name="wifi-outline" size={52} color={TEXT_MUTED} />
         <Text style={s.errTitle}>Lookup Failed</Text>
         <Text style={s.errMsg}>{errorMsg}</Text>
         <TouchableOpacity style={s.greenBtn} onPress={reset}>
@@ -775,7 +812,7 @@ export default function ScannerScreen() {
         {/* sticky header */}
         <View style={s.resultHeader}>
           <TouchableOpacity style={s.backBtn} onPress={reset}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.resultHeaderTitle} numberOfLines={1}>{result.name}</Text>
           <TouchableOpacity
@@ -792,19 +829,49 @@ export default function ScannerScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* product image */}
-          {result.imageUrl ? (
-            <Image
-              source={result.imageUrl}
-              style={s.productImage}
-              contentFit="contain"
-              placeholder={PLACEHOLDER_BLURHASH}
-              transition={300}
-            />
-          ) : (
-            <View style={s.imagePlaceholder}>
-              <Text style={s.imagePlaceholderEmoji}>🛒</Text>
+          <View style={s.photoFrame}>
+            <View style={s.photoInner}>
+              {result.imageUrl ? (
+                <Image
+                  source={result.imageUrl}
+                  style={s.productImage}
+                  contentFit="contain"
+                  placeholder={PLACEHOLDER_BLURHASH}
+                  transition={300}
+                />
+              ) : (
+                <View style={s.imagePlaceholder}>
+                  <Text style={s.imagePlaceholderEmoji}>🛒</Text>
+                </View>
+              )}
             </View>
-          )}
+            <ScanCorners color={DEEP_GREEN} size={22} thickness={3} />
+
+            {(result.certifiedHalal || result.isVeganOrVegetarian || result.communityVerified || result.hasPorkAllergen) && (
+              <View style={s.photoBadgeRow}>
+                {result.certifiedHalal && (
+                  <View style={[s.photoBadge, { backgroundColor: GREEN }]}>
+                    <Ionicons name="ribbon-outline" size={14} color="#fff" />
+                  </View>
+                )}
+                {result.isVeganOrVegetarian && (
+                  <View style={[s.photoBadge, { backgroundColor: '#16a34a' }]}>
+                    <Ionicons name="leaf-outline" size={14} color="#fff" />
+                  </View>
+                )}
+                {result.communityVerified && (
+                  <View style={[s.photoBadge, { backgroundColor: '#3b82f6' }]}>
+                    <Ionicons name="shield-checkmark-outline" size={14} color="#fff" />
+                  </View>
+                )}
+                {result.hasPorkAllergen && (
+                  <View style={[s.photoBadge, { backgroundColor: RED }]}>
+                    <Ionicons name="warning-outline" size={14} color="#fff" />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* product info */}
           <View style={s.productInfo}>
@@ -825,7 +892,7 @@ export default function ScannerScreen() {
 
           {/* e-number disclaimer */}
           <View style={s.eNumDisclaimer}>
-            <Ionicons name="information-circle-outline" size={14} color="#aaa" />
+            <Ionicons name="information-circle-outline" size={14} color={TEXT_MUTED} />
             <Text style={s.eNumDisclaimerText}>
               E-number status can vary by manufacturer. When in doubt, contact the brand directly.
             </Text>
@@ -859,7 +926,7 @@ export default function ScannerScreen() {
 
             {result.notFound ? (
               <View style={s.noDataBox}>
-                <Ionicons name="cube-outline" size={32} color="#ddd" />
+                <Ionicons name="cube-outline" size={32} color={TEXT_MUTED} />
                 <Text style={s.noDataTitle}>Product not in database</Text>
                 <Text style={s.noDataText}>
                   This barcode isn't in the Open Food Facts database yet.{'\n'}
@@ -868,7 +935,7 @@ export default function ScannerScreen() {
               </View>
             ) : result.ingredients.length === 0 ? (
               <View style={s.noDataBox}>
-                <Ionicons name="document-text-outline" size={32} color="#ddd" />
+                <Ionicons name="document-text-outline" size={32} color={TEXT_MUTED} />
                 <Text style={s.noDataTitle}>No ingredient data</Text>
                 <Text style={s.noDataText}>
                   This product was found but has no ingredient list in the database.
@@ -892,7 +959,7 @@ export default function ScannerScreen() {
             style={s.reportBtn}
             onPress={() => setReportOpen(true)}
           >
-            <Ionicons name="flag-outline" size={16} color="#999" />
+            <Ionicons name="flag-outline" size={16} color={TEXT_MUTED} />
             <Text style={s.reportText}>Report this result</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -930,10 +997,7 @@ export default function ScannerScreen() {
           {/* dim overlay with scan frame cut-out effect */}
           <View style={s.overlay}>
             <View style={s.scanFrame}>
-              <View style={[s.corner, s.tl]} />
-              <View style={[s.corner, s.tr]} />
-              <View style={[s.corner, s.bl]} />
-              <View style={[s.corner, s.br]} />
+              <ScanCorners color="#fff" size={28} thickness={3} />
             </View>
             <Text style={s.scanHint}>
               {scanned ? 'Detected! Loading…' : 'Point at a product barcode or QR code'}
@@ -963,8 +1027,9 @@ export default function ScannerScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* hero */}
-        <View style={s.idleIcon}>
-          <Ionicons name="scan" size={64} color={GREEN} />
+        <View style={s.idleFrame}>
+          <Ionicons name="scan" size={56} color={DEEP_GREEN} />
+          <ScanCorners color={DEEP_GREEN} size={24} thickness={3} />
         </View>
         <Text style={s.idleTitle}>Ready to Scan</Text>
         <Text style={s.idleText}>
@@ -1009,7 +1074,7 @@ export default function ScannerScreen() {
             ref={manualInputRef}
             style={s.manualInput}
             placeholder="Enter barcode manually…"
-            placeholderTextColor="#bbb"
+            placeholderTextColor={TEXT_MUTED}
             value={manualBarcode}
             onChangeText={setManualBarcode}
             keyboardType="number-pad"
@@ -1030,7 +1095,7 @@ export default function ScannerScreen() {
           <View style={s.historyCard}>
             <Text style={s.historyTitle}>Recent Scans</Text>
             {history.map((entry, idx) => {
-              const verdictColor = entry.verdict === 'halal' ? GREEN : entry.verdict === 'haram' ? RED : entry.verdict === 'unclear' ? AMBER : '#aaa';
+              const verdictColor = entry.verdict === 'halal' ? GREEN : entry.verdict === 'haram' ? RED : entry.verdict === 'unclear' ? AMBER : TEXT_MUTED;
               const verdictIcon  = entry.verdict === 'halal' ? 'checkmark-circle' : entry.verdict === 'haram' ? 'close-circle' : entry.verdict === 'unclear' ? 'warning' : 'help-circle-outline';
               return (
                 <TouchableOpacity
@@ -1044,7 +1109,7 @@ export default function ScannerScreen() {
                     <Text style={s.historyName} numberOfLines={1}>{entry.name}</Text>
                     <Text style={s.historyBarcode}>{entry.barcode}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color="#ccc" />
+                  <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
                 </TouchableOpacity>
               );
             })}
@@ -1081,8 +1146,8 @@ export default function ScannerScreen() {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex:   { flex: 1, backgroundColor: '#f7f7f7' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#f7f7f7', gap: 12 },
+  flex:   { flex: 1, backgroundColor: CREAM },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: CREAM, gap: 12 },
 
   // permission
   permCard: { alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, padding: 32, maxWidth: 320, gap: 0 },
@@ -1090,20 +1155,20 @@ const s = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-  permTitle: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 10, textAlign: 'center' },
-  permText:  { fontSize: 14, color: '#777', textAlign: 'center', lineHeight: 21, marginBottom: 24 },
+  permTitle: { fontSize: 20, fontWeight: '700', color: TEXT_DARK, marginBottom: 10, textAlign: 'center' },
+  permText:  { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
 
   // shared green button
-  greenBtn: { backgroundColor: GREEN, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32 },
+  greenBtn: { backgroundColor: DEEP_GREEN, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32 },
   greenBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // loading
-  loadingTitle:   { fontSize: 17, fontWeight: '600', color: '#555' },
-  loadingBarcode: { fontSize: 13, color: '#aaa', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  loadingTitle:   { fontSize: 17, fontWeight: '600', color: TEXT_MUTED },
+  loadingBarcode: { fontSize: 13, color: TEXT_MUTED, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
 
   // error
-  errTitle: { fontSize: 18, fontWeight: '700', color: '#c0392b' },
-  errMsg:   { fontSize: 14, color: '#777', textAlign: 'center', lineHeight: 20 },
+  errTitle: { fontSize: 18, fontWeight: '700', color: RED },
+  errMsg:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
 
   // camera
   cameraContainer: { flex: 1 },
@@ -1113,14 +1178,6 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   scanFrame: { width: 260, height: 180, position: 'relative' },
-  corner: {
-    position: 'absolute', width: CORNER, height: CORNER,
-    borderColor: '#fff', borderWidth: CORNER_W,
-  },
-  tl: { top: 0,    left: 0,  borderRightWidth: 0, borderBottomWidth: 0 },
-  tr: { top: 0,    right: 0, borderLeftWidth: 0,  borderBottomWidth: 0 },
-  bl: { bottom: 0, left: 0,  borderRightWidth: 0, borderTopWidth: 0    },
-  br: { bottom: 0, right: 0, borderLeftWidth: 0,  borderTopWidth: 0    },
   scanHint: {
     color: '#fff', fontSize: 14, fontWeight: '600', marginTop: 24,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 4,
@@ -1136,42 +1193,61 @@ const s = StyleSheet.create({
   // result header
   resultHeader: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10,
+    backgroundColor: CREAM, paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  resultHeaderTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: '#111' },
+  resultHeaderTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: TEXT_DARK },
   scanAgainBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
   },
 
-  // product
-  productImage: { width: '100%', height: 200, backgroundColor: '#fafafa' },
+  // product photo frame
+  photoFrame: {
+    marginHorizontal: 16, marginTop: 4, marginBottom: 28,
+    height: 220, position: 'relative',
+  },
+  photoInner: {
+    flex: 1, borderRadius: 24, overflow: 'hidden',
+    backgroundColor: FRAME_TAN, alignItems: 'center', justifyContent: 'center',
+  },
+  productImage: { width: '100%', height: '100%' },
   imagePlaceholder: {
-    height: 140, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5',
+    width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center',
   },
   imagePlaceholderEmoji: { fontSize: 56 },
+  photoBadgeRow: {
+    position: 'absolute', bottom: -14, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 10,
+  },
+  photoBadge: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: CREAM,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 }, elevation: 3,
+  },
   productInfo: {
     paddingHorizontal: 20, paddingVertical: 16,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE,
     marginBottom: 12,
   },
-  productName:    { fontSize: 20, fontWeight: '800', color: '#111', marginBottom: 4 },
-  productBrand:   { fontSize: 14, color: '#777', marginBottom: 4 },
-  productBarcode: { fontSize: 12, color: '#bbb', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  productName:    { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginBottom: 4 },
+  productBrand:   { fontSize: 14, color: TEXT_MUTED, marginBottom: 4 },
+  productBarcode: { fontSize: 12, color: TEXT_MUTED, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
 
   eNumDisclaimer: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 6,
     marginHorizontal: 16, marginBottom: 12,
-    backgroundColor: '#fafafa', borderRadius: 8,
+    backgroundColor: CREAM, borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 8,
-    borderWidth: 1, borderColor: '#f0f0f0',
+    borderWidth: 1, borderColor: HAIRLINE,
   },
-  eNumDisclaimerText: { flex: 1, fontSize: 12, color: '#aaa', lineHeight: 17 },
+  eNumDisclaimerText: { flex: 1, fontSize: 12, color: TEXT_MUTED, lineHeight: 17 },
 
   // flag summary chips
   flagSummary: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 },
@@ -1182,46 +1258,52 @@ const s = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '600' },
 
   // ingredients section
-  section:      { paddingHorizontal: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 12 },
+  section: {
+    marginHorizontal: 16, marginBottom: 16,
+    backgroundColor: '#fff', borderRadius: 18, padding: 16,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: TEXT_DARK, marginBottom: 12 },
   noDataBox: { alignItems: 'center', paddingVertical: 28, gap: 8 },
-  noDataTitle: { fontSize: 16, fontWeight: '600', color: '#ccc' },
-  noDataText:  { fontSize: 13, color: '#bbb', textAlign: 'center', lineHeight: 19 },
+  noDataTitle: { fontSize: 16, fontWeight: '600', color: TEXT_MUTED },
+  noDataText:  { fontSize: 13, color: TEXT_MUTED, textAlign: 'center', lineHeight: 19 },
 
   // report button
   reportBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginHorizontal: 16, paddingVertical: 14, borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#ebebeb', backgroundColor: '#fafafa',
+    borderWidth: 1.5, borderColor: HAIRLINE, backgroundColor: CREAM,
   },
-  reportText: { fontSize: 14, color: '#999', fontWeight: '500' },
+  reportText: { fontSize: 14, color: TEXT_MUTED, fontWeight: '500' },
 
   // idle
   idleHeader: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
-  idleHeaderTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a' },
-  idleHeaderSub:   { fontSize: 13, color: '#aaa', marginTop: 2 },
+  idleHeaderTitle: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
+  idleHeaderSub:   { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
   idleContent: { alignItems: 'center', paddingTop: 32, paddingHorizontal: 24, paddingBottom: 40 },
-  idleIcon: {
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  idleFrame: {
+    width: 180, height: 140, borderRadius: 24,
+    backgroundColor: FRAME_TAN, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 24, position: 'relative',
   },
-  idleTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', marginBottom: 8 },
-  idleText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 21, marginBottom: 24 },
+  idleTitle: { fontSize: 22, fontWeight: '800', color: TEXT_DARK, marginBottom: 8 },
+  idleText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
   startBtn: {
-    backgroundColor: GREEN, borderRadius: 14,
+    backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, paddingHorizontal: 40,
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20,
   },
   startBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  startBtnSettings: { backgroundColor: '#888' },
+  startBtnSettings: { backgroundColor: TEXT_MUTED },
 
   // or divider
   orDivider: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, marginBottom: 14 },
-  orLine:    { flex: 1, height: 1, backgroundColor: '#ebebeb' },
-  orText:    { fontSize: 12, color: '#bbb', fontWeight: '500' },
+  orLine:    { flex: 1, height: 1, backgroundColor: HAIRLINE },
+  orText:    { fontSize: 12, color: TEXT_MUTED, fontWeight: '500' },
 
   // manual barcode entry
   manualRow: {
@@ -1229,13 +1311,13 @@ const s = StyleSheet.create({
     width: '100%', marginBottom: 24,
   },
   manualInput: {
-    flex: 1, borderWidth: 1.5, borderColor: '#ebebeb', borderRadius: 14,
+    flex: 1, borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
     paddingVertical: 11, paddingHorizontal: 14,
-    fontSize: 14, color: '#111', backgroundColor: '#fafafa',
+    fontSize: 14, color: TEXT_DARK, backgroundColor: CREAM,
   },
   manualBtn: {
     width: 46, height: 46, borderRadius: 14,
-    backgroundColor: GREEN, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: DEEP_GREEN, alignItems: 'center', justifyContent: 'center',
   },
   manualBtnDisabled: { opacity: 0.4 },
 
@@ -1246,15 +1328,15 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  historyTitle: { fontSize: 13, fontWeight: '700', color: '#aaa', letterSpacing: 0.4, marginBottom: 4 },
+  historyTitle: { fontSize: 13, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.4, marginBottom: 4 },
   historyRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0',
+    paddingVertical: 10, borderTopWidth: 1, borderTopColor: HAIRLINE,
   },
   historyRowFirst: { borderTopWidth: 0 },
   historyInfo: { flex: 1 },
-  historyName:    { fontSize: 14, fontWeight: '600', color: '#111' },
-  historyBarcode: { fontSize: 11, color: '#bbb', marginTop: 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  historyName:    { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  historyBarcode: { fontSize: 11, color: TEXT_MUTED, marginTop: 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
 
   // info card on idle
   infoCard: {
@@ -1263,10 +1345,10 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  infoCardTitle: { fontSize: 13, fontWeight: '700', color: '#aaa', letterSpacing: 0.4, marginBottom: 2 },
+  infoCardTitle: { fontSize: 13, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.4, marginBottom: 2 },
   infoRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   infoLabel: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
-  infoItems: { fontSize: 12, color: '#999', lineHeight: 18 },
+  infoItems: { fontSize: 12, color: TEXT_MUTED, lineHeight: 18 },
 
-  disclaimer: { fontSize: 11, color: '#ccc', textAlign: 'center', lineHeight: 17, paddingHorizontal: 8 },
+  disclaimer: { fontSize: 11, color: TEXT_MUTED, textAlign: 'center', lineHeight: 17, paddingHorizontal: 8 },
 });

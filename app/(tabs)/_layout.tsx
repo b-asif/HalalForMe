@@ -41,8 +41,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
-          tabBarIcon: tabIcon('search', 'search-outline'),
+          title: 'Explore',
+          tabBarIcon: tabIcon('compass', 'compass-outline'),
         }}
       />
       <Tabs.Screen
@@ -52,12 +52,14 @@ export default function TabLayout() {
           tabBarIcon: tabIcon('scan', 'scan-outline'),
         }}
       />
+      {/* Community deliberately removed from the tab bar — deferred until
+          there's real user activity to populate it (see the "keep it simple
+          until there's a real content plan" decision). community.tsx and its
+          backend (contribution_points, user_badges, leaderboard views) are
+          left in place, not deleted, for when it's reintroduced. */}
       <Tabs.Screen
         name="community"
-        options={{
-          title: 'Community',
-          tabBarIcon: tabIcon('trophy', 'trophy-outline'),
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"
