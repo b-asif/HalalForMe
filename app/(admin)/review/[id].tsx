@@ -10,13 +10,18 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
+import { CERTIFIERS, Certifier } from '../../../lib/certifiers';
+import { Brand } from '../../../lib/theme';
 
-const GREEN = '#245737';
-
-const CERTIFIERS = [
-  'ISNA', 'IFANCA', 'HMA', 'HFA', 'HFSAA', 'HMS', 'MUI', 'self_certified', 'uncertified', 'unknown',
-] as const;
-type Certifier = typeof CERTIFIERS[number];
+const GREEN      = Brand.green;
+const DEEP_GREEN = Brand.deepGreen;
+const CREAM      = Brand.cream;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const AMBER      = Brand.amber;
+const RED        = Brand.red;
+const GOLD       = Brand.gold;
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -68,6 +73,8 @@ export default function AdminReviewScreen() {
 
   // Admin-editable fields
   const [certifiers,   setCertifiers]   = useState<Certifier[]>(['unknown']);
+  const [zabihahStatus, setZabihahStatus] = useState<'full' | 'partial' | null>(null);
+  const [zabihahNotes,  setZabihahNotes]  = useState('');
   const [adminPhone,   setAdminPhone]   = useState('');
   const [adminWebsite, setAdminWebsite] = useState('');
   const [adminLat,     setAdminLat]     = useState('');
@@ -258,6 +265,8 @@ export default function AdminReviewScreen() {
         opening_hours:      Object.keys(openingHours).length > 0 ? openingHours : null,
         categorized_photos: Object.keys(categorizedPhotos).length > 0 ? categorizedPhotos : null,
         image_url:          firstPhoto,
+        zabihah_status:     zabihahStatus,
+        zabihah_notes:      zabihahNotes.trim() || null,
       }).select('id').single();
 
       if (insertErr) throw new Error(insertErr.message);
@@ -358,7 +367,7 @@ export default function AdminReviewScreen() {
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color="#111" />
+            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
           <Text style={s.title}>Review Submission</Text>
           <View style={{ width: 36 }} />
@@ -492,6 +501,38 @@ export default function AdminReviewScreen() {
           })}
         </View>
 
+        {/* Zabihah Halal */}
+        <Text style={s.fieldGroupLabel}>Zabihah Halal</Text>
+        <View style={s.certChips}>
+          {([null, 'partial', 'full'] as const).map(v => {
+            const label = v === null ? 'Not Zabihah' : v === 'partial' ? 'Partial' : 'Full';
+            const selected = zabihahStatus === v;
+            return (
+              <TouchableOpacity
+                key={String(v)}
+                style={[s.chip, selected && s.chipSelected]}
+                onPress={() => setZabihahStatus(v)}
+              >
+                {selected && <Ionicons name="checkmark" size={12} color={GREEN} />}
+                <Text style={[s.chipText, selected && s.chipTextSelected]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {zabihahStatus && (
+          <View style={s.fieldWrap}>
+            <Text style={s.fieldLabel}>NOTES (optional)</Text>
+            <TextInput
+              style={s.input}
+              value={zabihahNotes}
+              onChangeText={setZabihahNotes}
+              placeholder={zabihahStatus === 'partial' ? 'e.g. Beef & lamb only — chicken is not zabihah' : 'Optional notes'}
+              placeholderTextColor="#bbb"
+              multiline
+            />
+          </View>
+        )}
+
         <View style={s.twoCol}>
           <View style={[s.fieldWrap, { flex: 1 }]}>
             <Text style={s.fieldLabel}>LATITUDE *</Text>
@@ -620,7 +661,7 @@ export default function AdminReviewScreen() {
                           onPress={() => removeTemplateRange(ri)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Ionicons name="close-circle" size={18} color="#ccc" />
+                          <Ionicons name="close-circle" size={18} color={HAIRLINE} />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -690,7 +731,7 @@ export default function AdminReviewScreen() {
                           onPress={() => removeRange(day, ri)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Ionicons name="close-circle" size={18} color="#ccc" />
+                          <Ionicons name="close-circle" size={18} color={HAIRLINE} />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -722,7 +763,7 @@ export default function AdminReviewScreen() {
           onPress={() => setRejectVisible(true)}
           disabled={saving}
         >
-          <Ionicons name="close-circle-outline" size={20} color="#e53e3e" />
+          <Ionicons name="close-circle-outline" size={20} color={RED} />
           <Text style={s.rejectBtnText}>Reject</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -858,24 +899,24 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111', textAlign: 'center' },
+  title: { flex: 1, fontSize: 17, fontWeight: '700', color: TEXT_DARK, textAlign: 'center' },
 
   content: { padding: 16 },
 
   sectionTitle: {
-    fontSize: 13, fontWeight: '700', color: '#111',
+    fontSize: 13, fontWeight: '700', color: TEXT_DARK,
     marginTop: 16, marginBottom: 10, letterSpacing: 0.2,
   },
 
@@ -886,8 +927,8 @@ const s = StyleSheet.create({
     marginBottom: 4, gap: 8,
   },
   infoRow: { flexDirection: 'row', gap: 10 },
-  infoLabel: { width: 72, fontSize: 12, fontWeight: '600', color: '#aaa', textTransform: 'uppercase' },
-  infoValue: { flex: 1, fontSize: 14, color: '#333', lineHeight: 20 },
+  infoLabel: { width: 72, fontSize: 12, fontWeight: '600', color: TEXT_MUTED, textTransform: 'uppercase' },
+  infoValue: { flex: 1, fontSize: 14, color: TEXT_DARK, lineHeight: 20 },
 
   certPhotoWrap: {
     borderRadius: 14, overflow: 'hidden', marginBottom: 4, height: 200,
@@ -910,11 +951,11 @@ const s = StyleSheet.create({
   },
   galleryTypeText: { fontSize: 10, color: '#fff', fontWeight: '600' },
 
-  fieldGroupLabel: { fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 8, marginTop: 4 },
+  fieldGroupLabel: { fontSize: 12, fontWeight: '600', color: TEXT_MUTED, marginBottom: 8, marginTop: 4 },
 
   imagePicker: {
-    height: 140, borderRadius: 14, borderWidth: 1.5, borderColor: '#e5e5e5',
-    borderStyle: 'dashed', backgroundColor: '#fafafa',
+    height: 140, borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE,
+    borderStyle: 'dashed', backgroundColor: CREAM,
     alignItems: 'center', justifyContent: 'center', marginBottom: 14,
     overflow: 'hidden', gap: 6,
   },
@@ -926,37 +967,37 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
   },
   imagePickerOverlayText: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  imagePickerText: { fontSize: 14, color: '#bbb', fontWeight: '500' },
-  imagePickerSub:  { fontSize: 11, color: '#ccc' },
+  imagePickerText: { fontSize: 14, color: TEXT_MUTED, fontWeight: '500' },
+  imagePickerSub:  { fontSize: 11, color: HAIRLINE },
 
   certChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#e0e0e0', backgroundColor: '#fafafa',
+    borderWidth: 1.5, borderColor: HAIRLINE, backgroundColor: CREAM,
   },
   chipSelected: { borderColor: GREEN, backgroundColor: '#e6f9f2' },
-  chipText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  chipText: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500' },
   chipTextSelected: { color: GREEN, fontWeight: '700' },
 
   twoCol: { flexDirection: 'row', gap: 10 },
   fieldWrap: {
     backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#e5e5e5',
+    borderWidth: 1.5, borderColor: HAIRLINE,
     paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4,
     marginBottom: 10,
   },
-  fieldLabel: { fontSize: 10, fontWeight: '600', color: '#aaa', letterSpacing: 0.5, marginBottom: 2 },
-  input: { fontSize: 15, color: '#111', paddingVertical: 6, minHeight: 36 },
+  fieldLabel: { fontSize: 10, fontWeight: '600', color: TEXT_MUTED, letterSpacing: 0.5, marginBottom: 2 },
+  input: { fontSize: 15, color: TEXT_DARK, paddingVertical: 6, minHeight: 36 },
 
   // Same every day toggle
   sameEveryDayRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8,
-    borderWidth: 1.5, borderColor: '#e5e5e5',
+    borderWidth: 1.5, borderColor: HAIRLINE,
   },
-  sameEveryDayLabel: { fontSize: 14, fontWeight: '600', color: '#111' },
-  sameEveryDaySub: { fontSize: 12, color: '#aaa', marginTop: 2 },
+  sameEveryDayLabel: { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  sameEveryDaySub: { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
 
   // Hours
   hoursCard: {
@@ -966,13 +1007,13 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   dayBlock: { paddingHorizontal: 14, paddingVertical: 10 },
-  dayBlockBorder: { borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  dayBlockBorder: { borderBottomWidth: 1, borderBottomColor: CREAM },
   dayHeaderRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4,
   },
-  dayName: { flex: 1, fontSize: 14, color: '#999', fontWeight: '500' },
-  dayNameOpen: { color: '#111', fontWeight: '600' },
-  closedLabel: { fontSize: 13, color: '#ccc' },
+  dayName: { flex: 1, fontSize: 14, color: TEXT_MUTED, fontWeight: '500' },
+  dayNameOpen: { color: TEXT_DARK, fontWeight: '600' },
+  closedLabel: { fontSize: 13, color: HAIRLINE },
   addRangeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     paddingHorizontal: 8, paddingVertical: 4,
@@ -994,7 +1035,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: '#c3e8d8',
   },
   timeBtnText: { fontSize: 13, color: GREEN, fontWeight: '600' },
-  timeSep: { fontSize: 13, color: '#ccc' },
+  timeSep: { fontSize: 13, color: HAIRLINE },
 
   approveBtn: {
     backgroundColor: GREEN, borderRadius: 14,
@@ -1021,21 +1062,21 @@ const tp = StyleSheet.create({
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 12,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 12,
   },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingBottom: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
-  sheetTitle: { fontSize: 15, fontWeight: '700', color: '#111' },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: TEXT_DARK },
   timeItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, height: 48,
-    borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+    borderBottomWidth: 1, borderBottomColor: CREAM,
   },
   timeItemSelected: { backgroundColor: '#f0faf6' },
-  timeItemText: { fontSize: 16, color: '#333' },
+  timeItemText: { fontSize: 16, color: TEXT_DARK },
   timeItemTextSelected: { color: GREEN, fontWeight: '700' },
 });
 
@@ -1063,19 +1104,19 @@ const rm = StyleSheet.create({
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 16,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 16,
   },
   closeBtn: {
     position: 'absolute', top: 14, right: 20,
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 19, fontWeight: '800', color: '#111', marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 8 },
+  title: { fontSize: 19, fontWeight: '800', color: TEXT_DARK, marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 8 },
   input: {
-    borderWidth: 1.5, borderColor: '#e8e8e8', borderRadius: 12,
-    padding: 12, fontSize: 14, color: '#111', minHeight: 90,
-    backgroundColor: '#fafafa',
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 12,
+    padding: 12, fontSize: 14, color: TEXT_DARK, minHeight: 90,
+    backgroundColor: CREAM,
   },
   errorBox: {
     backgroundColor: '#fff5f5', borderRadius: 10, padding: 10, marginBottom: 10,
@@ -1083,7 +1124,7 @@ const rm = StyleSheet.create({
   },
   errorText: { fontSize: 13, color: '#e53e3e', lineHeight: 18 },
   rejectBtn: {
-    marginTop: 16, backgroundColor: '#e53e3e', borderRadius: 14,
+    marginTop: 16, backgroundColor: RED, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center',
   },
   rejectBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

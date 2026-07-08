@@ -7,8 +7,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const GREEN      = Brand.green;
+const DEEP_GREEN = Brand.deepGreen;
+const CREAM      = Brand.cream;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const AMBER      = Brand.amber;
+const RED        = Brand.red;
+const GOLD       = Brand.gold;
 
 interface Submission {
   id: string;
@@ -259,7 +268,7 @@ export default function AdminDashboardScreen() {
               ) : null}
               <Text style={s.cardDate}>{formatDate(item.created_at)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+            <Ionicons name="chevron-forward" size={18} color={HAIRLINE} />
           </TouchableOpacity>
         )}
       />
@@ -317,7 +326,7 @@ function Shortcut({ icon, label, color, bg, badge, badgeColor, onPress }: {
           <Text style={sc.badgeText}>{badge}</Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={16} color="#ccc" style={{ marginLeft: 'auto' }} />
+      <Ionicons name="chevron-forward" size={16} color={HAIRLINE} style={{ marginLeft: 'auto' }} />
     </TouchableOpacity>
   );
 }
@@ -325,20 +334,20 @@ function Shortcut({ icon, label, color, bg, badge, badgeColor, onPress }: {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex:    { flex: 1, backgroundColor: '#f5f5f5' },
+  flex:    { flex: 1, backgroundColor: CREAM },
   centered:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
-  errorText:    { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 20 },
-  retryBtn:     { marginTop: 4, backgroundColor: GREEN, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
+  errorText:    { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
+  retryBtn:     { marginTop: 4, backgroundColor: DEEP_GREEN, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
   retryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   headerLeft:  {},
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#111' },
-  headerSub:   { fontSize: 12, color: '#aaa', marginTop: 1 },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
+  headerSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
   headerIcon: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
@@ -350,14 +359,14 @@ const s = StyleSheet.create({
   shortcuts: { paddingHorizontal: 16, gap: 10, marginBottom: 8 },
 
   sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: '#aaa',
+    fontSize: 12, fontWeight: '700', color: TEXT_MUTED,
     textTransform: 'uppercase', letterSpacing: 0.5,
     paddingHorizontal: 16, marginTop: 8, marginBottom: 4,
   },
 
   tabs: {
     flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
     marginBottom: 12,
   },
   tab: {
@@ -365,10 +374,10 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   tabActive:     { borderBottomWidth: 2, borderBottomColor: GREEN },
-  tabText:       { fontSize: 14, fontWeight: '600', color: '#aaa' },
+  tabText:       { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   tabTextActive: { color: GREEN },
   badge: {
-    backgroundColor: '#f6a623', borderRadius: 10,
+    backgroundColor: AMBER, borderRadius: 10,
     paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center',
   },
   badgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
@@ -384,15 +393,15 @@ const s = StyleSheet.create({
     gap: 12,
   },
   cardDot:    { alignItems: 'center', justifyContent: 'flex-start', paddingTop: 2 },
-  pendingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f6a623' },
+  pendingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: AMBER },
   cardBody:   { flex: 1, gap: 2 },
-  cardName:    { fontSize: 15, fontWeight: '700', color: '#111' },
-  cardAddress: { fontSize: 13, color: '#777' },
+  cardName:    { fontSize: 15, fontWeight: '700', color: TEXT_DARK },
+  cardAddress: { fontSize: 13, color: TEXT_MUTED },
   cardCuisine: { fontSize: 12, color: GREEN, fontWeight: '500' },
-  cardDate:    { fontSize: 11, color: '#bbb', marginTop: 2 },
+  cardDate:    { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
 
   emptyBox:  { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyText: { fontSize: 15, color: '#bbb', fontWeight: '500' },
+  emptyText: { fontSize: 15, color: TEXT_MUTED, fontWeight: '500' },
 });
 
 // stat card styles
@@ -408,8 +417,8 @@ const st = StyleSheet.create({
     width: 36, height: 36, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  value: { fontSize: 22, fontWeight: '800', color: '#111' },
-  label: { fontSize: 11, color: '#aaa', fontWeight: '600' },
+  value: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
+  label: { fontSize: 11, color: TEXT_MUTED, fontWeight: '600' },
   badge: {
     borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2,
   },
@@ -428,7 +437,7 @@ const sc = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
-  label: { fontSize: 15, fontWeight: '600', color: '#111' },
+  label: { fontSize: 15, fontWeight: '600', color: TEXT_DARK },
   badge: {
     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
     minWidth: 22, alignItems: 'center',

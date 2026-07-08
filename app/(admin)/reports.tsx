@@ -7,10 +7,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { Brand } from '../../lib/theme';
 
-const GREEN  = '#245737';
-const RED    = '#e53e3e';
-const ORANGE = '#f6a623';
+const GREEN      = Brand.green;
+const DEEP_GREEN = Brand.deepGreen;
+const CREAM      = Brand.cream;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const AMBER      = Brand.amber;
+const RED        = Brand.red;
+const GOLD       = Brand.gold;
+const ORANGE     = Brand.amber;
 
 type StatusTab = 'pending' | 'reviewed' | 'dismissed';
 
@@ -35,7 +43,7 @@ const REASON_COLORS: Record<string, { color: string; bg: string }> = {
   spam:          { color: '#b7791f', bg: '#fefce8' },
   inappropriate: { color: RED,       bg: '#fff5f5' },
   harassment:    { color: '#7c3aed', bg: '#f5f3ff' },
-  other:         { color: '#555',    bg: '#f5f5f5' },
+  other:         { color: TEXT_MUTED, bg: CREAM },
 };
 
 export default function AdminReportsScreen() {
@@ -158,7 +166,7 @@ export default function AdminReportsScreen() {
       {/* header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Content Reports</Text>
         <View style={{ width: 38 }} />
@@ -313,35 +321,35 @@ export default function AdminReportsScreen() {
 }
 
 const s = StyleSheet.create({
-  flex:    { flex: 1, backgroundColor: '#f5f5f5' },
+  flex:    { flex: 1, backgroundColor: CREAM },
   centered:{ flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#111' },
+  title: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   tabs: {
     flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   tab: {
     flex: 1, paddingVertical: 12, alignItems: 'center', justifyContent: 'center',
   },
   tabActive:     { borderBottomWidth: 2, borderBottomColor: GREEN },
-  tabText:       { fontSize: 14, fontWeight: '600', color: '#aaa' },
+  tabText:       { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   tabTextActive: { color: GREEN },
 
   listContent: { padding: 16, paddingBottom: 40 },
 
   emptyBox:  { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyText: { fontSize: 15, color: '#bbb', fontWeight: '500' },
+  emptyText: { fontSize: 15, color: TEXT_MUTED, fontWeight: '500' },
 
   card: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
@@ -355,9 +363,9 @@ const s = StyleSheet.create({
   },
   avatarText:   { fontSize: 14, fontWeight: '700', color: RED },
   cardMeta:     { flex: 1 },
-  reporterName: { fontSize: 14, fontWeight: '600', color: '#111' },
-  reporterSub:  { fontSize: 11, color: '#aaa', marginTop: 1 },
-  date:         { fontSize: 11, color: '#bbb' },
+  reporterName: { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  reporterSub:  { fontSize: 11, color: TEXT_MUTED, marginTop: 1 },
+  date:         { fontSize: 11, color: TEXT_MUTED },
 
   reasonBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -367,34 +375,34 @@ const s = StyleSheet.create({
   reasonText: { fontSize: 12, fontWeight: '700' },
 
   commentBox: {
-    backgroundColor: '#fafafa', borderRadius: 10,
+    backgroundColor: CREAM, borderRadius: 10,
     padding: 10, marginBottom: 10,
-    borderLeftWidth: 3, borderLeftColor: '#e0e0e0',
+    borderLeftWidth: 3, borderLeftColor: HAIRLINE,
   },
-  commentLabel: { fontSize: 10, fontWeight: '700', color: '#bbb', textTransform: 'uppercase', marginBottom: 4 },
-  commentText:  { fontSize: 13, color: '#555', lineHeight: 19 },
+  commentLabel: { fontSize: 10, fontWeight: '700', color: TEXT_MUTED, textTransform: 'uppercase', marginBottom: 4 },
+  commentText:  { fontSize: 13, color: TEXT_DARK, lineHeight: 19 },
 
   reviewBox: {
-    backgroundColor: '#f7f7f7', borderRadius: 10,
+    backgroundColor: CREAM, borderRadius: 10,
     padding: 10, marginBottom: 10,
-    borderWidth: 1, borderColor: '#ebebeb',
+    borderWidth: 1, borderColor: HAIRLINE,
   },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
-  reviewRating: { fontSize: 12, fontWeight: '700', color: '#111' },
-  reviewAuthor: { fontSize: 12, color: '#888' },
-  reviewComment:   { fontSize: 13, color: '#444', lineHeight: 19, fontStyle: 'italic' },
-  reviewNoComment: { fontSize: 12, color: '#bbb', fontStyle: 'italic' },
+  reviewRating: { fontSize: 12, fontWeight: '700', color: TEXT_DARK },
+  reviewAuthor: { fontSize: 12, color: TEXT_MUTED },
+  reviewComment:   { fontSize: 13, color: TEXT_DARK, lineHeight: 19, fontStyle: 'italic' },
+  reviewNoComment: { fontSize: 12, color: TEXT_MUTED, fontStyle: 'italic' },
 
   actions: {
     flexDirection: 'row', gap: 10, marginTop: 10,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: CREAM,
   },
   dismissBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     paddingVertical: 10, borderRadius: 12,
-    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e0e0e0',
+    backgroundColor: CREAM, borderWidth: 1.5, borderColor: HAIRLINE,
   },
-  dismissBtnText: { fontSize: 14, fontWeight: '700', color: '#888' },
+  dismissBtnText: { fontSize: 14, fontWeight: '700', color: TEXT_MUTED },
   reviewedBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     paddingVertical: 10, borderRadius: 12,
@@ -405,7 +413,7 @@ const s = StyleSheet.create({
   viewReviewBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     marginTop: 10, paddingTop: 10,
-    borderTopWidth: 1, borderTopColor: '#f5f5f5',
+    borderTopWidth: 1, borderTopColor: CREAM,
   },
   viewReviewText: { fontSize: 13, color: GREEN, fontWeight: '600' },
 });

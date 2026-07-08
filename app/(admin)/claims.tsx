@@ -7,8 +7,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
+const GREEN      = Brand.green;
+const DEEP_GREEN = Brand.deepGreen;
+const CREAM      = Brand.cream;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const AMBER      = Brand.amber;
+const RED        = Brand.red;
+const GOLD       = Brand.gold;
 
 interface Claim {
   id: string;
@@ -140,7 +149,7 @@ export default function AdminClaimsScreen() {
               <Text style={s.cardEmail} numberOfLines={1}>{item.contact_email}</Text>
               <Text style={s.cardDate}>{formatDate(item.created_at)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+            <Ionicons name="chevron-forward" size={18} color={HAIRLINE} />
           </TouchableOpacity>
         )}
       />
@@ -152,7 +161,7 @@ function Header({ router }: { router: any }) {
   return (
     <View style={s.header}>
       <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={20} color="#111" />
+        <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
       </TouchableOpacity>
       <Text style={s.title}>Ownership Claims</Text>
       <View style={{ width: 36 }} />
@@ -161,33 +170,33 @@ function Header({ router }: { router: any }) {
 }
 
 const s = StyleSheet.create({
-  flex:    { flex: 1, backgroundColor: '#f5f5f5' },
+  flex:    { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { flex: 1, fontSize: 17, fontWeight: '700', color: '#111', textAlign: 'center' },
+  title: { flex: 1, fontSize: 17, fontWeight: '700', color: TEXT_DARK, textAlign: 'center' },
 
   tabs: {
     flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   tab: {
     flex: 1, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   tabActive:     { borderBottomWidth: 2, borderBottomColor: GREEN },
-  tabText:       { fontSize: 14, fontWeight: '600', color: '#aaa' },
+  tabText:       { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   tabTextActive: { color: GREEN },
   badge: {
-    backgroundColor: '#f6a623', borderRadius: 10,
+    backgroundColor: AMBER, borderRadius: 10,
     paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: 'center',
   },
   badgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
@@ -203,13 +212,13 @@ const s = StyleSheet.create({
     gap: 12,
   },
   cardDot:       { alignItems: 'center', justifyContent: 'flex-start', paddingTop: 2 },
-  pendingDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: '#f6a623' },
+  pendingDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: AMBER },
   cardBody:      { flex: 1, gap: 2 },
-  cardRestaurant: { fontSize: 15, fontWeight: '700', color: '#111' },
+  cardRestaurant: { fontSize: 15, fontWeight: '700', color: TEXT_DARK },
   cardClaimant:   { fontSize: 13, color: GREEN, fontWeight: '500', textTransform: 'capitalize' },
-  cardEmail:      { fontSize: 12, color: '#aaa' },
-  cardDate:       { fontSize: 11, color: '#bbb', marginTop: 2 },
+  cardEmail:      { fontSize: 12, color: TEXT_MUTED },
+  cardDate:       { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
 
   emptyBox:  { alignItems: 'center', paddingTop: 80, gap: 10 },
-  emptyText: { fontSize: 15, color: '#bbb', fontWeight: '500' },
+  emptyText: { fontSize: 15, color: TEXT_MUTED, fontWeight: '500' },
 });

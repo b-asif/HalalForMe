@@ -8,9 +8,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { supabase } from '../../lib/supabase';
+import { Brand } from '../../lib/theme';
 
-const GREEN = '#245737';
-const RED   = '#e53e3e';
+const GREEN      = Brand.green;
+const DEEP_GREEN = Brand.deepGreen;
+const CREAM      = Brand.cream;
+const TEXT_DARK  = Brand.textDark;
+const TEXT_MUTED = Brand.textMuted;
+const HAIRLINE   = Brand.hairline;
+const AMBER      = Brand.amber;
+const RED        = Brand.red;
+const GOLD       = Brand.gold;
 
 type StatusTab = 'pending' | 'approved' | 'rejected';
 
@@ -117,7 +125,7 @@ export default function AdminReviewsScreen() {
       {/* header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#111" />
+          <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
         <Text style={s.title}>Review Moderation</Text>
         <View style={{ width: 38 }} />
@@ -277,36 +285,36 @@ export default function AdminReviewsScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f5f5f5' },
+  flex: { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#111' },
+  title: { fontSize: 17, fontWeight: '700', color: TEXT_DARK },
 
   tabs: {
     flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   tab: {
     flex: 1, paddingVertical: 12,
     alignItems: 'center', justifyContent: 'center',
   },
   tabActive:     { borderBottomWidth: 2, borderBottomColor: GREEN },
-  tabText:       { fontSize: 14, fontWeight: '600', color: '#aaa' },
+  tabText:       { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
   tabTextActive: { color: GREEN },
 
   listContent: { padding: 16, paddingBottom: 40 },
 
   emptyBox: { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyText: { fontSize: 15, color: '#bbb', fontWeight: '500' },
+  emptyText: { fontSize: 15, color: TEXT_MUTED, fontWeight: '500' },
 
   card: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
@@ -321,21 +329,21 @@ const s = StyleSheet.create({
   },
   avatarText:    { fontSize: 14, fontWeight: '700', color: GREEN },
   cardMeta:      { flex: 1 },
-  reviewerName:  { fontSize: 14, fontWeight: '600', color: '#111' },
-  restaurantName:{ fontSize: 12, color: '#888', marginTop: 1 },
-  date:          { fontSize: 11, color: '#bbb' },
+  reviewerName:  { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
+  restaurantName:{ fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  date:          { fontSize: 11, color: TEXT_MUTED },
 
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  ratingLabel: { fontSize: 11, color: '#aaa', fontWeight: '600' },
+  ratingLabel: { fontSize: 11, color: TEXT_MUTED, fontWeight: '600' },
 
-  comment: { fontSize: 14, color: '#444', lineHeight: 20, marginBottom: 8 },
+  comment: { fontSize: 14, color: TEXT_DARK, lineHeight: 20, marginBottom: 8 },
 
   photoStrip: { marginVertical: 8 },
   photo: { width: 80, height: 80, borderRadius: 10, marginRight: 8 },
 
   actions: {
     flexDirection: 'row', gap: 10, marginTop: 10,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f5f5f5',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: CREAM,
   },
   rejectBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
