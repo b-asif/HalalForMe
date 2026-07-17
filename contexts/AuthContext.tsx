@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
         // If getSession rejects (bad config, AsyncStorage failure, etc.) we
         // must still clear the loading flag or the splash screen hangs forever.
         setLoading(false);
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // Fetch is_admin from profiles whenever the logged-in user changes.
   // Also sync tos_accepted_at from auth metadata → profiles on first sign-in.
@@ -84,6 +86,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         () => setIsAdmin(false),
       );
+  }, [session?.user?.id]);
+
+  // Re-check is_admin on every foreground resume AND on a 60-second interval
+  // so a revoked admin flag takes effect without requiring a sign-out/sign-in cycle.
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    const checkAdminStatus = () => {
+      supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data }) => setIsAdmin(data?.is_admin === true), () => {});
+    };
+
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') checkAdminStatus();
+    });
+
+    const interval = setInterval(checkAdminStatus, 60_000);
+
+    return () => {
+      sub.remove();
+      clearInterval(interval);
+    };
   }, [session?.user?.id]);
 
   const signOut = async () => {
