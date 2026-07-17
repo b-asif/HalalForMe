@@ -1,6 +1,6 @@
 {
   "name": "halalforme",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -10,11 +10,13 @@
     "validate:prayer": "tsx scripts/validatePrayerTimes.ts",
     "validate:methodDefaults": "tsx scripts/validateMethodDefaults.ts",
     "validate:notificationPlan": "tsx scripts/validateNotificationPlan.ts",
-    "validate:qibla": "tsx scripts/validateQibla.ts"
+    "validate:qibla": "tsx scripts/validateQibla.ts",
+    "validate:hijri": "tsx scripts/validateHijri.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@supabase/supabase-js": "^2.104.1",
     "adhan": "^4.4.4",
     "babel-preset-expo": "~54.0.10",
@@ -42,6 +44,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-get-random-values": "~1.11.0",
+    "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "tz-lookup": "^6.1.25"
@@ -52,6 +55,7 @@
     "@types/react-native": "^0.72.8",
     "@types/tz-lookup": "^6.1.2",
     "@types/uuid": "^10.0.0",
+    "puppeteer": "^25.3.0",
     "tsx": "^4.22.5",
     "typescript": "~5.9.2"
   },

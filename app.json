@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "HalalForMe",
+    "name": "Rihdal",
     "slug": "HalalForMe",
     "scheme": "halalforme",
     "version": "3.0.0",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#245737"
+      "backgroundColor": "#1F3D2B"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,7 +19,11 @@
       "bundleIdentifier": "com.halalforme.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "HalalForMe uses your camera to scan product barcodes and to take photos of restaurants and food."
+        "NSCameraUsageDescription": "Rihdal uses your camera to scan product barcodes and to take photos of restaurants and food.",
+        "UIBackgroundModes": [
+          "fetch",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -52,18 +56,24 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HalalForMe needs your location to show halal restaurants near you."
+          "locationWhenInUsePermission": "Rihdal uses your location to show nearby halal restaurants and mosques, calculate accurate prayer times for your area, and determine the Qibla direction."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "HalalForMe needs access to your photos to upload restaurant and food images."
+          "photosPermission": "Rihdal needs access to your photos to upload restaurant and food images."
         }
       ],
-      "expo-camera",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Rihdal uses your camera to scan product barcodes and to take photos of restaurants and food."
+        }
+      ],
       "expo-background-task",
-      "expo-localization"
+      "expo-localization",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},
