@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession } from '../lib/guestLoginIntent';
+import { registerPushToken } from '../lib/notifications';
 
 // Side-effect import only — this calls TaskManager.defineTask() at module
 // load time, which MUST happen unconditionally on every app launch,
@@ -21,6 +22,7 @@ import '../lib/prayer/backgroundRefresh';
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
+
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -107,7 +109,7 @@ function SplashOverlay({ show }: { show: boolean }) {
               resizeMode="cover"
             />
           </View>
-          <Text style={sp.title}>HalalForMe</Text>
+          <Text style={sp.title}>Rihdal</Text>
           <Text style={sp.tagline}>Your daily prayer companion</Text>
         </Animated.View>
 
@@ -138,9 +140,16 @@ function RootLayoutNav() {
   // Let the native splash go immediately — our Modal takes over
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
-    const t = setTimeout(() => setMinSplashElapsed(true), 400);
+    const t = setTimeout(() => setMinSplashElapsed(true), 200);
     return () => clearTimeout(t);
   }, []);
+
+  // Register push token whenever a user signs in so every signed-in device
+  // receives server-side notifications (previously only happened on Notifications screen visit).
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (userId) registerPushToken(userId).catch(() => {});
+  }, [session?.user?.id]);
 
   // Onboarding check (guests use a shared key; logged-in users use their own).
   // If the user-specific key is missing but the guest key is set, the user saw
@@ -234,7 +243,7 @@ function RootLayoutNav() {
 
 // ─── Root layout ───────────────────────────────────────────────────────────────
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -243,6 +252,8 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default RootLayout;
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
