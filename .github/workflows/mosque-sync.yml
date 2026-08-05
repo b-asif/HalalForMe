@@ -1,0 +1,74 @@
+name: Mosque Website Sync
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # Daily 5 AM UTC — prayer + jummah times
+    - cron: '0 6 * * 0'   # Sunday 6 AM UTC — events (weekly)
+    - cron: '0 8 * * 5'   # Friday 8 AM UTC — pre-Jummah times refresh
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Sync scope'
+        default: 'times'
+        required: true
+        type: choice
+        options:
+          - times
+          - events
+          - all
+
+# Prayer + jummah times: daily and pre-Jummah Friday run
+jobs:
+  sync-times:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 5 * * *' ||
+      github.event.schedule == '0 8 * * 5'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SYNC_SCOPE: ${{ github.event.inputs.scope || 'times' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests supabase playwright
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: python scripts/mosque_scraper.py
+
+  # Events: weekly Sunday run only
+  sync-events:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 6 * * 0'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SYNC_SCOPE: events
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests supabase playwright
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: python scripts/mosque_scraper.py
