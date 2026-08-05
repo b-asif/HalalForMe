@@ -25,7 +25,6 @@ from supabase import create_client
 
 SUPABASE_URL = os.environ['SUPABASE_URL']
 SUPABASE_SERVICE_KEY = os.environ['SUPABASE_SERVICE_KEY']
-CRON_SECRET = os.environ['CRON_SECRET']
 PARSE_FN_URL = f"{SUPABASE_URL}/functions/v1/parse-mosque-website"
 SCOPE = os.environ.get('SYNC_SCOPE', 'times')
 
@@ -98,7 +97,7 @@ def sync_mosque(mosque_id: str, url: str) -> dict:
     resp = requests.post(
         PARSE_FN_URL,
         headers={
-            'Authorization': f'Bearer {CRON_SECRET}',
+            'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
             'Content-Type': 'application/json',
             'X-Batch-Sync': 'true',
         },

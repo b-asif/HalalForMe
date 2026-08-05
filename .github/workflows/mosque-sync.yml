@@ -28,7 +28,6 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-      CRON_SECRET: ${{ secrets.CRON_SECRET }}
       SYNC_SCOPE: ${{ github.event.inputs.scope || 'times' }}
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +56,6 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-      CRON_SECRET: ${{ secrets.CRON_SECRET }}
       SYNC_SCOPE: events
     steps:
       - uses: actions/checkout@v4

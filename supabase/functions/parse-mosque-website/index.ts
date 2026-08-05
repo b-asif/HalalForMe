@@ -2166,14 +2166,18 @@ Deno.serve(async (req) => {
     return new Response('Missing Authorization header', { status: 401 });
   }
 
-  // Internal batch sync (mosque-website-batch-sync function) calls with the
-  // CRON_SECRET. Accept it as a trusted admin-level caller and skip user JWT
-  // resolution — the batch function already validated admin access.
+  // Internal batch sync calls are trusted if they carry either:
+  //   • CRON_SECRET  — used by mosque-website-batch-sync Edge Function
+  //   • SUPABASE_SERVICE_ROLE_KEY — used by the GitHub Actions Python scraper
+  // Both are server-side secrets never exposed to the client.
   const cronSecret = Deno.env.get('CRON_SECRET');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const isBatchCall =
     req.headers.get('X-Batch-Sync') === 'true' &&
-    !!cronSecret &&
-    authHeader === `Bearer ${cronSecret}`;
+    (
+      (!!cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+      (!!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`)
+    );
 
   let callerUserId: string | null = null;
 
