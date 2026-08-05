@@ -32,6 +32,8 @@ jobs:
       SYNC_SCOPE: ${{ github.event.inputs.scope || 'times' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - uses: actions/setup-python@v5
         with:
@@ -59,6 +61,8 @@ jobs:
       SYNC_SCOPE: events
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - uses: actions/setup-python@v5
         with:
