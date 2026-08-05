@@ -110,6 +110,8 @@ def sync_mosque(mosque_id: str, url: str) -> dict:
         },
         timeout=90,
     )
+    if not resp.ok:
+        print(f'    HTTP {resp.status_code} response body: {resp.text[:500]}')
     resp.raise_for_status()
     return resp.json()
 
