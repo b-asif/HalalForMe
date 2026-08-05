@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../../lib/supabase';
+import { isValidImageBytes } from '../../../lib/validateImageBytes';
 import AddressAutocomplete from '../../../components/AddressAutocomplete';
 import { CERTIFIERS, Certifier } from '../../../lib/certifiers';
 import { Brand } from '../../../lib/theme';
@@ -65,11 +66,27 @@ function hoursToWeek(raw: any): WeekHours {
   return week;
 }
 
+type ListingCategory = 'restaurant' | 'grocery' | 'butcher' | 'cafe';
+const LISTING_CATEGORIES: { key: 'restaurant' | 'grocery' | 'cafe'; label: string }[] = [
+  { key: 'restaurant', label: 'Restaurant'      },
+  { key: 'grocery',    label: 'Grocery/Butcher' },
+  { key: 'cafe',       label: 'Cafe'            },
+];
+// cuisine_type is repurposed as a looser "specialty" label for non-restaurant
+// categories (e.g. "Halal Butcher") — same free-text column, different copy.
+const CUISINE_FIELD_META: Record<ListingCategory, { label: string; placeholder: string }> = {
+  restaurant: { label: 'CUISINE TYPE', placeholder: 'e.g. Pakistani, Middle Eastern'     },
+  grocery:    { label: 'SPECIALTY',    placeholder: 'e.g. Halal Butcher, Middle Eastern' },
+  butcher:    { label: 'SPECIALTY',    placeholder: 'e.g. Halal Butcher, Middle Eastern' },
+  cafe:       { label: 'TYPE',         placeholder: 'e.g. Coffee Shop, Desserts, Boba'   },
+};
+
 interface Restaurant {
   id: string;
   name: string;
   address: string;
   cuisine_type: string;
+  category: ListingCategory;
   primary_certifier: string;
   phone: string | null;
   website: string | null;
@@ -78,6 +95,7 @@ interface Restaurant {
   opening_hours: any;
   image_url: string | null;
   categorized_photos: Partial<Record<Category, string[]>> | null;
+  owner_id: string | null;
 }
 
 type NewPhoto = { uri: string; base64: string };
@@ -88,6 +106,7 @@ export default function AdminEditScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
+  const isNew   = id === 'new';
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -96,6 +115,7 @@ export default function AdminEditScreen() {
   const [name,       setName]       = useState('');
   const [address,   setAddress]   = useState('');
   const [cuisine,   setCuisine]   = useState('');
+  const [category,  setCategory]  = useState<ListingCategory>('restaurant');
   const [certifiers, setCertifiers] = useState<Certifier[]>(['unknown']);
   const [phone,     setPhone]     = useState('');
   const [website,   setWebsite]   = useState('');
@@ -105,6 +125,7 @@ export default function AdminEditScreen() {
 
   const [zabihahStatus, setZabihahStatus] = useState<'full' | 'partial' | null>(null);
   const [zabihahNotes,  setZabihahNotes]  = useState('');
+  const [hasPrayerRoom, setHasPrayerRoom] = useState(false);
 
   const [timePicker,       setTimePicker]       = useState<{ day: string; rangeIndex: number; field: 'open' | 'close' } | null>(null);
   const [sameEveryDay,    setSameEveryDay]    = useState(false);
@@ -120,9 +141,10 @@ export default function AdminEditScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
+    if (isNew) { setLoading(false); return; }
     const { data, error } = await supabase
       .from('restaurants')
-      .select('id, name, address, cuisine_type, primary_certifier, certifiers, phone, website, lat, lng, opening_hours, image_url, categorized_photos, zabihah_status, zabihah_notes')
+      .select('id, name, address, cuisine_type, category, primary_certifier, certifiers, phone, website, lat, lng, opening_hours, image_url, categorized_photos, zabihah_status, zabihah_notes, has_prayer_room, owner_id')
       .eq('id', id)
       .single();
 
@@ -136,6 +158,8 @@ export default function AdminEditScreen() {
     setName(r.name);
     setAddress(r.address);
     setCuisine(r.cuisine_type ?? '');
+    // Normalize legacy 'butcher' → 'grocery' (now a single combined category in the UI)
+    setCategory(r.category === 'butcher' ? 'grocery' : (r.category ?? 'restaurant'));
     // Load existing certifiers array; fall back to primary_certifier
     const existing = Array.isArray((r as any).certifiers) && (r as any).certifiers.length > 0
       ? ((r as any).certifiers as string[]).filter(c => CERTIFIERS.includes(c as Certifier)) as Certifier[]
@@ -159,6 +183,7 @@ export default function AdminEditScreen() {
     setExistingImageUrl(r.image_url ?? null);
     setZabihahStatus((r as any).zabihah_status ?? null);
     setZabihahNotes((r as any).zabihah_notes ?? '');
+    setHasPrayerRoom((r as any).has_prayer_room ?? false);
     // Load categorized gallery photos (including menu)
     const cp = r.categorized_photos;
     setGalleryPhotos({
@@ -268,6 +293,7 @@ export default function AdminEditScreen() {
     const uuid = Math.random().toString(36).slice(2);
     const path = `main/${uuid}.jpg`;
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    if (!isValidImageBytes(bytes)) throw new Error('Invalid image file.');
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
@@ -308,6 +334,7 @@ export default function AdminEditScreen() {
     const uuid = Math.random().toString(36).slice(2);
     const path = `gallery/${id}/${category}/${uuid}.jpg`;
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    if (!isValidImageBytes(bytes)) throw new Error('Invalid image file.');
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
@@ -318,7 +345,7 @@ export default function AdminEditScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Missing name', 'Restaurant name is required.');
+      Alert.alert('Missing name', 'Name is required.');
       return;
     }
     if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
@@ -356,36 +383,50 @@ export default function AdminEditScreen() {
         if (weekHours[day].length > 0) openingHours[day] = weekHours[day];
       });
 
-      const { data: updated, error } = await supabase
-        .from('restaurants')
-        .update({
-          name:                name.trim(),
-          address:             address.trim(),
-          cuisine_type:        cuisine.trim() || null,
-          primary_certifier:   certifiers[0] ?? 'unknown',
-          certifiers:          certifiers,
-          phone:               phone.trim() || null,
-          website:             website.trim() || null,
-          lat:                 parseFloat(lat),
-          lng:                 parseFloat(lng),
-          opening_hours:       Object.keys(openingHours).length > 0 ? openingHours : null,
-          image_url:           imageUrl,
-          categorized_photos:  finalCategorized,
-          gallery_images:      galleryImages.length > 0 ? galleryImages : null,
-          zabihah_status:      zabihahStatus,
-          zabihah_notes:       zabihahNotes.trim() || null,
-        })
-        .eq('id', id)
-        .select('id')
-        .single();
+      const fields = {
+        name:                name.trim(),
+        address:             address.trim(),
+        cuisine_type:        cuisine.trim() || null,
+        category,
+        primary_certifier:   certifiers[0] ?? 'unknown',
+        certifiers:          certifiers,
+        phone:               phone.trim() || null,
+        website:             website.trim() || null,
+        lat:                 parseFloat(lat),
+        lng:                 parseFloat(lng),
+        opening_hours:       Object.keys(openingHours).length > 0 ? openingHours : null,
+        image_url:           imageUrl,
+        categorized_photos:  finalCategorized,
+        gallery_images:      galleryImages.length > 0 ? galleryImages : null,
+        zabihah_status:      zabihahStatus,
+        zabihah_notes:       zabihahNotes.trim() || null,
+        has_prayer_room:     hasPrayerRoom,
+      };
 
-      if (error || !updated) throw new Error(error?.message ?? 'Update failed — admin may lack UPDATE permission on restaurants.');
+      const { data: saved, error } = isNew
+        ? await supabase
+            .from('restaurants')
+            // Admin-curated listings (grocery/butcher, or a restaurant added
+            // directly) are live immediately — no pending/moderation state,
+            // matching the fields review/[id].tsx sets when approving a
+            // public submission.
+            .insert({ ...fields, confidence: 'medium', status: 'approved', is_verified: true })
+            .select('id')
+            .single()
+        : await supabase
+            .from('restaurants')
+            .update(fields)
+            .eq('id', id)
+            .select('id')
+            .single();
+
+      if (error || !saved) throw new Error(error?.message ?? `${isNew ? 'Create' : 'Update'} failed — admin may lack the required permission on restaurants.`);
 
       // Commit uploaded photos into local state so UI stays consistent
       setGalleryPhotos(finalCategorized);
       setNewPhotos(emptyNew());
 
-      Alert.alert('Saved', 'Restaurant updated.', [
+      Alert.alert('Saved', isNew ? 'Listing created.' : 'Listing updated.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
@@ -395,9 +436,38 @@ export default function AdminEditScreen() {
     }
   };
 
+  const handleRemoveOwner = () => {
+    Alert.alert(
+      'Remove Owner',
+      `Remove the current owner from "${restaurant?.name}"? They will lose manage access immediately.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove', style: 'destructive',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const { error } = await supabase
+                .from('restaurants')
+                .update({ owner_id: null })
+                .eq('id', id);
+              if (error) throw new Error(error.message);
+              setRestaurant(r => r ? { ...r, owner_id: null } : r);
+              Alert.alert('Done', 'Owner has been removed.');
+            } catch (e: any) {
+              Alert.alert('Error', e.message);
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleDelete = () => {
     Alert.alert(
-      'Delete Restaurant',
+      'Delete Listing',
       `Permanently delete "${restaurant?.name}"? This will also remove all reviews and saved entries. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -411,8 +481,8 @@ export default function AdminEditScreen() {
                 .delete()
                 .eq('id', id);
               if (error) throw new Error(error.message);
-              Alert.alert('Deleted', 'Restaurant has been removed.', [
-                { text: 'OK', onPress: () => router.replace('/(tabs)') },
+              Alert.alert('Deleted', 'Listing has been removed.', [
+                { text: 'OK', onPress: () => router.back() },
               ]);
             } catch (e: any) {
               Alert.alert('Error', e.message);
@@ -425,14 +495,14 @@ export default function AdminEditScreen() {
     );
   };
 
-  if (loading || !restaurant) {
+  if (loading || (!restaurant && !isNew)) {
     return (
       <SafeAreaView style={s.flex}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
           </TouchableOpacity>
-          <Text style={s.title}>Edit Restaurant</Text>
+          <Text style={s.title}>Edit Listing</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={s.centered}><ActivityIndicator size="large" color={GREEN} /></View>
@@ -452,7 +522,7 @@ export default function AdminEditScreen() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color="#111" />
         </TouchableOpacity>
-        <Text style={s.title} numberOfLines={1}>{name || 'Edit Restaurant'}</Text>
+        <Text style={s.title} numberOfLines={1}>{name || (isNew ? 'New Listing' : 'Edit Listing')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -464,11 +534,27 @@ export default function AdminEditScreen() {
       >
         {/* Basic Info */}
         <Text style={s.sectionTitle}>Basic Info</Text>
+        <Text style={s.fieldLabel}>CATEGORY</Text>
+        <View style={s.certChips}>
+          {LISTING_CATEGORIES.map(c => {
+            const selected = category === c.key;
+            return (
+              <TouchableOpacity
+                key={c.key}
+                style={[s.chip, selected && s.chipSelected]}
+                onPress={() => setCategory(c.key)}
+              >
+                {selected && <Ionicons name="checkmark" size={12} color={GREEN} />}
+                <Text style={[s.chipText, selected && s.chipTextSelected]}>{c.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <View style={s.fieldWrap}>
           <Text style={s.fieldLabel}>NAME *</Text>
           <TextInput
             style={s.input} value={name} onChangeText={setName}
-            placeholder="Restaurant name" placeholderTextColor="#bbb"
+            placeholder="Listing name" placeholderTextColor="#bbb"
             returnKeyType="next"
           />
         </View>
@@ -486,10 +572,10 @@ export default function AdminEditScreen() {
           />
         </View>
         <View style={s.fieldWrap}>
-          <Text style={s.fieldLabel}>CUISINE TYPE</Text>
+          <Text style={s.fieldLabel}>{CUISINE_FIELD_META[category].label}</Text>
           <TextInput
             style={s.input} value={cuisine} onChangeText={setCuisine}
-            placeholder="e.g. Pakistani, Middle Eastern" placeholderTextColor="#bbb"
+            placeholder={CUISINE_FIELD_META[category].placeholder} placeholderTextColor="#bbb"
             returnKeyType="next"
           />
         </View>
@@ -632,6 +718,20 @@ export default function AdminEditScreen() {
             />
           </View>
         )}
+
+        {/* Prayer Room */}
+        <View style={s.switchRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.sectionTitle}>Prayer Room</Text>
+            <Text style={s.switchSubtitle}>This listing has a dedicated prayer space available for customers</Text>
+          </View>
+          <Switch
+            value={hasPrayerRoom}
+            onValueChange={setHasPrayerRoom}
+            trackColor={{ false: HAIRLINE, true: GREEN }}
+            thumbColor="#fff"
+          />
+        </View>
 
         {/* Coordinates */}
         <View style={s.twoCol}>
@@ -817,14 +917,27 @@ export default function AdminEditScreen() {
                <Text style={s.saveBtnText}>Save Changes</Text></>}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[s.deleteBtn, saving && s.btnDisabled]}
-          onPress={handleDelete}
-          disabled={saving}
-        >
-          <Ionicons name="trash-outline" size={18} color="#e53e3e" />
-          <Text style={s.deleteBtnText}>Delete Restaurant</Text>
-        </TouchableOpacity>
+        {!isNew && (
+          <TouchableOpacity
+            style={[s.deleteBtn, saving && s.btnDisabled]}
+            onPress={handleDelete}
+            disabled={saving}
+          >
+            <Ionicons name="trash-outline" size={18} color="#e53e3e" />
+            <Text style={s.deleteBtnText}>Delete Listing</Text>
+          </TouchableOpacity>
+        )}
+
+        {!isNew && restaurant?.owner_id && (
+          <TouchableOpacity
+            style={[s.removeOwnerBtn, saving && s.btnDisabled]}
+            onPress={handleRemoveOwner}
+            disabled={saving}
+          >
+            <Ionicons name="person-remove-outline" size={18} color="#e53e3e" />
+            <Text style={s.deleteBtnText}>Remove Owner</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Lightbox modal */}
@@ -900,6 +1013,13 @@ const s = StyleSheet.create({
     fontSize: 13, fontWeight: '700', color: TEXT_DARK,
     marginTop: 16, marginBottom: 10, letterSpacing: 0.2,
   },
+  switchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginTop: 16, paddingVertical: 12, paddingHorizontal: 14,
+    backgroundColor: '#fff', borderRadius: 12,
+    borderWidth: 1, borderColor: HAIRLINE,
+  },
+  switchSubtitle: { fontSize: 12, color: TEXT_MUTED, marginTop: 2, lineHeight: 16 },
 
   imagePicker: {
     height: 140, borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE,
@@ -975,6 +1095,12 @@ const s = StyleSheet.create({
   timeSep: { fontSize: 13, color: HAIRLINE },
 
   deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: '#fca5a5', borderRadius: 14,
+    paddingVertical: 14, marginTop: 10,
+    backgroundColor: '#fff5f5',
+  },
+  removeOwnerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1.5, borderColor: '#fca5a5', borderRadius: 14,
     paddingVertical: 14, marginTop: 10, marginBottom: 32,

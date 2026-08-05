@@ -1,93 +1,65 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
-  Alert, Animated, Dimensions, FlatList, PanResponder, ScrollView,
+  ActivityIndicator, Image, ImageBackground, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Localization from 'expo-localization';
+
+import { Brand, getCuisineTheme } from '../../lib/theme';
+import { loadPrayerSettings } from '../../lib/prayer/settingsStore';
+import { resolveGpsCoordinates, loadCachedGpsCoordinates, ResolvedCoordinates } from '../../lib/prayer/coordinates';
+import { searchOsmMosquesByName, Mosque } from '../../lib/mosques/overpass';
+import { fetchNearestMosquesIncludingManual, searchMosquesByName } from '../../lib/mosques/manual';
+import { haversineMi } from '../../lib/geo';
 import { supabase } from '../../lib/supabase';
-import { formatError } from '../../lib/errors';
-import { useAuth } from '../../contexts/AuthContext';
-import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
-import RestaurantCard, { Restaurant } from '../../components/RestaurantCard';
-import { Brand } from '../../lib/theme';
+import { isHFSAACertified } from '../../lib/certifiers';
 
 const CREAM      = Brand.cream;
 const DEEP_GREEN = Brand.deepGreen;
-const GREEN       = Brand.green;
+const GREEN      = Brand.green;
 const TEXT_DARK  = Brand.textDark;
 const TEXT_MUTED = Brand.textMuted;
-const HAIRLINE   = Brand.hairline;
-const RED        = Brand.red;
-const SCREEN_H    = Dimensions.get('window').height;
-const DISTANCE_OPTIONS = [5, 10, 25, 50, 100]; // miles
 
-function haversineMi(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3958.8;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLng = (lng2 - lng1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+// ─── category registry ────────────────────────────────────────────────────────
 
-// ─── certifier options shown in filter sheet ──────────────────────────────────
+type CategoryItem = {
+  key: string;
+  label: string;
+  route: string;
+  bg: string;
+  iconName: string;
+  iconLib: 'ion' | 'mc';
+  iconColor: string;
+};
 
-const THIRD_PARTY_CERTS = ['ISNA', 'IFANCA', 'HMA', 'HFA', 'HFSAA', 'HMS', 'MUI'];
+const TILE_BG = '#E8E4DC';
 
-const CERT_OPTIONS: { key: string; label: string }[] = [
-  { key: 'ISNA',           label: 'ISNA'           },
-  { key: 'IFANCA',         label: 'IFANCA'         },
-  { key: 'HMA',            label: 'HMA'            },
-  { key: 'HFA',            label: 'HFA'            },
-  { key: 'HFSAA',          label: 'HFSAA'          },
-  { key: 'HMS',            label: 'HMS'            },
-  { key: 'MUI',            label: 'MUI'            },
-  { key: 'self_certified', label: 'Self Certified' },
-  { key: 'uncertified',    label: 'Not Certified'  },
+const CATEGORIES: CategoryItem[] = [
+  { key: 'mosques', label: 'Mosques',    route: '/mosques',
+    bg: TILE_BG, iconName: 'mosque',           iconLib: 'mc',  iconColor: DEEP_GREEN },
+  { key: 'food',    label: 'Halal Food', route: '/explore/food?category=restaurant',
+    bg: TILE_BG, iconName: 'restaurant',       iconLib: 'ion', iconColor: DEEP_GREEN },
+  { key: 'cafe',    label: 'Cafes',      route: '/explore/food?category=cafe',
+    bg: TILE_BG, iconName: 'cafe',             iconLib: 'ion', iconColor: DEEP_GREEN },
+  { key: 'market',  label: 'Grocery & Butcher', route: '/explore/food?category=market',
+    bg: TILE_BG, iconName: 'basket-outline',   iconLib: 'ion', iconColor: DEEP_GREEN },
+  { key: 'events',  label: 'Events',     route: '/events',
+    bg: TILE_BG, iconName: 'calendar-outline', iconLib: 'ion', iconColor: DEEP_GREEN },
 ];
 
-// ─── types ────────────────────────────────────────────────────────────────────
-
-interface DbRow {
-  id: string;
-  name: string;
-  address: string;
-  lat: number | null;
-  lng: number | null;
-  cuisine_type: string;
-  primary_certifier: string;
-  certifiers: string[] | null;
-  is_verified: boolean;
-  image_url: string | null;
-  categorized_photos: Record<string, string[]> | null;
-  opening_hours: Record<string, any> | null;
-  avg_rating?: number | null;
-  reviews?: { count: number }[];
-}
-
-// ─── hours helpers ────────────────────────────────────────────────────────────
+// ─── hours helpers (for open/closed badge on food cards) ─────────────────────
 
 const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-function fmt12(t: string): string {
-  const [h, m] = t.split(':').map(Number);
-  const p = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return m === 0 ? `${h12} ${p}` : `${h12}:${String(m).padStart(2, '0')} ${p}`;
-}
-
-function isOpenNow(hours: DbRow['opening_hours']): boolean {
+function isOpenNow(hours: Record<string, any> | null): boolean {
   if (!hours) return false;
-  const now = new Date();
-  const cur = now.getHours() * 60 + now.getMinutes();
-  const todayIdx     = now.getDay();
-  const yesterdayIdx = (todayIdx + 6) % 7;
+  const now  = new Date();
+  const cur  = now.getHours() * 60 + now.getMinutes();
+  const tidx = now.getDay();
+  const yidx = (tidx + 6) % 7;
 
   const checkRanges = (dayVal: any, overnight: boolean) => {
     if (!dayVal) return false;
@@ -103,877 +75,729 @@ function isOpenNow(hours: DbRow['opening_hours']): boolean {
     });
   };
 
-  return checkRanges(hours[WEEK_DAYS[todayIdx]], false)
-      || checkRanges(hours[WEEK_DAYS[yesterdayIdx]], true);
+  return checkRanges(hours[WEEK_DAYS[tidx]], false) || checkRanges(hours[WEEK_DAYS[yidx]], true);
 }
 
-function todayHoursStr(hours: DbRow['opening_hours']): string | null {
-  if (!hours) return null;
-  const today = WEEK_DAYS[new Date().getDay()];
-  const val = hours[today];
-  if (!val) return 'Closed today';
-  const ranges = Array.isArray(val) ? val : [val];
-  if (ranges.length === 0) return 'Closed today';
-  if (ranges.length === 1 && ranges[0].open === '00:00' && ranges[0].close === '00:00') return 'Today: Open 24 Hours';
-  return 'Today: ' + ranges.map((r: any) => `${fmt12(r.open)}–${fmt12(r.close)}`).join(', ');
+// ─── types ────────────────────────────────────────────────────────────────────
+
+interface NearbyFood {
+  kind: 'food';
+  id: string;
+  name: string;
+  cuisine: string;
+  distanceMi: number;
+  image_url: string | null;
+  isOpen: boolean;
+  primary_certifier: string;
+  zabihah_status?: 'full' | 'partial' | null;
 }
 
+type NearbyItem = (Mosque & { kind: 'mosque' }) | NearbyFood;
 
+// ─── data helpers ─────────────────────────────────────────────────────────────
 
-// ─── toCard ───────────────────────────────────────────────────────────────────
+async function fetchNearbyFood(lat: number, lng: number, limit: number): Promise<NearbyFood[]> {
+  // 25-mile bounding box at the DB level so we never pull the entire global
+  // table. cos(50°) ≈ 0.64 → 1° lng ≈ 44 mi; divide by 50 for safe headroom.
+  const RADIUS_MI = 25;
+  const latDelta  = RADIUS_MI / 69;
+  const lngDelta  = RADIUS_MI / 50;
 
-function toCard(r: DbRow, distanceMi?: number): Restaurant {
-  return {
-    id: r.id,
-    name: r.name,
-    cuisine: r.cuisine_type ?? '',
-    rating: r.avg_rating ?? 0,
-    reviewCount: r.reviews?.[0]?.count ?? 0,
-    distance: distanceMi != null ? `${distanceMi < 10 ? distanceMi.toFixed(1) : Math.round(distanceMi)} mi` : '',
-    isOpen: isOpenNow(r.opening_hours),
-    primaryCertifier: r.primary_certifier ?? 'unknown',
-    address: r.address,
-    image_url: r.image_url,
-    categorized_photos: r.categorized_photos,
-    todayHours: todayHoursStr(r.opening_hours),
-  };
+  const { data } = await supabase
+    .from('restaurants')
+    .select('id, name, cuisine_type, image_url, opening_hours, lat, lng, primary_certifier, zabihah_status')
+    .eq('category', 'restaurant')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .gte('lat', lat - latDelta)
+    .lte('lat', lat + latDelta)
+    .gte('lng', lng - lngDelta)
+    .lte('lng', lng + lngDelta)
+    .limit(60);
+
+  if (!data) return [];
+
+  return (data as any[])
+    .filter(r => r.lat != null && r.lng != null)
+    .map(r => ({
+      kind:           'food' as const,
+      id:             r.id,
+      name:           r.name,
+      cuisine:        r.cuisine_type ?? '',
+      distanceMi:     haversineMi(lat, lng, r.lat, r.lng),
+      image_url:      r.image_url,
+      isOpen:         isOpenNow(r.opening_hours),
+      primary_certifier: r.primary_certifier ?? 'unknown',
+      zabihah_status: r.zabihah_status ?? null,
+    }))
+    .sort((a, b) => a.distanceMi - b.distanceMi)
+    .slice(0, limit);
 }
 
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-export default function SearchScreen() {
-  const router   = useRouter();
-  const insets   = useSafeAreaInsets();
-  const { user } = useAuth();
+export default function ExploreHub() {
+  const router  = useRouter();
+  const insets  = useSafeAreaInsets();
 
-  // filter sheet animation
-  const filterSlideAnim    = useRef(new Animated.Value(SCREEN_H)).current;
-  const filterPanY         = useRef(new Animated.Value(0)).current;
-  const filterBackdropAnim = useRef(new Animated.Value(0)).current;
+  const [searchQuery,    setSearchQuery]    = useState('');
+  const [nearbyItems,    setNearbyItems]    = useState<NearbyItem[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [coords,         setCoords]         = useState<ResolvedCoordinates | null>(null);
+  const [searchMode,     setSearchMode]     = useState(false);
+  const [searchLoading,  setSearchLoading]  = useState(false);
+  const [searchResults,  setSearchResults]  = useState<NearbyItem[]>([]);
+  const [dropdownItems,  setDropdownItems]  = useState<NearbyItem[]>([]);
+  const [dropdownLoading,setDropdownLoading]= useState(false);
+  const [showDropdown,   setShowDropdown]   = useState(false);
+  const hasLoadedOnce = useRef(false);
+  const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // search
-  const [query, setQuery] = useState('');
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+    setSearchQuery('');
 
-  // location search
-  const [locationQuery, setLocationQuery]   = useState('');
-  const [locationInput, setLocationInput]   = useState('');
-  const [searchLat,     setSearchLat]       = useState<number | null>(null);
-  const [searchLng,     setSearchLng]       = useState<number | null>(null);
-  const [geoLoading,    setGeoLoading]      = useState(false);
-  const [geoError,      setGeoError]        = useState<string | null>(null);
+    async function load() {
+      if (!hasLoadedOnce.current) setLoading(true);
 
-  // quick filter toggles
-  const [filterOpenNow,    setFilterOpenNow]    = useState(false);
-  const [filterTopRated,   setFilterTopRated]   = useState(false);
-  const [filterThirdParty, setFilterThirdParty] = useState(false);
+      // Resolve location — same logic as mosques.tsx / qibla screen
+      const regionCode = Localization.getLocales()[0]?.regionCode ?? null;
+      const settings   = await loadPrayerSettings(regionCode);
+      let loc: ResolvedCoordinates | null = null;
 
-  // distance
-  const [radiusMi, setRadiusMi] = useState(25);
-
-  // advanced filters (cuisine + certification)
-  const [filterCuisines, setFilterCuisines] = useState<string[]>([]);
-  const [filterCerts,    setFilterCerts]    = useState<string[]>([]);
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-
-  // data
-  const [rows,    setRows]    = useState<DbRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-
-
-  // ── location search ──────────────────────────────────────────
-  const handleLocationSearch = useCallback(async () => {
-    const q = locationInput.trim();
-    if (!q) {
-      setLocationQuery('');
-      setSearchLat(null);
-      setSearchLng(null);
-      setGeoError(null);
-      return;
-    }
-    setGeoLoading(true);
-    setGeoError(null);
-    try {
-      const results = await Location.geocodeAsync(q);
-      if (results.length === 0) {
-        setGeoError('Location not found. Try a different city or zip code.');
-        setSearchLat(null);
-        setSearchLng(null);
+      if (settings.locationMode === 'manual' && settings.manualCity) {
+        loc = settings.manualCity;
       } else {
-        setSearchLat(results[0].latitude);
-        setSearchLng(results[0].longitude);
-        setLocationQuery(q);
-        setGeoError(null);
+        // Use cached GPS (written by the Home screen) so the Explore hub
+        // loads instantly on every tab switch. Fall back to a live fix only
+        // on first launch when no cache exists yet.
+        loc = (await loadCachedGpsCoordinates()) ?? await resolveGpsCoordinates();
       }
-    } catch {
-      setGeoError('Could not search that location. Try again.');
-    }
-    setGeoLoading(false);
-  }, [locationInput]);
 
-  const clearLocation = useCallback(() => {
-    setLocationInput('');
-    setLocationQuery('');
-    setSearchLat(null);
-    setSearchLng(null);
-    setGeoError(null);
-  }, []);
+      if (cancelled) return;
+      setCoords(loc);
 
-  // ── fetch ─────────────────────────────────────────────────────
-  const fetchRestaurants = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+      if (!loc) { setLoading(false); return; }
 
-    const baseCols = 'id, name, address, lat, lng, cuisine_type, primary_certifier, certifiers, is_verified, image_url, categorized_photos, opening_hours';
+      const { latitude, longitude } = loc;
 
-    const { data, error: err } = await supabase
-      .from('restaurants')
-      .select(baseCols)
-      .order('name')
-      .limit(200);
+      const [mosqueRes, foodRes] = await Promise.allSettled([
+        fetchNearestMosquesIncludingManual(latitude, longitude, 15_000, 5),
+        fetchNearbyFood(latitude, longitude, 5),
+      ]);
 
-    if (err) {
-      setError(formatError(err));
+      if (cancelled) return;
+
+      const mosques = mosqueRes.status === 'fulfilled' ? mosqueRes.value : [];
+      const foods   = foodRes.status   === 'fulfilled' ? foodRes.value   : [];
+
+      const items: NearbyItem[] = [
+        ...mosques.map(m => ({ ...m, kind: 'mosque' as const })),
+        ...foods,
+      ].sort((a, b) => a.distanceMi - b.distanceMi);
+
+      setNearbyItems(items);
+      hasLoadedOnce.current = true;
       setLoading(false);
-      return;
     }
 
-    const restaurantRows = (data as DbRow[]) ?? [];
+    load();
+    return () => { cancelled = true; };
+  }, []));
 
-    // Ratings are computed here from the `reviews` table directly (same
-    // source the restaurant detail screen uses) rather than trusting a
-    // restaurants.avg_rating column or a reviews(count) embed, since neither
-    // is guaranteed to exist / be embeddable depending on the schema.
-    const ids = restaurantRows.map(r => r.id);
-    if (ids.length > 0) {
-      const { data: reviewRows } = await supabase
-        .from('reviews')
-        .select('restaurant_id, rating')
-        .eq('status', 'approved')
-        .in('restaurant_id', ids);
+  // Live dropdown — debounced 300ms after each keystroke
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) { setShowDropdown(false); setDropdownItems([]); return; }
+    if (searchMode) return; // full results already showing
 
-      const stats = new Map<string, { sum: number; count: number }>();
-      for (const rv of (reviewRows as { restaurant_id: string; rating: number }[]) ?? []) {
-        const entry = stats.get(rv.restaurant_id) ?? { sum: 0, count: 0 };
-        entry.sum += rv.rating;
-        entry.count += 1;
-        stats.set(rv.restaurant_id, entry);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setDropdownLoading(true);
+      setShowDropdown(true);
+      try {
+        const { data } = await supabase
+          .from('restaurants')
+          .select('id, name, cuisine_type, lat, lng')
+          .ilike('name', `%${q}%`)
+          .limit(6);
+
+        const foods: NearbyItem[] = (data ?? []).map((r: any) => ({
+          kind:              'food' as const,
+          id:                r.id,
+          name:              r.name,
+          cuisine:           r.cuisine_type ?? '',
+          distanceMi:        coords && r.lat != null && r.lng != null
+                               ? haversineMi(coords.latitude, coords.longitude, r.lat, r.lng)
+                               : Infinity,
+          image_url:         null,
+          isOpen:            false,
+          primary_certifier: 'unknown',
+          zabihah_status:    null,
+        }));
+
+        setDropdownItems(foods);
+      } catch {
+        setDropdownItems([]);
+      } finally {
+        setDropdownLoading(false);
       }
-      for (const r of restaurantRows) {
-        const entry = stats.get(r.id);
-        r.avg_rating = entry ? entry.sum / entry.count : null;
-        r.reviews = [{ count: entry?.count ?? 0 }];
-      }
-    }
+    }, 300);
 
-    setRows(restaurantRows);
-    setLoading(false);
-  }, []);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery, searchMode]);
 
-  useFocusEffect(useCallback(() => { fetchRestaurants(); }, [fetchRestaurants]));
-
-  // ── derived ───────────────────────────────────────────────────
-
-  // unique cuisine types from loaded data
-  const cuisineOptions = useMemo(
-    () => [...new Set(rows.map(r => r.cuisine_type).filter(Boolean))].sort(),
-    [rows],
-  );
-
-  // count of active advanced filters (for badge on button)
-  const activeFilterCount = [filterOpenNow, filterTopRated, filterThirdParty, radiusMi !== 25].filter(Boolean).length
-    + filterCuisines.length + filterCerts.length;
-
-  const results = useMemo(() => {
-    let filtered = rows;
-
-    // location filter (city / zip)
-    if (searchLat !== null && searchLng !== null) {
-      filtered = filtered.filter(r =>
-        r.lat != null && r.lng != null &&
-        haversineMi(searchLat, searchLng, r.lat, r.lng) <= radiusMi,
-      );
-    }
-
-    // text search
-    const q = query.trim().toLowerCase();
-    if (q) {
-      filtered = filtered.filter(r =>
-        r.name.toLowerCase().includes(q) ||
-        (r.cuisine_type ?? '').toLowerCase().includes(q),
-      );
-    }
-
-    // quick toggles
-    if (filterOpenNow)    filtered = filtered.filter(r => isOpenNow(r.opening_hours));
-    if (filterTopRated)   filtered = filtered.filter(r => (r.avg_rating ?? 0) >= 4.0);
-    if (filterThirdParty) filtered = filtered.filter(r => THIRD_PARTY_CERTS.includes(r.primary_certifier));
-
-    // advanced
-    if (filterCuisines.length > 0) {
-      filtered = filtered.filter(r => filterCuisines.includes(r.cuisine_type));
-    }
-    if (filterCerts.length > 0) {
-      filtered = filtered.filter(r => filterCerts.includes(r.primary_certifier));
-    }
-
-    if (filterTopRated) {
-      filtered = [...filtered].sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
-    } else if (searchLat !== null && searchLng !== null) {
-      filtered = [...filtered].sort((a, b) => {
-        const da = a.lat != null && a.lng != null ? haversineMi(searchLat, searchLng, a.lat, a.lng) : Infinity;
-        const db = b.lat != null && b.lng != null ? haversineMi(searchLat, searchLng, b.lat, b.lng) : Infinity;
-        return da - db;
-      });
-    }
-
-    const hasLocationSearch = searchLat !== null && searchLng !== null;
-    return filtered.map(r => {
-      const distanceMi = hasLocationSearch && r.lat != null && r.lng != null
-        ? haversineMi(searchLat!, searchLng!, r.lat, r.lng)
-        : undefined;
-      return toCard(r, distanceMi);
-    });
-  }, [rows, query, searchLat, searchLng, radiusMi, filterOpenNow, filterTopRated, filterThirdParty, filterCuisines, filterCerts]);
-
-  const openFilterSheet = useCallback(() => {
-    filterPanY.setValue(0);
-    setFilterSheetOpen(true);
-    Animated.parallel([
-      Animated.spring(filterSlideAnim,    { toValue: 0, tension: 68, friction: 12, useNativeDriver: true }),
-      Animated.timing(filterBackdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-    ]).start();
-  }, [filterSlideAnim, filterPanY, filterBackdropAnim]);
-
-  const closeFilterSheet = useCallback(() => {
-    // Fallback timeout ensures the sheet closes even if the animation callback
-    // never fires (e.g. interrupted gesture on slow Android devices).
-    const fallback = setTimeout(() => { setFilterSheetOpen(false); filterPanY.setValue(0); }, 350);
-    Animated.parallel([
-      Animated.timing(filterSlideAnim,    { toValue: SCREEN_H, duration: 260, useNativeDriver: true }),
-      Animated.timing(filterBackdropAnim, { toValue: 0,        duration: 200, useNativeDriver: true }),
-    ]).start(() => { clearTimeout(fallback); setFilterSheetOpen(false); filterPanY.setValue(0); });
-  }, [filterSlideAnim, filterPanY, filterBackdropAnim]);
-
-  const filterPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  (_, gs) => gs.dy > 5,
-      onPanResponderMove: (_, gs) => {
-        if (gs.dy > 0) filterPanY.setValue(gs.dy);
-      },
-      onPanResponderRelease: (_, gs) => {
-        if (gs.dy > 80 || gs.vy > 0.5) {
-          closeFilterSheet();
-        } else {
-          Animated.spring(filterPanY, { toValue: 0, useNativeDriver: true }).start();
-        }
-      },
-    }),
-  ).current;
-
-  const handleCardPress = useCallback((card: Restaurant) => {
-    router.push(`/restaurant/${card.id}`);
-  }, [router]);
-
-  const clearAllFilters = () => {
-    setFilterOpenNow(false);
-    setFilterTopRated(false);
-    setFilterThirdParty(false);
-    setRadiusMi(25);
-    setFilterCuisines([]);
-    setFilterCerts([]);
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchMode(false);
+    setSearchResults([]);
+    setShowDropdown(false);
+    setDropdownItems([]);
   };
 
-  const toggleCuisine = (c: string) =>
-    setFilterCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  const handleSearch = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
 
-  const toggleCert = (c: string) =>
-    setFilterCerts(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+    setSearchMode(true);
+    setSearchLoading(true);
+    setSearchResults([]);
+    setShowDropdown(false);
 
-  // ─────────────────────────────────────────────────────────────
-  return (
-    <View style={st.root}>
-      <SafeAreaView style={st.safeArea} edges={['top']}>
+    try {
+      const lat = coords?.latitude  ?? 0;
+      const lng = coords?.longitude ?? 0;
 
-        <View style={st.header}>
-          <Text style={st.title}>Explore</Text>
-        </View>
+      const [mosqueRes, foodRes] = await Promise.allSettled([
+        // Mosques: local DB first, then OSM with 2.5 s cap
+        searchMosquesByName(q, lat, lng).then(async local => {
+          if (local.length > 0) return local;
+          return Promise.race([
+            searchOsmMosquesByName(q, lat, lng).catch(() => [] as Mosque[]),
+            new Promise<Mosque[]>(resolve => setTimeout(() => resolve([]), 2500)),
+          ]);
+        }),
+        // Restaurants: name search against Supabase
+        supabase
+          .from('restaurants')
+          .select('id, name, cuisine_type, image_url, opening_hours, lat, lng, primary_certifier, zabihah_status')
+          .ilike('name', `%${q}%`)
+          .limit(25)
+          .then(({ data }) =>
+            (data ?? []).map((r: any) => ({
+              kind:              'food' as const,
+              id:                r.id,
+              name:              r.name,
+              cuisine:           r.cuisine_type ?? '',
+              distanceMi:        coords && r.lat != null && r.lng != null
+                                   ? haversineMi(lat, lng, r.lat, r.lng)
+                                   : Infinity,
+              image_url:         r.image_url,
+              isOpen:            isOpenNow(r.opening_hours),
+              primary_certifier: r.primary_certifier ?? 'unknown',
+              zabihah_status:    r.zabihah_status ?? null,
+            }))
+          ),
+      ]);
 
-        {/* Search bar */}
-        <View style={st.searchRow}>
-          <Ionicons name="search-outline" size={18} color={TEXT_MUTED} style={st.searchIcon} />
-          <TextInput
-            style={st.input}
-            placeholder="Search restaurants, cuisines..."
-            placeholderTextColor={TEXT_MUTED}
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} style={st.clearBtn}>
-              <Ionicons name="close-circle" size={18} color={TEXT_MUTED} />
-            </TouchableOpacity>
-          )}
-        </View>
+      const mosques = mosqueRes.status === 'fulfilled'
+        ? mosqueRes.value.map(m => ({ ...m, kind: 'mosque' as const }))
+        : [];
+      const foods = foodRes.status === 'fulfilled' ? foodRes.value : [];
 
-        {/* Location search */}
-        <View style={st.locationRow}>
-          <Ionicons name="location-outline" size={18} color={TEXT_MUTED} style={st.searchIcon} />
-          <TextInput
-            style={st.input}
-            placeholder="City or zip code..."
-            placeholderTextColor={TEXT_MUTED}
-            value={locationInput}
-            onChangeText={setLocationInput}
-            autoCapitalize="none"
-            returnKeyType="search"
-            onSubmitEditing={handleLocationSearch}
-          />
-          {geoLoading ? (
-            <ActivityIndicator size="small" color={GREEN} style={{ marginRight: 4 }} />
-          ) : locationQuery ? (
-            <TouchableOpacity onPress={clearLocation} style={st.clearBtn}>
-              <Ionicons name="close-circle" size={18} color={GREEN} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={handleLocationSearch} style={st.clearBtn}>
-              <Ionicons name="arrow-forward-circle" size={22} color={GREEN} />
-            </TouchableOpacity>
-          )}
-        </View>
-        {geoError && (
-          <Text style={st.geoError}>{geoError}</Text>
-        )}
-        {locationQuery ? (
-          <Text style={st.locationActive}>
-            <Ionicons name="location" size={12} color={GREEN} /> Showing within {radiusMi} mi of "{locationQuery}"
-          </Text>
-        ) : null}
+      const combined: NearbyItem[] = [...mosques, ...foods].sort((a, b) => {
+        if (a.distanceMi === Infinity && b.distanceMi === Infinity) return 0;
+        if (a.distanceMi === Infinity) return 1;
+        if (b.distanceMi === Infinity) return -1;
+        return a.distanceMi - b.distanceMi;
+      });
 
-        {/* Verified Only prominent toggle */}
-        <TouchableOpacity
-          style={[st.verifiedToggle, filterThirdParty && st.verifiedToggleActive]}
-          onPress={() => setFilterThirdParty(v => !v)}
-          activeOpacity={0.8}
-        >
-          <View style={[st.verifiedToggleIcon, filterThirdParty && st.verifiedToggleIconActive]}>
-            <Ionicons name="shield-checkmark" size={18} color={filterThirdParty ? '#fff' : GREEN} />
-          </View>
-          <View style={st.verifiedToggleBody}>
-            <Text style={[st.verifiedToggleTitle, filterThirdParty && st.verifiedToggleTitleActive]}>
-              Verified Only
-            </Text>
-            <Text style={[st.verifiedToggleSub, filterThirdParty && st.verifiedToggleSubActive]}>
-              {filterThirdParty
-                ? `${results.length} certified restaurant${results.length !== 1 ? 's' : ''}`
-                : 'Show certified restaurants only'}
-            </Text>
-          </View>
-          <View style={[st.verifiedTogglePill, filterThirdParty && st.verifiedTogglePillActive]}>
-            <Ionicons
-              name={filterThirdParty ? 'checkmark-circle' : 'ellipse-outline'}
-              size={22}
-              color={filterThirdParty ? '#fff' : TEXT_MUTED}
-            />
-          </View>
+      setSearchResults(combined);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Shared search bar used in both browse and search modes
+  const searchBar = (
+    <View style={s.searchBar}>
+      {searchLoading || dropdownLoading ? (
+        <ActivityIndicator size="small" color={GREEN} style={{ marginRight: 8 }} />
+      ) : (
+        <Ionicons name="search-outline" size={18} color={TEXT_MUTED} style={{ marginRight: 8 }} />
+      )}
+      <TextInput
+        style={s.searchInput}
+        placeholder="Mosques, restaurants, events..."
+        placeholderTextColor={TEXT_MUTED}
+        value={searchQuery}
+        onChangeText={v => { setSearchQuery(v); if (!v) { setSearchMode(false); setSearchResults([]); } }}
+        returnKeyType="search"
+        onSubmitEditing={handleSearch}
+        autoCapitalize="none"
+        editable={!searchLoading}
+      />
+      {searchQuery.length > 0 && (
+        <TouchableOpacity onPress={clearSearch} hitSlop={8}>
+          <Ionicons name="close-circle" size={18} color={TEXT_MUTED} />
         </TouchableOpacity>
+      )}
+    </View>
+  );
 
-        {/* Filter chips */}
-        <View style={st.filtersWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={st.filtersContent}
-        >
-          <QuickChip
-            label="Open Now"
-            icon="time-outline"
-            active={filterOpenNow}
-            onPress={() => setFilterOpenNow(v => !v)}
-          />
-          <QuickChip
-            label="4+ Stars"
-            icon="star-outline"
-            active={filterTopRated}
-            onPress={() => setFilterTopRated(v => !v)}
-          />
-          <TouchableOpacity
-            style={[st.filterChip, activeFilterCount > 0 && st.filterChipActive]}
-            onPress={openFilterSheet}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name="options-outline"
-              size={14}
-              color={activeFilterCount > 0 ? '#fff' : TEXT_MUTED}
-            />
-            <Text style={[st.filterText, activeFilterCount > 0 && st.filterTextActive]}>
-              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-        </View>
-
-        {/* Results */}
-        {loading ? (
-          <View style={st.centered}>
-            <ActivityIndicator size="large" color={GREEN} />
-          </View>
-        ) : error ? (
-          <View style={st.centered}>
-            <Ionicons name="alert-circle-outline" size={36} color={TEXT_MUTED} />
-            <Text style={st.errorText}>{error}</Text>
-            <TouchableOpacity style={st.retryBtn} onPress={fetchRestaurants}>
-              <Text style={st.retryText}>Try again</Text>
+  if (searchMode) {
+    return (
+      <View style={s.root}>
+        {/* Slim search header replaces hero entirely */}
+        <View style={[s.searchHeader, { paddingTop: insets.top + 10 }]}>
+          <View style={s.searchHeaderInner}>
+            {searchBar}
+            <TouchableOpacity onPress={clearSearch} style={s.cancelBtn}>
+              <Text style={s.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        ) : results.length === 0 ? (
-          <View style={st.empty}>
-            <Ionicons name="search-outline" size={48} color={TEXT_MUTED} />
-            <Text style={st.emptyTitle}>No results</Text>
-            <Text style={st.emptyText}>
-              {activeFilterCount > 0
-                ? 'Try removing some filters'
-                : query
-                  ? 'Try a different search'
-                  : 'No restaurants found'}
-            </Text>
-            {activeFilterCount > 0 && (
-              <TouchableOpacity style={st.clearFiltersBtn} onPress={clearAllFilters}>
-                <Text style={st.clearFiltersText}>Clear filters</Text>
-              </TouchableOpacity>
-            )}
+        </View>
+
+        <ScrollView
+          style={s.flex}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.searchResultsScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {searchLoading ? (
+            <View style={s.nearbyLoading}>
+              <ActivityIndicator size="large" color={GREEN} />
+            </View>
+          ) : searchResults.length === 0 ? (
+            <View style={s.nearbyEmpty}>
+              <Ionicons name="search-outline" size={32} color={TEXT_MUTED} style={{ marginBottom: 8 }} />
+              <Text style={s.nearbyEmptyText}>No results for "{searchQuery}"</Text>
+              <Text style={[s.nearbyEmptyText, { fontSize: 12, marginTop: 4 }]}>
+                Try a different spelling or browse categories below
+              </Text>
+            </View>
+          ) : (
+            <View style={s.section}>
+              <Text style={s.resultsCount}>
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}"
+              </Text>
+              <View style={s.resultsCard}>
+                {searchResults.map((item, idx) => (
+                  <SearchResultRow
+                    key={`${item.kind}-${item.id}`}
+                    item={item}
+                    showBorder={idx < searchResults.length - 1}
+                    onPress={() => {
+                      if (item.kind === 'food') router.push(`/restaurant/${item.id}` as any);
+                      else router.push(`/mosque/${item.id.replace('/', ':')}` as any);
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  return (
+    <View style={s.root}>
+      <SafeAreaView style={s.safeArea} edges={[]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+
+          {/* Hero banner — extends behind status bar */}
+          <ImageBackground
+            source={require('../../assets/background.png')}
+            style={[s.hero, { height: 220 + insets.top }]}
+            imageStyle={s.heroBg}
+          >
+            <View style={s.heroOverlay} />
+            <View style={[s.heroContent, { paddingTop: insets.top + 12 }]}>
+              <Text style={s.heroTitle}>Explore</Text>
+              <Text style={s.heroSub}>Discover places, events, and more near you</Text>
+            </View>
+          </ImageBackground>
+
+          {/* Search bar — overlaps hero bottom edge */}
+          <View style={s.searchWrap}>
+            {searchBar}
           </View>
-        ) : (
-          <FlatList
-            style={st.flatList}
-            data={results}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <RestaurantCard restaurant={item} onPress={handleCardPress} />
-            )}
-            contentContainerStyle={st.list}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            ListHeaderComponent={
-              <View>
-                <TouchableOpacity
-                  style={st.communityBanner}
-                  onPress={() => {
-                  if (!user) {
-                    Alert.alert(
-                      'Sign in to add a restaurant',
-                      'Create a free account to submit halal restaurants for the community.',
-                      [
-                        { text: 'Not now', style: 'cancel' },
-                        { text: 'Sign In', onPress: () => { setGuestLoginIntent(true); router.push('/(auth)/login'); } },
-                      ],
-                    );
-                    return;
+
+          {/* Live dropdown */}
+          {showDropdown && !searchMode && (
+            <View style={s.dropdown}>
+              {dropdownItems.length === 0 && !dropdownLoading ? (
+                <View style={s.dropdownEmpty}>
+                  <Text style={s.dropdownEmptyText}>No results for "{searchQuery}"</Text>
+                </View>
+              ) : (
+                dropdownItems.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[s.dropdownRow, idx < dropdownItems.length - 1 && s.dropdownRowBorder]}
+                    onPress={() => {
+                      setShowDropdown(false);
+                      router.push(`/restaurant/${item.id}` as any);
+                    }}
+                    activeOpacity={0.72}
+                  >
+                    <Ionicons name="restaurant-outline" size={15} color={TEXT_MUTED} />
+                    <Text style={s.dropdownName} numberOfLines={1}>{item.name}</Text>
+                    {item.distanceMi !== Infinity && (
+                      <Text style={s.dropdownDist}>{item.distanceMi.toFixed(1)} mi</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+              <TouchableOpacity
+                style={s.dropdownSeeAll}
+                onPress={handleSearch}
+              >
+                <Ionicons name="search" size={14} color={GREEN} />
+                <Text style={s.dropdownSeeAllText}>See all results for "{searchQuery}"</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Browse Categories */}
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Browse Categories</Text>
+              <TouchableOpacity onPress={() => router.push('/nearby' as any)} hitSlop={8} style={s.seeAllRow}>
+                <Text style={s.seeAll}>View All</Text>
+                <Ionicons name="chevron-forward" size={14} color={GREEN} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.categoryScroll}
+          >
+            {CATEGORIES.map(cat => (
+              <TouchableOpacity
+                key={cat.key}
+                style={s.categoryCell}
+                onPress={() => router.push(cat.route as any)}
+                activeOpacity={0.8}
+              >
+                <View style={[s.categoryIconBox, { backgroundColor: cat.bg }]}>
+                  {cat.iconLib === 'mc'
+                    ? <MaterialCommunityIcons name={cat.iconName as any} size={30} color={cat.iconColor} />
+                    : <Ionicons name={cat.iconName as any} size={30} color={cat.iconColor} />
                   }
-                  router.push('/submit-restaurant');
-                }}
-                  activeOpacity={0.85}
-                >
-                  <View style={st.communityBannerLeft}>
-                    <Text style={st.communityBannerTitle}>Know a halal spot?</Text>
-                    <Text style={st.communityBannerSub}>
-                      Our listings are community-driven. Help others by adding a restaurant.
-                    </Text>
-                  </View>
-                  <Ionicons name="add-circle-outline" size={28} color={GREEN} />
-                </TouchableOpacity>
-                <Text style={st.count}>
-                  {results.length} result{results.length !== 1 ? 's' : ''}
-                  {activeFilterCount > 0 ? ' · filtered' : ''}
+                </View>
+                <Text style={s.categoryLabel}>{cat.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Nearby Places */}
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Nearby Places</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/nearby')}
+                hitSlop={8}
+                style={s.seeAllRow}
+              >
+                <Text style={s.seeAll}>See All</Text>
+                <Ionicons name="chevron-forward" size={14} color={GREEN} />
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <View style={s.nearbyLoading}>
+                <ActivityIndicator size="small" color={GREEN} />
+              </View>
+            ) : nearbyItems.length === 0 ? (
+              <View style={s.nearbyEmpty}>
+                <Text style={s.nearbyEmptyText}>
+                  {coords
+                    ? 'No nearby places found'
+                    : 'Open the Home tab to set your location'}
                 </Text>
               </View>
-            }
-          />
-        )}
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.nearbyScroll}
+              >
+                {nearbyItems.map(item => (
+                  <NearbyCard
+                    key={`${item.kind}-${item.id}`}
+                    item={item}
+                    onPress={() => {
+                      if (item.kind === 'food') router.push(`/restaurant/${item.id}` as any);
+                      else router.push(`/mosque/${item.id.replace('/', ':')}` as any);
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
 
+        </ScrollView>
       </SafeAreaView>
-
-      {/* Submit FAB */}
-      <TouchableOpacity
-        style={[st.fab, { bottom: insets.bottom + 16 }]}
-        onPress={() => {
-                  if (!user) {
-                    Alert.alert(
-                      'Sign in to add a restaurant',
-                      'Create a free account to submit halal restaurants for the community.',
-                      [
-                        { text: 'Not now', style: 'cancel' },
-                        { text: 'Sign In', onPress: () => { setGuestLoginIntent(true); router.push('/(auth)/login'); } },
-                      ],
-                    );
-                    return;
-                  }
-                  router.push('/submit-restaurant');
-                }}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="add" size={26} color="#fff" />
-      </TouchableOpacity>
-
-      {/* ── Filter sheet ── */}
-      {filterSheetOpen && (
-        <>
-          {/* Backdrop */}
-          <Animated.View style={[st.backdrop, { opacity: filterBackdropAnim, zIndex: 40 }]} pointerEvents="auto">
-            <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeFilterSheet} activeOpacity={1} />
-          </Animated.View>
-
-          {/* Sheet */}
-          <Animated.View
-            style={[
-              fs.sheet,
-              { paddingBottom: insets.bottom + 16 },
-              { transform: [{ translateY: Animated.add(filterSlideAnim, filterPanY) }] },
-            ]}
-          >
-            {/* Draggable handle area */}
-            <View {...filterPanResponder.panHandlers} style={fs.handleArea}>
-              <View style={fs.handle} />
-            </View>
-
-            {/* Header */}
-            <View style={fs.headerRow}>
-              <Text style={fs.title}>Filters</Text>
-              <TouchableOpacity onPress={clearAllFilters}>
-                <Text style={fs.clearAll}>Clear all</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Quick toggles */}
-              <Text style={fs.sectionLabel}>Quick Filters</Text>
-              <View style={fs.togglesRow}>
-                <FilterToggle label="Open Now"        icon="time-outline"             active={filterOpenNow}    onPress={() => setFilterOpenNow(v => !v)} />
-                <FilterToggle label="Certified"  icon="shield-checkmark-outline" active={filterThirdParty} onPress={() => setFilterThirdParty(v => !v)} />
-                <FilterToggle label="4+ Stars"         icon="star-outline"             active={filterTopRated}   onPress={() => setFilterTopRated(v => !v)} />
-              </View>
-
-              {/* Distance */}
-              <Text style={fs.sectionLabel}>Distance (miles)</Text>
-              <View style={fs.chipGrid}>
-                {DISTANCE_OPTIONS.map(d => (
-                  <TouchableOpacity
-                    key={d}
-                    style={[fs.optionChip, radiusMi === d && fs.optionChipActive]}
-                    onPress={() => setRadiusMi(d)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[fs.optionChipText, radiusMi === d && fs.optionChipTextActive]}>
-                      {d} mi
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Cuisine */}
-              {cuisineOptions.length > 0 && (
-                <>
-                  <Text style={fs.sectionLabel}>Cuisine</Text>
-                  <View style={fs.chipGrid}>
-                    {cuisineOptions.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[fs.optionChip, filterCuisines.includes(c) && fs.optionChipActive]}
-                        onPress={() => toggleCuisine(c)}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[fs.optionChipText, filterCuisines.includes(c) && fs.optionChipTextActive]}>
-                          {c}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
-
-              {/* Certification */}
-              <Text style={fs.sectionLabel}>Halal Certification</Text>
-              <View style={fs.chipGrid}>
-                {CERT_OPTIONS.map(o => (
-                  <TouchableOpacity
-                    key={o.key}
-                    style={[fs.optionChip, filterCerts.includes(o.key) && fs.optionChipActive]}
-                    onPress={() => toggleCert(o.key)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[fs.optionChipText, filterCerts.includes(o.key) && fs.optionChipTextActive]}>
-                      {o.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity style={fs.applyBtn} onPress={closeFilterSheet}>
-              <Text style={fs.applyBtnText}>
-                {results.length > 0
-                  ? `Show ${results.length} result${results.length !== 1 ? 's' : ''}`
-                  : 'Show results'}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </>
-      )}
     </View>
   );
 }
 
-// ─── small reusable components ────────────────────────────────────────────────
+// ─── nearby card ──────────────────────────────────────────────────────────────
 
-function QuickChip({ label, icon, active, onPress }: {
-  label: string;
-  icon: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+function NearbyCard({ item, onPress }: { item: NearbyItem; onPress: () => void }) {
+  if (item.kind === 'mosque') {
+    return (
+      <TouchableOpacity style={nc.card} onPress={onPress} activeOpacity={0.85}>
+        <View style={[nc.imageArea, { backgroundColor: DEEP_GREEN }]}>
+          <MaterialCommunityIcons name="mosque" size={44} color="rgba(255,255,255,0.5)" />
+          <View style={nc.distanceBadge}>
+            <Text style={nc.distanceText}>{item.distanceMi.toFixed(1)} mi</Text>
+          </View>
+          <View style={[nc.typeBadge, { backgroundColor: GREEN }]}>
+            <MaterialCommunityIcons name="mosque" size={13} color="#fff" />
+          </View>
+        </View>
+        <View style={nc.info}>
+          <Text style={nc.name} numberOfLines={2}>{item.name}</Text>
+          <Text style={nc.type}>Mosque</Text>
+          <Text style={nc.detail}>{item.distanceMi.toFixed(1)} mi away</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  const { emoji, color } = getCuisineTheme(item.cuisine);
+
   return (
-    <TouchableOpacity
-      style={[st.filterChip, active && st.filterChipActive]}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-      <Ionicons name={icon as any} size={14} color={active ? '#fff' : TEXT_MUTED} />
-      <Text style={[st.filterText, active && st.filterTextActive]}>{label}</Text>
+    <TouchableOpacity style={nc.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={nc.imageArea}>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={nc.image} />
+        ) : (
+          <View style={[nc.imagePlaceholder, { backgroundColor: color }]}>
+            <Text style={nc.emoji}>{emoji}</Text>
+          </View>
+        )}
+        <View style={nc.distanceBadge}>
+          <Text style={nc.distanceText}>{item.distanceMi.toFixed(1)} mi</Text>
+        </View>
+        <View style={[nc.typeBadge, { backgroundColor: '#e65c00' }]}>
+          <Ionicons name="restaurant" size={13} color="#fff" />
+        </View>
+      </View>
+      <View style={nc.info}>
+        <Text style={nc.name} numberOfLines={2}>{item.name}</Text>
+        <Text style={nc.type}>{item.cuisine || 'Halal Restaurant'}</Text>
+        {(() => {
+          const isZabihah = item.zabihah_status === 'full' || isHFSAACertified(item.primary_certifier);
+          const isPartial = item.zabihah_status === 'partial' && !isHFSAACertified(item.primary_certifier);
+          if (!isZabihah && !isPartial) return null;
+          return (
+            <View style={[nc.zabihahBadge, { backgroundColor: isZabihah ? Brand.zabihahBg : Brand.zabihahPartialBg }]}>
+              <Ionicons name="checkmark-circle" size={10} color={isZabihah ? Brand.zabihah : Brand.zabihahPartial} />
+              <Text style={[nc.zabihahText, { color: isZabihah ? Brand.zabihah : Brand.zabihahPartial }]}>
+                {isZabihah ? 'Zabihah' : 'Partial Zabihah'}
+              </Text>
+            </View>
+          );
+        })()}
+        <View style={nc.openRow}>
+          <View style={[nc.openDot, { backgroundColor: item.isOpen ? '#16a34a' : '#ef4444' }]} />
+          <Text style={nc.detail}>{item.isOpen ? 'Open now' : 'Closed'}</Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
 
-function FilterToggle({ label, icon, active, onPress }: {
-  label: string;
-  icon: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+// ─── search result row ────────────────────────────────────────────────────────
+
+function SearchResultRow({ item, showBorder, onPress }: { item: NearbyItem; showBorder: boolean; onPress: () => void }) {
+  const isMosque = item.kind === 'mosque';
+  const { color } = !isMosque ? getCuisineTheme((item as NearbyFood).cuisine) : { color: DEEP_GREEN };
+  const distLabel = item.distanceMi !== Infinity ? `${item.distanceMi.toFixed(1)} mi` : null;
+
   return (
     <TouchableOpacity
-      style={[fs.toggle, active && fs.toggleActive]}
+      style={[sr.row, showBorder && sr.rowBorder]}
       onPress={onPress}
-      activeOpacity={0.75}
+      activeOpacity={0.72}
     >
-      <Ionicons name={icon as any} size={16} color={active ? '#fff' : TEXT_MUTED} />
-      <Text style={[fs.toggleText, active && fs.toggleTextActive]}>{label}</Text>
+      <View style={[sr.iconBox, { backgroundColor: isMosque ? DEEP_GREEN : color }]}>
+        {isMosque
+          ? <MaterialCommunityIcons name="mosque" size={20} color="rgba(255,255,255,0.85)" />
+          : (!isMosque && (item as NearbyFood).image_url)
+            ? <Image source={{ uri: (item as NearbyFood).image_url! }} style={sr.iconImage} />
+            : <Ionicons name="restaurant" size={20} color="rgba(255,255,255,0.85)" />
+        }
+      </View>
+      <View style={sr.info}>
+        <Text style={sr.name} numberOfLines={1}>{item.name}</Text>
+        <Text style={sr.sub} numberOfLines={1}>
+          {isMosque ? 'Mosque' : ((item as NearbyFood).cuisine || 'Halal Restaurant')}
+          {distLabel ? ` · ${distLabel}` : ''}
+          {!isMosque ? ` · ${(item as NearbyFood).isOpen ? 'Open' : 'Closed'}` : ''}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
     </TouchableOpacity>
   );
 }
+
+const sr = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#f0ece4' },
+  iconBox: {
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, overflow: 'hidden',
+  },
+  iconImage: { width: 44, height: 44, resizeMode: 'cover' },
+  info:      { flex: 1 },
+  name:      { fontSize: 15, fontWeight: '600', color: TEXT_DARK },
+  sub:       { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
+});
 
 // ─── styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const s = StyleSheet.create({
   root:    { flex: 1, backgroundColor: CREAM },
-  safeArea: { flex: 1 },
+  safeArea:{ flex: 1 },
+  flex:    { flex: 1 },
+  scroll:  { paddingBottom: 40 },
 
-  header: {
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  // search mode header (replaces hero)
+  searchHeader: {
+    backgroundColor: CREAM,
+    paddingHorizontal: 16, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: '#e8e4dc',
   },
-  title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
+  searchHeaderInner: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchResultsScroll: { paddingBottom: 40 },
 
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, marginBottom: 8,
-    borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE, paddingHorizontal: 12,
+  // hero
+  hero:        {},  // height set dynamically (220 + insets.top)
+  heroBg:      { resizeMode: 'cover' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(31,61,43,0.48)' },
+  heroContent: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 32 },
+  heroTitle:   { fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSub:     { fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 4, lineHeight: 18 },
+
+  // search bar (overlaps hero bottom)
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginTop: -22, marginBottom: 4,
   },
-  searchIcon: { marginRight: 8 },
-  input: { flex: 1, paddingVertical: 13, fontSize: 15, color: TEXT_DARK },
-  clearBtn: { padding: 4 },
-
-  locationRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-    borderRadius: 14, borderWidth: 1.5, borderColor: HAIRLINE, paddingHorizontal: 12,
-  },
-  geoError:      { fontSize: 12, color: RED, marginHorizontal: 20, marginBottom: 4 },
-  locationActive: { fontSize: 12, color: GREEN, marginHorizontal: 20, marginBottom: 4, fontWeight: '600' },
-
-  filtersWrapper: { paddingTop: 8, paddingBottom: 6 },
-  filtersContent: { paddingHorizontal: 16, gap: 8, flexDirection: 'row' },
-  flatList: { flex: 1 },
-
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
-  },
-  filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  filterText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
-  filterTextActive: { color: '#fff' },
-
-  list: { paddingTop: 8, paddingBottom: 100 },
-  count: { fontSize: 13, color: TEXT_MUTED, paddingHorizontal: 16, marginBottom: 8, fontWeight: '500' },
-
-  communityBanner: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 14,
-    padding: 14, marginHorizontal: 16, marginBottom: 10,
-    borderWidth: 1.5, borderColor: '#e0ede6',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
-  communityBannerLeft: { flex: 1, marginRight: 12 },
-  communityBannerTitle: { fontSize: 14, fontWeight: '700', color: GREEN, marginBottom: 3 },
-  communityBannerSub:   { fontSize: 12, color: TEXT_MUTED, lineHeight: 17 },
-
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 24 },
-  errorText: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
-  retryBtn: { backgroundColor: DEEP_GREEN, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
-  retryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: TEXT_MUTED },
-  emptyText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
-  clearFiltersBtn: {
-    marginTop: 8, backgroundColor: DEEP_GREEN,
-    paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10,
-  },
-  clearFiltersText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-
-  verifiedToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: 16, marginTop: 10, marginBottom: 4,
+  searchBar: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, borderWidth: 1.5, borderColor: HAIRLINE,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    paddingHorizontal: 14, paddingVertical: 13,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
-  verifiedToggleActive: {
-    backgroundColor: GREEN, borderColor: GREEN,
-    shadowOpacity: 0.15,
-  },
-  verifiedToggleIcon: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#e6f4ec', alignItems: 'center', justifyContent: 'center',
-  },
-  verifiedToggleIconActive: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  verifiedToggleBody: { flex: 1 },
-  verifiedToggleTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 1 },
-  verifiedToggleTitleActive: { color: '#fff' },
-  verifiedToggleSub: { fontSize: 12, color: TEXT_MUTED, lineHeight: 16 },
-  verifiedToggleSubActive: { color: 'rgba(255,255,255,0.8)' },
-  verifiedTogglePill: { padding: 2 },
-  verifiedTogglePillActive: {},
+  searchInput: { flex: 1, fontSize: 14, color: TEXT_DARK },
 
-  fab: {
-    position: 'absolute', right: 20,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: DEEP_GREEN,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 }, elevation: 6,
-  },
+  // sections
+  section:       { marginTop: 28, paddingHorizontal: 16 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sectionTitle:  { fontSize: 16, fontWeight: '800', color: TEXT_DARK },
+  seeAllRow:     { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  seeAll:        { fontSize: 13, color: GREEN, fontWeight: '600' },
 
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 20 },
+  // category horizontal scroll
+  categoryScroll:  { paddingHorizontal: 16, paddingBottom: 4, gap: 10 },
+  categoryCell:    { alignItems: 'center', width: 64 },
+  categoryIconBox: {
+    width: 64, height: 64, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+    overflow: 'hidden',
+  },
+  categoryLabel: { fontSize: 11, fontWeight: '600', color: TEXT_DARK, textAlign: 'center', lineHeight: 14 },
 
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30,
-    backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    paddingHorizontal: 20, paddingTop: 12,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24,
-    shadowOffset: { width: 0, height: -6 }, elevation: 24,
-  },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 14,
-  },
-  sheetClose: {
-    position: 'absolute', top: 14, right: 16,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
-  },
-  sheetRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-  sheetThumb: {
-    width: 52, height: 52, borderRadius: 14,
-    backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center', marginRight: 14,
-  },
-  sheetInfo: { flex: 1 },
-  sheetNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  sheetName:    { flex: 1, fontSize: 16, fontWeight: '700', color: TEXT_DARK },
-  verifiedDot: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
-  },
-  sheetCuisine:  { fontSize: 13, color: TEXT_MUTED, marginBottom: 3 },
-  sheetAddress:  { fontSize: 12, color: TEXT_MUTED, marginBottom: 6 },
-  sheetCertRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  sheetHoursRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sheetHoursText: { fontSize: 12, color: TEXT_MUTED },
+  // nearby section
+  nearbyScroll:     { paddingRight: 16, paddingBottom: 4 },
+  nearbyLoading:    { height: 200, alignItems: 'center', justifyContent: 'center' },
+  nearbyEmpty:      { paddingVertical: 40, alignItems: 'center', justifyContent: 'center' },
+  nearbyEmptyText:  { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
 
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
-  },
-  badgeText: { fontSize: 12, fontWeight: '600' },
+  // cancel button
+  cancelBtn:  { paddingLeft: 4 },
+  cancelText: { fontSize: 15, color: GREEN, fontWeight: '600' },
 
-  viewBtn: {
-    backgroundColor: GREEN, borderRadius: 14,
-    paddingVertical: 14, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', gap: 8,
+  // live dropdown
+  dropdown: {
+    marginHorizontal: 16, marginTop: -2, marginBottom: 8,
+    backgroundColor: '#fff', borderRadius: 14,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 }, elevation: 8,
+    overflow: 'hidden',
   },
-  viewBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  dropdownRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  dropdownRowBorder: { borderBottomWidth: 1, borderBottomColor: '#f3f0eb' },
+  dropdownName:  { flex: 1, fontSize: 14, fontWeight: '500', color: TEXT_DARK },
+  dropdownDist:  { fontSize: 12, color: TEXT_MUTED },
+  dropdownEmpty: { paddingHorizontal: 14, paddingVertical: 14 },
+  dropdownEmptyText: { fontSize: 13, color: TEXT_MUTED },
+  dropdownSeeAll: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderTopWidth: 1, borderTopColor: '#f3f0eb',
+    backgroundColor: '#fafaf8',
+  },
+  dropdownSeeAllText: { fontSize: 13, fontWeight: '600', color: GREEN },
+
+  // search results
+  resultsCount: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500', marginBottom: 10 },
+  resultsCard:  {
+    backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
 });
 
-const fs = StyleSheet.create({
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50,
-    backgroundColor: CREAM,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingHorizontal: 20, paddingTop: 0,
-    maxHeight: '85%',
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24,
-    shadowOffset: { width: 0, height: -6 }, elevation: 24,
-  },
-  handleArea: {
-    paddingVertical: 12, alignItems: 'center',
-  },
-  handle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: HAIRLINE,
-  },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  title:    { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
-  clearAll: { fontSize: 14, color: DEEP_GREEN, fontWeight: '600' },
+const CARD_W       = 162;
+const CARD_IMAGE_H = 112;
 
-  sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: TEXT_MUTED,
-    textTransform: 'uppercase', letterSpacing: 0.5,
-    marginBottom: 10, marginTop: 4,
+const nc = StyleSheet.create({
+  card: {
+    width: CARD_W, borderRadius: 18, backgroundColor: '#fff', marginRight: 12,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-
-  togglesRow: { flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' },
-  toggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
+  imageArea: {
+    width: CARD_W, height: CARD_IMAGE_H,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
-  toggleActive: { backgroundColor: GREEN, borderColor: GREEN },
-  toggleText: { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
-  toggleTextActive: { color: '#fff' },
-
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  optionChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: HAIRLINE,
+  image:           { width: CARD_W, height: CARD_IMAGE_H, resizeMode: 'cover' },
+  imagePlaceholder:{ width: CARD_W, height: CARD_IMAGE_H, alignItems: 'center', justifyContent: 'center' },
+  emoji:           { fontSize: 38 },
+  distanceBadge:   {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: 'rgba(0,0,0,0.52)', borderRadius: 10,
+    paddingHorizontal: 7, paddingVertical: 3,
   },
-  optionChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  optionChipText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
-  optionChipTextActive: { color: '#fff' },
-
-  applyBtn: {
-    marginTop: 8, backgroundColor: DEEP_GREEN,
-    borderRadius: 14, paddingVertical: 15,
-    alignItems: 'center',
+  distanceText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  typeBadge:    {
+    position: 'absolute', bottom: 8, left: 8,
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
   },
-  applyBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  info:   { padding: 10, gap: 2 },
+  name:   { fontSize: 13, fontWeight: '700', color: TEXT_DARK, lineHeight: 17 },
+  type:   { fontSize: 11, color: TEXT_MUTED },
+  openRow:{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  openDot:{ width: 6, height: 6, borderRadius: 3 },
+  detail: { fontSize: 11, color: TEXT_MUTED },
+  zabihahBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 20, marginTop: 2 },
+  zabihahText:  { fontSize: 10, fontWeight: '600' },
 });

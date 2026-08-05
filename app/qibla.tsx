@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +43,16 @@ export default function QiblaScreen() {
   const [heading, setHeading] = useState<HeadingReading | null>(null);
   const [headingError, setHeadingError] = useState<string | null>(null);
 
+  // Calibration overlay: shown when first reading arrives at low accuracy,
+  // or when accuracy drops back to low mid-use after being good.
+  const [showCalibrationOverlay, setShowCalibrationOverlay] = useState(false);
+  const hadGoodAccuracy = useRef(false);
+
+  // Instability detection: track last 8 headings; if std dev > 15° the
+  // needle is visibly jumping — likely magnetic interference nearby.
+  const headingHistory = useRef<number[]>([]);
+  const [isUnstable, setIsUnstable] = useState(false);
+
   const rotation = useRef(new Animated.Value(0)).current;
 
   // resolve location the same way Home does: whatever the user already has
@@ -79,8 +89,38 @@ export default function QiblaScreen() {
         setHeadingError(`Compass error: ${result.message}`);
         return;
       }
-      setHeading(result.reading);
-      sub = await watchHeading(setHeading);
+
+      const handleReading = (r: HeadingReading) => {
+        setHeading(r);
+
+        // Calibration overlay logic
+        if (r.accuracy < 2) {
+          if (!hadGoodAccuracy.current) {
+            // First reading is poor — block the compass until calibrated
+            setShowCalibrationOverlay(true);
+          } else {
+            // Was good, now dropped — show calibration prompt again
+            setShowCalibrationOverlay(true);
+            hadGoodAccuracy.current = false;
+          }
+        } else {
+          hadGoodAccuracy.current = true;
+          setShowCalibrationOverlay(false);
+        }
+
+        // Instability detection — circular mean variance over last 8 readings
+        const hist = headingHistory.current;
+        hist.push(r.trueHeading);
+        if (hist.length > 8) hist.shift();
+        if (hist.length >= 4) {
+          const mean = hist.reduce((s, h) => s + h, 0) / hist.length;
+          const variance = hist.reduce((s, h) => s + (h - mean) ** 2, 0) / hist.length;
+          setIsUnstable(Math.sqrt(variance) > 15);
+        }
+      };
+
+      handleReading(result.reading);
+      sub = await watchHeading(handleReading);
     })();
     return () => sub?.remove();
   }, []);
@@ -98,6 +138,13 @@ export default function QiblaScreen() {
   }, [relativeAngle]);
 
   const lowAccuracy = heading !== null && heading.accuracy < 2;
+
+  // Needle tip color: gold = high accuracy, amber = medium, red = low/none
+  const needleTipColor =
+    heading === null       ? GOLD :
+    heading.accuracy >= 2  ? GOLD :
+    heading.accuracy === 1 ? AMBER :
+    RED;
 
   // Plain-language translation of relativeAngle — the raw numbers (Qibla
   // 19°, Heading 19°) require the user to do the subtraction themselves;
@@ -200,7 +247,7 @@ export default function QiblaScreen() {
                     This shape's 0°-points-up geometry is guaranteed by
                     construction, same technique as the original working
                     version. Tip = direction to face; tail = counterweight. */}
-                <View style={s.needleTip} />
+                <View style={[s.needleTip, { borderBottomColor: needleTipColor }]} />
                 <View style={s.needleTail} />
               </Animated.View>
 
@@ -257,11 +304,20 @@ export default function QiblaScreen() {
               </View>
             </View>
 
-            {lowAccuracy && (
+            {lowAccuracy && !showCalibrationOverlay && (
               <View style={s.calibrateBox}>
                 <Ionicons name="sync-outline" size={16} color={AMBER} />
                 <Text style={s.calibrateHint}>
-                  Move your phone in a figure-8 to calibrate the compass.
+                  Move your phone in a figure-8 to improve accuracy.
+                </Text>
+              </View>
+            )}
+
+            {isUnstable && !lowAccuracy && (
+              <View style={s.unstableBox}>
+                <Ionicons name="warning-outline" size={16} color={RED} />
+                <Text style={s.unstableHint}>
+                  Compass is unstable — move away from metal objects, electronics, or magnetic cases.
                 </Text>
               </View>
             )}
@@ -272,6 +328,38 @@ export default function QiblaScreen() {
         {bearing !== null && !heading && !headingError && <Text style={s.meta}>Waiting for compass…</Text>}
       </View>
       </SafeAreaView>
+
+      {/* Blocking calibration overlay — shown on first load or after accuracy
+          drops mid-use. Auto-dismisses when accuracy reaches 2+; user can
+          also dismiss manually if they want to proceed anyway. */}
+      {showCalibrationOverlay && (
+        <View style={s.calibrationOverlay}>
+          <View style={s.calibrationCard}>
+            <View style={s.calibrationIconWrap}>
+              <Ionicons name="sync-outline" size={36} color={AMBER} />
+            </View>
+            <Text style={s.calibrationTitle}>Compass Needs Calibration</Text>
+            <Text style={s.calibrationBody}>
+              Move your phone slowly in a figure-8 motion until the accuracy improves.
+            </Text>
+            <Text style={s.calibrationBody}>
+              Keep away from metal surfaces, electronics, and magnetic phone cases.
+            </Text>
+            <View style={s.calibrationAccuracy}>
+              <Text style={s.calibrationAccuracyLabel}>Current accuracy: </Text>
+              <Text style={[s.calibrationAccuracyValue, { color: heading && heading.accuracy >= 1 ? AMBER : RED }]}>
+                {heading ? ACCURACY_LABELS[heading.accuracy] : 'None'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={s.calibrationDismiss}
+              onPress={() => setShowCalibrationOverlay(false)}
+            >
+              <Text style={s.calibrationDismissText}>Proceed anyway</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -378,5 +466,51 @@ const s = StyleSheet.create({
   },
   calibrateHint: { flex: 1, fontSize: 13, color: AMBER, lineHeight: 18 },
 
+  unstableBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#FDF2F1', borderRadius: 12, padding: 12,
+    borderWidth: 1, borderColor: '#F3C6C2',
+  },
+  unstableHint: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
+
   meta: { fontSize: 14, color: TEXT_MUTED },
+
+  // Calibration overlay
+  calibrationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 100, padding: 24,
+  },
+  calibrationCard: {
+    backgroundColor: CREAM, borderRadius: 24,
+    padding: 28, alignItems: 'center', width: '100%',
+    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 }, elevation: 16,
+  },
+  calibrationIconWrap: {
+    width: 68, height: 68, borderRadius: 34,
+    backgroundColor: '#FBF3E6',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16,
+  },
+  calibrationTitle: {
+    fontSize: 18, fontWeight: '800', color: TEXT_DARK,
+    textAlign: 'center', marginBottom: 12,
+  },
+  calibrationBody: {
+    fontSize: 14, color: TEXT_MUTED, textAlign: 'center',
+    lineHeight: 20, marginBottom: 8,
+  },
+  calibrationAccuracy: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 8, marginBottom: 20,
+    backgroundColor: '#fff', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: HAIRLINE,
+  },
+  calibrationAccuracyLabel: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500' },
+  calibrationAccuracyValue: { fontSize: 13, fontWeight: '700' },
+  calibrationDismiss: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: 8 },
+  calibrationDismissText: { fontSize: 13, color: TEXT_MUTED, textDecorationLine: 'underline' },
 });

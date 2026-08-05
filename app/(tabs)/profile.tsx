@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, ScrollView,
@@ -12,7 +12,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { isValidImageBytes } from '../../lib/validateImageBytes';
 import { formatError } from '../../lib/errors';
+import { APP_VERSION } from '../../lib/appVersion';
 import { setGuestLoginIntent } from '../../lib/guestLoginIntent';
 import { Brand } from '../../lib/theme';
 
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
   const [profileName,      setProfileName]      = useState<string>('');
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileLoading,   setProfileLoading]   = useState(true);
+  const [submissionCount,  setSubmissionCount]  = useState<number | null>(null);
 
   // Edit modal state
   const [editVisible, setEditVisible] = useState(false);
@@ -49,6 +52,14 @@ export default function ProfileScreen() {
   const [newAvatar,   setNewAvatar]   = useState<{ uri: string; base64: string } | null>(null);
   const [saving,      setSaving]      = useState(false);
   const [saveError,   setSaveError]   = useState<string | null>(null);
+
+  // Email change OTP modal state
+  const [otpVisible,      setOtpVisible]      = useState(false);
+  const [otpTargetEmail,  setOtpTargetEmail]  = useState('');
+  const [otpDigits,       setOtpDigits]       = useState(['', '', '', '', '', '']);
+  const [otpLoading,      setOtpLoading]      = useState(false);
+  const [otpError,        setOtpError]        = useState<string | null>(null);
+  const otpRefs = useRef<(TextInput | null)[]>([]);
 
   // Load profile from DB
   const loadProfile = useCallback(async () => {
@@ -64,6 +75,14 @@ export default function ProfileScreen() {
     }
 
     setProfileLoading(false);
+
+    // Fetch submission count in parallel (non-blocking)
+    supabase
+      .from('submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('submitted_by', user.id)
+      .then(({ count }) => { if (count !== null) setSubmissionCount(count); })
+      .catch(() => {});
   }, [user]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
@@ -120,8 +139,8 @@ export default function ProfileScreen() {
       Alert.alert(
         'Deletion Failed',
         isRpcMissing
-          ? 'Account deletion is not yet configured on the server. Please contact infor.halalforme@gmail.com to delete your account.'
-          : `Something went wrong: ${msg}\n\nPlease try again or email infor.halalforme@gmail.com.`,
+          ? 'Account deletion is not yet configured on the server. Please contact support@rihdal.com to delete your account.'
+          : `Something went wrong: ${msg}\n\nPlease try again or email support@rihdal.com.`,
       );
     }
   };
@@ -167,6 +186,7 @@ export default function ProfileScreen() {
     if (base64.length > 6_700_000) throw new Error('Photo is too large. Please choose an image under 5 MB.');
     const path = `${user!.id}/${Crypto.randomUUID()}.jpg`;
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    if (!isValidImageBytes(bytes)) throw new Error('Invalid image file.');
     const { error } = await supabase.storage
       .from('avatars')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
@@ -200,7 +220,10 @@ export default function ProfileScreen() {
       const emailChanged = trimmedEmail !== user?.email;
       const { error: authErr } = await supabase.auth.updateUser({
         data: { name: trimmed },
-        ...(emailChanged ? { email: trimmedEmail } : {}),
+        ...(emailChanged ? {
+          email: trimmedEmail,
+          options: { emailRedirectTo: 'halalforme://email-change-confirmed' },
+        } : {}),
       });
 
       // DB already saved successfully — commit UI state regardless of auth result
@@ -209,7 +232,6 @@ export default function ProfileScreen() {
       setEditVisible(false);
 
       if (authErr) {
-        // Name/avatar saved; only the auth metadata/email change failed
         Alert.alert(
           'Partially saved',
           emailChanged
@@ -217,10 +239,11 @@ export default function ProfileScreen() {
             : 'Your profile was saved.',
         );
       } else if (emailChanged) {
-        Alert.alert(
-          'Confirm your new email',
-          `A confirmation link has been sent to ${trimmedEmail}. Check your inbox to complete the change.`,
-        );
+        // Open OTP modal so the user confirms in-app — no browser redirect needed
+        setOtpTargetEmail(trimmedEmail);
+        setOtpDigits(['', '', '', '', '', '']);
+        setOtpError(null);
+        setOtpVisible(true);
       }
     } catch (e: any) {
       setSaveError(formatError(e));
@@ -230,26 +253,117 @@ export default function ProfileScreen() {
   };
 
 
+  const handleOtpDigit = (value: string, index: number) => {
+    if (value.length > 1) {
+      const pasted = value.replace(/\D/g, '').slice(0, 6);
+      if (!pasted.length) return;
+      const next = Array(6).fill('').map((_, i) => pasted[i] ?? '');
+      setOtpDigits(next);
+      const focusIdx = Math.min(pasted.length - 1, 5);
+      otpRefs.current[focusIdx]?.focus();
+      if (pasted.length === 6) handleVerifyEmailOtp(pasted);
+      return;
+    }
+    const digit = value.replace(/\D/g, '');
+    const next = [...otpDigits];
+    next[index] = digit;
+    setOtpDigits(next);
+    setOtpError(null);
+    if (digit && index < 5) otpRefs.current[index + 1]?.focus();
+    if (digit && index === 5) {
+      const full = [...next.slice(0, 5), digit].join('');
+      if (full.length === 6) handleVerifyEmailOtp(full);
+    }
+  };
+
+  const handleOtpKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !otpDigits[index] && index > 0) {
+      const next = [...otpDigits];
+      next[index - 1] = '';
+      setOtpDigits(next);
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyEmailOtp = async (codeOverride?: string) => {
+    const code = codeOverride ?? otpDigits.join('');
+    if (code.length < 6) { setOtpError('Enter the full 6-digit code.'); return; }
+    setOtpLoading(true);
+    setOtpError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: otpTargetEmail,
+      token: code,
+      type: 'email_change',
+    });
+    setOtpLoading(false);
+    if (error) {
+      setOtpError('Invalid or expired code. Request a new one and try again.');
+      setOtpDigits(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 50);
+    } else {
+      setOtpVisible(false);
+      Alert.alert('Email updated', `Your email has been changed to ${otpTargetEmail}.`);
+    }
+  };
+
   // ── Guest screen ─────────────────────────────────────────────────────────
   if (!user) {
+    const LOCKED_FEATURES = [
+      { icon: 'heart' as const,       label: 'Saved Restaurants', sub: 'Bookmark spots to revisit later' },
+      { icon: 'storefront' as const,  label: 'My Submissions',    sub: 'Track restaurants you\'ve added' },
+      { icon: 'star' as const,        label: 'Write Reviews',     sub: 'Share your dining experiences' },
+      { icon: 'business' as const,    label: 'Claim a Mosque',    sub: 'Manage your mosque\'s page' },
+    ] as const;
     return (
       <SafeAreaView style={s.flex} edges={['top', 'left', 'right']}>
         <View style={s.header}>
           <Text style={s.title}>Profile</Text>
         </View>
         <ScrollView contentContainerStyle={s.guestWrap} showsVerticalScrollIndicator={false}>
-          <Ionicons name="person-circle-outline" size={80} color={TEXT_MUTED} />
-          <Text style={s.guestTitle}>Sign in to your account</Text>
-          <Text style={s.guestSub}>
-            Save restaurants, submit new spots, write reviews, and track your contributions.
-          </Text>
-          <TouchableOpacity style={s.guestSignInBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}>
-            <Text style={s.guestSignInText}>Sign In</Text>
+          {/* hero */}
+          <View style={s.guestHero}>
+            <View style={s.guestHeroIcon}>
+              <Ionicons name="person" size={32} color={CREAM} />
+            </View>
+            <Text style={s.guestTitle}>You're browsing as a guest</Text>
+            <Text style={s.guestSub}>
+              Create a free account to unlock everything below.
+            </Text>
+          </View>
+
+          {/* locked feature teasers */}
+          <View style={s.lockedCard}>
+            {LOCKED_FEATURES.map((f, idx) => (
+              <View key={f.label} style={[s.lockedRow, idx < LOCKED_FEATURES.length - 1 && s.lockedRowBorder]}>
+                <View style={s.lockedIconWrap}>
+                  <Ionicons name={f.icon} size={18} color={GREEN} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.lockedLabel}>{f.label}</Text>
+                  <Text style={s.lockedSub}>{f.sub}</Text>
+                </View>
+                <View style={s.lockBadge}>
+                  <Ionicons name="lock-closed" size={11} color={TEXT_MUTED} />
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* CTAs */}
+          <TouchableOpacity style={s.guestSignInBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/signup'); }}>
+            <Text style={s.guestSignInText}>Create Free Account</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.guestSignUpBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/signup'); }}>
-            <Text style={s.guestSignUpText}>Create Account</Text>
+          <TouchableOpacity style={s.guestSignUpBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}>
+            <Text style={s.guestSignUpText}>Sign In</Text>
           </TouchableOpacity>
+
+          {/* links */}
           <View style={s.guestLinks}>
+            <TouchableOpacity style={s.guestLink} onPress={() => router.push('/onboarding')}>
+              <Ionicons name="play-circle-outline" size={16} color={GREEN} />
+              <Text style={s.guestLinkText}>View App Tour</Text>
+              <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
+            </TouchableOpacity>
             <TouchableOpacity style={s.guestLink} onPress={() => router.push('/certification-guide')}>
               <Ionicons name="shield-checkmark-outline" size={16} color={GREEN} />
               <Text style={s.guestLinkText}>Halal Certification Guide</Text>
@@ -260,7 +374,7 @@ export default function ProfileScreen() {
               <Text style={s.guestLinkText}>Privacy Policy</Text>
               <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
             </TouchableOpacity>
-            <TouchableOpacity style={s.guestLink} onPress={() => router.push('/terms-of-service')}>
+            <TouchableOpacity style={[s.guestLink, { borderBottomWidth: 0 }]} onPress={() => router.push('/terms-of-service')}>
               <Ionicons name="reader-outline" size={16} color={GREEN} />
               <Text style={s.guestLinkText}>Terms of Service</Text>
               <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
@@ -280,10 +394,11 @@ export default function ProfileScreen() {
   const menuItems: MenuItem[] = [
     { icon: 'heart-outline',            label: 'Saved Restaurants',         onPress: () => router.push('/saved') },
     { icon: 'storefront-outline',       label: 'My Submissions',            onPress: () => router.push('/my-submissions') },
-    { icon: 'star-outline',             label: 'My Reviews',                onPress: () => router.push('/my-reviews') },
-    { icon: 'ban-outline',              label: 'Blocked Users',             onPress: () => router.push('/blocked-users') },
+    { icon: 'add-circle-outline',       label: 'Add My Business',           onPress: () => router.push('/add-my-business') },
+    { icon: 'business-outline',         label: 'Manage a Mosque',           onPress: () => router.push('/redeem-mosque') },
     { icon: 'shield-checkmark-outline', label: 'Halal Certification Guide', onPress: () => router.push('/certification-guide') },
     { icon: 'notifications-outline',    label: 'Notifications',             onPress: () => router.push('/notifications') },
+    { icon: 'play-circle-outline',      label: 'View App Tour',             onPress: () => router.push('/onboarding') },
     { icon: 'help-circle-outline',      label: 'Help & Support',            onPress: () => router.push('/help') },
     { icon: 'document-text-outline',    label: 'Privacy Policy',            onPress: () => router.push('/privacy-policy') },
     { icon: 'reader-outline',           label: 'Terms of Service',          onPress: () => router.push('/terms-of-service') },
@@ -336,6 +451,18 @@ export default function ProfileScreen() {
                 {isVerified ? 'Verified account' : 'Email not verified'}
               </Text>
             </View>
+            <View style={s.statsRow}>
+              {user.created_at ? (
+                <Text style={s.statChip}>
+                  Member since {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </Text>
+              ) : null}
+              {submissionCount !== null && submissionCount > 0 ? (
+                <Text style={s.statChip}>
+                  {submissionCount} submission{submissionCount !== 1 ? 's' : ''}
+                </Text>
+              ) : null}
+            </View>
           </View>
 
           <TouchableOpacity style={s.editBtn} onPress={openEdit}>
@@ -380,27 +507,94 @@ export default function ProfileScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* ── Delete account ── */}
+        <Text style={s.version}>Rihdal v{APP_VERSION}</Text>
+
+        {/* ── Danger zone (de-emphasised) ── */}
         <TouchableOpacity
-          style={s.deleteCard}
+          style={s.dangerZoneBtn}
           onPress={handleDeleteAccount}
           disabled={deleting}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
-          {deleting ? (
-            <ActivityIndicator size="small" color={RED} style={{ marginRight: 13 }} />
-          ) : (
-            <View style={s.menuIconDanger}>
-              <Ionicons name="trash-outline" size={19} color={RED} />
-            </View>
-          )}
-          <Text style={s.signOutLabel}>
+          {deleting
+            ? <ActivityIndicator size="small" color={TEXT_MUTED} style={{ marginRight: 6 }} />
+            : <Ionicons name="trash-outline" size={14} color={TEXT_MUTED} style={{ marginRight: 6 }} />
+          }
+          <Text style={s.dangerZoneText}>
             {deleting ? 'Deleting account…' : 'Delete Account'}
           </Text>
         </TouchableOpacity>
-
-        <Text style={s.version}>HalalForMe v1.0.0</Text>
+        <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* ── Email Change OTP Modal ── */}
+      <Modal
+        visible={otpVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOtpVisible(false)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={m.overlay}>
+            <View style={m.sheet}>
+              <View style={m.handle} />
+              <TouchableOpacity style={m.closeBtn} onPress={() => setOtpVisible(false)}>
+                <Ionicons name="close" size={18} color={TEXT_MUTED} />
+              </TouchableOpacity>
+
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <Ionicons name="mail-open-outline" size={30} color={GREEN} />
+                </View>
+                <Text style={m.title}>Confirm new email</Text>
+                <Text style={[m.emailNote, { textAlign: 'center', marginTop: 6 }]}>
+                  Enter the 6-digit code sent to{'\n'}
+                  <Text style={{ fontWeight: '700', color: TEXT_DARK }}>{otpTargetEmail}</Text>
+                </Text>
+              </View>
+
+              {otpError ? (
+                <View style={m.errorBox}>
+                  <Ionicons name="alert-circle-outline" size={14} color={RED} />
+                  <Text style={m.errorText}>{otpError}</Text>
+                </View>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginBottom: 24 }}>
+                {otpDigits.map((d, i) => (
+                  <TextInput
+                    key={i}
+                    ref={ref => { otpRefs.current[i] = ref; }}
+                    style={[m.otpBox, d && m.otpBoxFilled, otpError && m.otpBoxError]}
+                    value={d}
+                    onChangeText={v => handleOtpDigit(v, i)}
+                    onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    selectTextOnFocus
+                    textAlign="center"
+                    caretHidden
+                  />
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[m.saveBtn, (otpLoading || otpDigits.join('').length < 6) && m.saveBtnDisabled]}
+                onPress={() => handleVerifyEmailOtp()}
+                disabled={otpLoading || otpDigits.join('').length < 6}
+              >
+                {otpLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={m.saveText}>Confirm Email</Text>}
+              </TouchableOpacity>
+
+              <Text style={[m.emailNote, { textAlign: 'center', marginTop: 12 }]}>
+                Didn't get it? Check your spam folder or cancel and try again.
+              </Text>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ── Edit Profile Modal ── */}
       <Modal
@@ -464,7 +658,7 @@ export default function ProfileScreen() {
                 returnKeyType="done"
                 onSubmitEditing={saveProfile}
               />
-              <Text style={m.emailNote}>A confirmation link will be sent if you change your email.</Text>
+              <Text style={m.emailNote}>A 6-digit confirmation code will be sent to your new email address.</Text>
 
               {saveError ? (
                 <View style={m.errorBox}>
@@ -524,6 +718,11 @@ const s = StyleSheet.create({
   email: { fontSize: 13, color: TEXT_MUTED },
   verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   verifiedText: { fontSize: 12, fontWeight: '500' },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  statChip: {
+    fontSize: 11, fontWeight: '500', color: TEXT_MUTED,
+    backgroundColor: CREAM, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
+  },
   editBtn: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
@@ -557,21 +756,48 @@ const s = StyleSheet.create({
     backgroundColor: '#fff5f5', alignItems: 'center', justifyContent: 'center', marginRight: 13,
   },
   signOutLabel: { fontSize: 15, fontWeight: '600', color: RED },
-  deleteCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10, borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  version: { textAlign: 'center', fontSize: 12, color: TEXT_MUTED, marginTop: 24, marginBottom: 8 },
+  dangerZoneBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 10, marginBottom: 4,
   },
-  version: { textAlign: 'center', fontSize: 12, color: TEXT_MUTED, marginTop: 24, marginBottom: 32 },
+  dangerZoneText: { fontSize: 12, color: TEXT_MUTED },
 
   // guest state
   guestWrap: {
-    alignItems: 'center', paddingTop: 52, paddingHorizontal: 28, paddingBottom: 40,
+    alignItems: 'center', paddingTop: 32, paddingHorizontal: 20, paddingBottom: 40,
   },
-  guestTitle: { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginTop: 20, marginBottom: 8, textAlign: 'center' },
-  guestSub:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 28 },
+  guestHero: { alignItems: 'center', marginBottom: 24, width: '100%' },
+  guestHeroIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: DEEP_GREEN, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16,
+  },
+  guestTitle: { fontSize: 19, fontWeight: '800', color: TEXT_DARK, marginBottom: 6, textAlign: 'center' },
+  guestSub:   { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 21 },
+  lockedCard: {
+    width: '100%', backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  lockedRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  lockedRowBorder: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
+  lockedIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  lockedLabel: { fontSize: 15, fontWeight: '600', color: TEXT_DARK },
+  lockedSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  lockBadge: {
+    width: 24, height: 24, borderRadius: 8,
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
   guestSignInBtn: {
     width: '100%', backgroundColor: DEEP_GREEN, borderRadius: 14,
     paddingVertical: 15, alignItems: 'center', marginBottom: 12,
@@ -579,7 +805,7 @@ const s = StyleSheet.create({
   guestSignInText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   guestSignUpBtn: {
     width: '100%', backgroundColor: '#f0faf6', borderRadius: 14,
-    paddingVertical: 15, alignItems: 'center', marginBottom: 32,
+    paddingVertical: 15, alignItems: 'center', marginBottom: 24,
     borderWidth: 1.5, borderColor: '#c3e8d8',
   },
   guestSignUpText: { color: GREEN, fontSize: 16, fontWeight: '700' },
@@ -652,4 +878,11 @@ const m = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  otpBox: {
+    width: 44, height: 54, borderRadius: 12,
+    borderWidth: 2, borderColor: HAIRLINE,
+    backgroundColor: '#fff', fontSize: 22, fontWeight: '700', color: TEXT_DARK,
+  },
+  otpBoxFilled: { borderColor: GREEN, backgroundColor: '#f0faf6' },
+  otpBoxError:  { borderColor: RED,   backgroundColor: '#fff5f5' },
 });

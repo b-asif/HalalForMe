@@ -31,3 +31,13 @@ let _onboardingSeenThisSession = false;
 
 export function setOnboardingSeenThisSession() { _onboardingSeenThisSession = true; }
 export function getOnboardingSeenThisSession() { return _onboardingSeenThisSession; }
+
+/**
+ * Tracks whether the user signed up as a business/masjid owner.
+ * Set during signup so _layout.tsx can redirect to the business-type picker
+ * after OTP verification instead of going straight to (tabs).
+ */
+let _businessSignupIntent = false;
+
+export function setBusinessSignupIntent(active: boolean) { _businessSignupIntent = active; }
+export function getBusinessSignupIntent() { return _businessSignupIntent; }

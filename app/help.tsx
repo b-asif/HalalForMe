@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Brand } from '../lib/theme';
+import { APP_VERSION } from '../lib/appVersion';
 
 const CREAM = Brand.cream;
 const GREEN = Brand.green;
@@ -33,7 +34,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Why does my location not appear on the map?',
-    a: 'HalalForMe needs location permission to show restaurants near you. Go to your device Settings → HalalForMe → Location and enable it.',
+    a: 'Rihdal needs location permission to show restaurants near you. Go to your device Settings → Rihdal → Location and enable it.',
   },
 ];
 
@@ -84,7 +85,7 @@ export default function HelpScreen() {
         <Text style={s.sectionTitle}>Contact Us</Text>
         <TouchableOpacity
           style={s.contactCard}
-          onPress={() => Linking.openURL('mailto:infor.halalforme@gmail.com')}
+          onPress={() => Linking.openURL('mailto:support@rihdal.com')}
           activeOpacity={0.8}
         >
           <View style={s.contactIcon}>
@@ -92,12 +93,12 @@ export default function HelpScreen() {
           </View>
           <View style={s.contactInfo}>
             <Text style={s.contactLabel}>Email Support</Text>
-            <Text style={s.contactValue}>infor.halalforme@gmail.com</Text>
+            <Text style={s.contactValue}>support@rihdal.com</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
         </TouchableOpacity>
 
-        <Text style={s.version}>HalalForMe v1.0.0</Text>
+        <Text style={s.version}>Rihdal v{APP_VERSION}</Text>
       </ScrollView>
     </SafeAreaView>
   );

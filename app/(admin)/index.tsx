@@ -38,6 +38,7 @@ interface Stats {
   pendingClaims: number;
   pendingReviews: number;
   pendingReports: number;
+  pendingMosqueSync: number;
 }
 
 type Tab = 'pending' | 'approved';
@@ -51,6 +52,7 @@ export default function AdminDashboardScreen() {
   const [stats,      setStats]      = useState<Stats>({
     restaurants: 0, users: 0, reviews: 0,
     unreadNotifications: 0, pendingSubmissions: 0, pendingClaims: 0, pendingReviews: 0, pendingReports: 0,
+    pendingMosqueSync: 0,
   });
   const [loading,    setLoading]    = useState(true);
   const [loadError,  setLoadError]  = useState<string | null>(null);
@@ -63,6 +65,7 @@ export default function AdminDashboardScreen() {
         pendingRes, approvedRes,
         restaurantsRes, usersRes, reviewsRes,
         unreadRes, claimsRes, pendingReviewsRes, pendingReportsRes,
+        pendingMosqueSyncRes,
       ] = await Promise.all([
         supabase
           .from('submissions')
@@ -81,19 +84,21 @@ export default function AdminDashboardScreen() {
         supabase.from('restaurant_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('mosque_sync_cache').select('id', { count: 'exact', head: true }).eq('needs_review', true).eq('review_status', 'pending'),
       ]);
 
       setPending((pendingRes.data as Submission[]) ?? []);
       setApproved((approvedRes.data as Submission[]) ?? []);
       setStats({
-        restaurants:          restaurantsRes.count    ?? 0,
-        users:                usersRes.count          ?? 0,
-        reviews:              reviewsRes.count        ?? 0,
-        unreadNotifications:  unreadRes.count         ?? 0,
+        restaurants:          restaurantsRes.count         ?? 0,
+        users:                usersRes.count               ?? 0,
+        reviews:              reviewsRes.count             ?? 0,
+        unreadNotifications:  unreadRes.count              ?? 0,
         pendingSubmissions:   (pendingRes.data?.length ?? 0),
-        pendingClaims:        claimsRes.count         ?? 0,
-        pendingReviews:       pendingReviewsRes.count ?? 0,
-        pendingReports:       pendingReportsRes.count ?? 0,
+        pendingClaims:        claimsRes.count              ?? 0,
+        pendingReviews:       pendingReviewsRes.count      ?? 0,
+        pendingReports:       pendingReportsRes.count      ?? 0,
+        pendingMosqueSync:    pendingMosqueSyncRes.count   ?? 0,
       });
     } catch {
       setLoadError('Failed to load dashboard. Pull down to retry.');
@@ -201,6 +206,42 @@ export default function AdminDashboardScreen() {
                 badgeColor="#e53e3e"
                 onPress={() => router.push('/(admin)/reports')}
               />
+              <Shortcut
+                icon="storefront-outline"
+                label="Manage Listings"
+                color="#3b82f6"
+                bg="#eff6ff"
+                badge={0}
+                badgeColor="#3b82f6"
+                onPress={() => router.push('/(admin)/listings')}
+              />
+              <Shortcut
+                icon="sync-outline"
+                label="Mosque Sync"
+                color={GREEN}
+                bg="#f0fdf4"
+                badge={stats.pendingMosqueSync}
+                badgeColor={GREEN}
+                onPress={() => router.push('/(admin)/mosque-sync')}
+              />
+              <Shortcut
+                icon="business-outline"
+                label="Manage Mosques"
+                color="#0d9488"
+                bg="#f0fdfa"
+                badge={0}
+                badgeColor="#0d9488"
+                onPress={() => router.push('/(admin)/mosque-listings')}
+              />
+              <Shortcut
+                icon="book-outline"
+                label="Manage Guides"
+                color={DEEP_GREEN}
+                bg="#eef5f0"
+                badge={0}
+                badgeColor={DEEP_GREEN}
+                onPress={() => router.push('/(admin)/guides')}
+              />
             </View>
 
             {/* ── Submissions header ── */}
@@ -283,7 +324,7 @@ function Header() {
     <View style={s.header}>
       <View style={s.headerLeft}>
         <Text style={s.headerTitle}>Admin Panel</Text>
-        <Text style={s.headerSub}>HalalForMe</Text>
+        <Text style={s.headerSub}>Rihdal</Text>
       </View>
       <View style={s.headerIcon}>
         <Ionicons name="shield-checkmark" size={20} color={GREEN} />

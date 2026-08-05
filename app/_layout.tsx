@@ -8,8 +8,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession } from '../lib/guestLoginIntent';
+import UpdateBanner from '../components/UpdateBanner';
+import { Brand } from '../lib/theme';
+import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession, getBusinessSignupIntent, setBusinessSignupIntent } from '../lib/guestLoginIntent';
 import { registerPushToken } from '../lib/notifications';
+import * as Notifications from 'expo-notifications';
 
 // Side-effect import only — this calls TaskManager.defineTask() at module
 // load time, which MUST happen unconditionally on every app launch,
@@ -110,7 +113,7 @@ function SplashOverlay({ show }: { show: boolean }) {
             />
           </View>
           <Text style={sp.title}>Rihdal</Text>
-          <Text style={sp.tagline}>Your daily prayer companion</Text>
+          <Text style={sp.tagline}>Guide Your Journey</Text>
         </Animated.View>
 
         <LoadingDots />
@@ -150,6 +153,37 @@ function RootLayoutNav() {
     const userId = session?.user?.id;
     if (userId) registerPushToken(userId).catch(() => {});
   }, [session?.user?.id]);
+
+  // Handle notification taps — deep-link to the relevant screen.
+  // Two cases:
+  // 1. App in foreground/background: addNotificationResponseReceivedListener fires immediately.
+  // 2. Cold start (app killed): the tap launches the app; getLastNotificationResponseAsync()
+  //    catches it once appReady is true and the router can actually navigate.
+  useEffect(() => {
+    const handleResponse = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as Record<string, any>;
+      if (data?.type === 'iqama_update' && data?.mosqueOsmId) {
+        const encoded = (data.mosqueOsmId as string).replace('/', ':');
+        router.push(`/mosque/${encoded}` as any);
+      }
+    };
+
+    const sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
+    return () => sub.remove();
+  }, [router]);
+
+  // Cold-start: check if the app was opened by tapping a notification
+  useEffect(() => {
+    if (!appReady) return;
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (!response) return;
+      const data = response.notification.request.content.data as Record<string, any>;
+      if (data?.type === 'iqama_update' && data?.mosqueOsmId) {
+        const encoded = (data.mosqueOsmId as string).replace('/', ':');
+        router.push(`/mosque/${encoded}` as any);
+      }
+    });
+  }, [appReady]);
 
   // Onboarding check (guests use a shared key; logged-in users use their own).
   // If the user-specific key is missing but the guest key is set, the user saw
@@ -212,8 +246,16 @@ function RootLayoutNav() {
       }
     } else if (!hasSeenOnboarding && !getOnboardingSeenThisSession()) {
       if (!inOnboarding) { router.replace('/onboarding'); redirecting = true; }
-    } else if (inAuthGroup || inOnboarding) {
-      router.replace('/(tabs)');
+    } else if (inAuthGroup) {
+      // Logged-in users who land on auth screens get bounced home, but
+      // inOnboarding is intentionally excluded — the profile screen lets
+      // them re-watch the tour via router.push('/onboarding').
+      if (getBusinessSignupIntent()) {
+        setBusinessSignupIntent(false);
+        router.replace('/business-type');
+      } else {
+        router.replace('/(tabs)');
+      }
       redirecting = true;
     }
 
@@ -237,6 +279,7 @@ function RootLayoutNav() {
     <View style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }} />
       <SplashOverlay show={!appReady} />
+      <UpdateBanner />
     </View>
   );
 }
@@ -300,7 +343,7 @@ const sp = StyleSheet.create({
   },
   tagline: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.62)',
+    color: Brand.gold,
     fontWeight: '500',
   },
   dotsRow: {

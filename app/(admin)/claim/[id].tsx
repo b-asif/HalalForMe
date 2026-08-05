@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,9 +31,11 @@ export default function AdminClaimReviewScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
 
-  const [claim,   setClaim]   = useState<Claim | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
+  const [claim,          setClaim]          = useState<Claim | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [working,        setWorking]        = useState(false);
+  const [rejectVisible,  setRejectVisible]  = useState(false);
+  const [rejectReason,   setRejectReason]   = useState('');
 
   const loadClaim = useCallback(async () => {
     const { data, error } = await supabase
@@ -97,43 +99,40 @@ export default function AdminClaimReviewScreen() {
   };
 
   const rejectClaim = () => {
-    Alert.alert(
-      'Reject Claim',
-      `Reject the ownership claim from ${claim?.contact_name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject', style: 'destructive',
-          onPress: async () => {
-            setWorking(true);
-            try {
-              const { error } = await supabase
-                .from('restaurant_claims')
-                .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
-                .eq('id', id);
-              if (error) throw new Error(error.message);
+    setRejectReason('');
+    setRejectVisible(true);
+  };
 
-              // Notify user
-              supabase.functions.invoke('notify-user', {
-                body: {
-                  userId: claim!.user_id,
-                  title: 'Claim Not Approved',
-                  body: `We were unable to verify your ownership claim for ${(claim?.restaurants as any)?.name}. Please contact support if you believe this is an error.`,
-                },
-              }).catch(() => {});
+  const doReject = async () => {
+    if (!claim) return;
+    setWorking(true);
+    setRejectVisible(false);
+    try {
+      const { error } = await supabase
+        .from('restaurant_claims')
+        .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
 
-              Alert.alert('Rejected', 'Claim has been rejected.', [
-                { text: 'OK', onPress: () => router.back() },
-              ]);
-            } catch (e: any) {
-              Alert.alert('Error', e.message);
-            } finally {
-              setWorking(false);
-            }
-          },
+      const reason = rejectReason.trim();
+      supabase.functions.invoke('notify-user', {
+        body: {
+          userId: claim.user_id,
+          title: 'Claim Not Approved',
+          body: reason
+            ? `We were unable to verify your ownership of ${(claim.restaurants as any)?.name}. Reason: ${reason}`
+            : `We were unable to verify your ownership of ${(claim.restaurants as any)?.name}. Please contact support if you believe this is an error.`,
         },
-      ],
-    );
+      }).catch(() => {});
+
+      Alert.alert('Rejected', 'Claim has been rejected.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setWorking(false);
+    }
   };
 
   if (loading) {
@@ -167,6 +166,44 @@ export default function AdminClaimReviewScreen() {
   return (
     <SafeAreaView style={s.flex}>
       <Header router={router} />
+
+      {/* Rejection reason modal */}
+      <Modal
+        visible={rejectVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRejectVisible(false)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.modalOverlay}>
+            <View style={s.modalSheet}>
+              <View style={s.modalHandle} />
+              <Text style={s.modalTitle}>Reject Claim</Text>
+              <Text style={s.modalSubtitle}>
+                Optionally provide a reason. It will be included in the notification sent to {claim?.contact_name}.
+              </Text>
+              <TextInput
+                style={s.modalInput}
+                placeholder="e.g. Could not verify your connection to this restaurant."
+                placeholderTextColor="#bbb"
+                value={rejectReason}
+                onChangeText={setRejectReason}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+              <View style={s.modalActions}>
+                <TouchableOpacity style={s.modalCancelBtn} onPress={() => setRejectVisible(false)}>
+                  <Text style={s.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.modalRejectBtn} onPress={doReject}>
+                  <Text style={s.modalRejectText}>Reject Claim</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 40 }]}>
 
@@ -370,4 +407,34 @@ const s = StyleSheet.create({
   },
   rejectBtnText: { color: '#e53e3e', fontSize: 16, fontWeight: '700' },
   btnDisabled: { opacity: 0.6 },
+
+  // Rejection modal
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40,
+  },
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 8 },
+  modalSubtitle: { fontSize: 13, color: '#888', lineHeight: 19, marginBottom: 16 },
+  modalInput: {
+    borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: '#111', backgroundColor: '#fafafa',
+    minHeight: 80, marginBottom: 20,
+  },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  modalCancelBtn: {
+    flex: 1, borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  modalCancelText: { fontSize: 15, fontWeight: '600', color: '#666' },
+  modalRejectBtn: {
+    flex: 1, backgroundColor: '#fff5f5', borderWidth: 1.5, borderColor: '#fca5a5',
+    borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+  },
+  modalRejectText: { fontSize: 15, fontWeight: '700', color: '#e53e3e' },
 });

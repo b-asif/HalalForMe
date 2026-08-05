@@ -6,8 +6,42 @@ const supabase = createClient(
 );
 
 Deno.serve(async (req) => {
+  console.log('[notify-user] invoked', req.method);
+
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
+  }
+
+  // Every caller of this function (claim approve/reject, submission
+  // approve/reject, review approve/reject) is an admin action — reject
+  // anyone who isn't a signed-in admin before this runs with the
+  // service-role client. Without this, any UUID could be sent an
+  // arbitrary push under this app's name.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    console.log('[notify-user] missing Authorization header');
+    return new Response('Missing Authorization header', { status: 401 });
+  }
+
+  const callerClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const { data: { user }, error: authError } = await callerClient.auth.getUser();
+  if (authError || !user) {
+    console.log('[notify-user] auth failed', authError?.message);
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const { data: callerProfile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!callerProfile?.is_admin) {
+    return new Response('Admin access required', { status: 403 });
   }
 
   const { userId, title, body } = await req.json();
@@ -39,6 +73,9 @@ Deno.serve(async (req) => {
     body: JSON.stringify(messages),
   });
 
-  const result = await response.json();
-  return new Response(JSON.stringify({ sent: messages.length, result }), { status: 200 });
+  if (!response.ok) {
+    const result = await response.json();
+    console.error('[notify-user] expo push error', response.status, JSON.stringify(result));
+  }
+  return new Response(JSON.stringify({ sent: messages.length }), { status: 200 });
 });

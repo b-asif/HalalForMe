@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, Modal, Platform,
-  TextInput, Linking,
+  TextInput, Linking, Share,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { lookupENumber, HalalStatus } from '../../lib/eNumbers';
 import { fetchWithTimeout, formatError } from '../../lib/errors';
+import { APP_VERSION } from '../../lib/appVersion';
 import { Brand } from '../../lib/theme';
 
 // ─── scan history ─────────────────────────────────────────────────────────────
@@ -322,7 +323,7 @@ async function lookupBarcode(barcode: string): Promise<ProductResult> {
   const [offRes, verifiedRes] = await Promise.allSettled([
     fetchWithTimeout(
       `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
-      { headers: { 'User-Agent': 'HalalForMe/1.0' } },
+      { headers: { 'User-Agent': `HalalForMe/${APP_VERSION}` } },
     ),
     (async () => {
       const { supabase } = await import('../../lib/supabase');
@@ -387,22 +388,26 @@ async function lookupBarcode(barcode: string): Promise<ProductResult> {
   let ingredients: string[];
   let nonEnglishText = false;
 
+  // Detect whether the product has English ingredient data.
+  // `languages_codes` is an object like { "en": 1, "sv": 1 } — the most
+  // reliable signal from OFF. Fall back to checking for ingredients_text_en.
+  const hasEnglishData =
+    (p.languages_codes && typeof p.languages_codes === 'object' && 'en' in p.languages_codes)
+    || !!p.ingredients_text_en;
+
   if (Array.isArray(p.ingredients) && p.ingredients.length > 0) {
-    // Structured ingredients array — language-normalised by OFF, safe to analyse.
-    ingredients = flattenNodes(p.ingredients as IngNode[]).filter(s => s.length > 1);
+    // Prefer English text if available; otherwise use the structured array
+    // (which may be in a foreign language) but flag it.
+    if (!hasEnglishData) nonEnglishText = true;
+    const rawEn = p.ingredients_text_en || '';
+    ingredients = rawEn
+      ? parseIngredients(rawEn)
+      : flattenNodes(p.ingredients as IngNode[]).filter(s => s.length > 1);
   } else {
-    // Prefer the English text field. Fall back to the generic field only if needed.
+    // Raw text path: prefer English field, fall back to default.
     const rawText = p.ingredients_text_en || p.ingredients_text || '';
-    // If there is no English-specific field and the raw text is mostly non-ASCII
-    // (>40% of characters), it is likely not in English — flag it rather than
-    // running English-only rules on foreign text and producing a false verdict.
-    if (!p.ingredients_text_en && rawText.length > 0) {
-      const nonAscii = (rawText.match(/[^\x00-\x7F]/g) ?? []).length;
-      if (nonAscii / rawText.length > 0.4) {
-        nonEnglishText = true;
-      }
-    }
-    ingredients = nonEnglishText ? [] : parseIngredients(rawText);
+    if (!hasEnglishData && rawText.length > 0) nonEnglishText = true;
+    ingredients = parseIngredients(rawText);
   }
 
   const { flagged, verdict: textVerdict } = analyzeIngredients(ingredients, { isVeganOrVegetarian });
@@ -439,60 +444,82 @@ async function lookupBarcode(barcode: string): Promise<ProductResult> {
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
-function VerdictBanner({ verdict, certifiedHalal, hasPorkAllergen, nonEnglishText, isVeganOrVegetarian, communityVerified }: {
+function VerdictHero({ verdict, productName, brand, onBack, onScanAgain, onShare, certifiedHalal, hasPorkAllergen, nonEnglishText, isVeganOrVegetarian, communityVerified }: {
   verdict: ProductResult['verdict'];
+  productName: string;
+  brand: string;
+  onBack: () => void;
+  onScanAgain: () => void;
+  onShare: () => void;
   certifiedHalal: boolean;
   hasPorkAllergen: boolean;
   nonEnglishText: boolean;
   isVeganOrVegetarian: boolean;
   communityVerified: boolean;
 }) {
+  const insets = useSafeAreaInsets();
   const cfg = {
-    halal:   { color: GREEN,      icon: 'checkmark-circle',    heading: 'Halal Certified',  sub: 'No prohibited ingredients detected' },
-    haram:   { color: RED,        icon: 'close-circle',        heading: 'Contains Haram',   sub: 'Prohibited ingredients detected' },
-    unclear: { color: AMBER,      icon: 'help-circle',         heading: 'Needs Verification', sub: 'Some ingredients need verification' },
-    no_data: { color: TEXT_MUTED, icon: 'information-circle',  heading: 'No Data Found',    sub: nonEnglishText ? 'Ingredient list is not in English — verify manually' : 'No ingredient information found' },
+    halal:   { bg: GREEN,      icon: 'checkmark-circle',   label: 'HALAL',   sub: 'No prohibited ingredients detected' },
+    haram:   { bg: RED,        icon: 'close-circle',       label: 'HARAM',   sub: 'Prohibited ingredients detected' },
+    unclear: { bg: AMBER,      icon: 'help-circle',        label: 'UNCLEAR', sub: 'Some ingredients need verification' },
+    no_data: { bg: TEXT_MUTED, icon: 'information-circle', label: 'NO DATA', sub: nonEnglishText ? 'Ingredient list not in English — verify manually' : 'No ingredient information found' },
   }[verdict];
 
-  const showBadges = certifiedHalal || hasPorkAllergen || isVeganOrVegetarian || communityVerified;
-
   return (
-    <View style={vb.outer}>
-      <View style={vb.wrap}>
-        <View style={[vb.iconBadge, { backgroundColor: cfg.color }]}>
-          <Ionicons name={cfg.icon as any} size={24} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={vb.heading}>{cfg.heading}</Text>
-          <Text style={vb.sub}>{cfg.sub}</Text>
-        </View>
+    <View style={[vh.block, { backgroundColor: cfg.bg, paddingTop: insets.top + 10 }]}>
+      {/* nav row */}
+      <View style={vh.navRow}>
+        <TouchableOpacity style={vh.navBtn} onPress={onBack} hitSlop={8}>
+          <Ionicons name="arrow-back" size={20} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity style={vh.navBtn} onPress={onShare} hitSlop={8}>
+          <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+        <View style={{ width: 10 }} />
+        <TouchableOpacity style={vh.navBtn} onPress={onScanAgain} hitSlop={8}>
+          <Ionicons name="scan-outline" size={20} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
       </View>
 
-      {/* Metadata badges — shown below the main verdict */}
-      {showBadges && (
-        <View style={vb.badges}>
+      {/* verdict */}
+      <View style={vh.center}>
+        <Ionicons name={cfg.icon as any} size={72} color="rgba(255,255,255,0.95)" />
+        <Text style={vh.verdict}>{cfg.label}</Text>
+        <Text style={vh.sub}>{cfg.sub}</Text>
+      </View>
+
+      {/* product identity */}
+      <View style={vh.product}>
+        <Text style={vh.productName} numberOfLines={2}>{productName}</Text>
+        {brand ? <Text style={vh.brand}>{brand}</Text> : null}
+      </View>
+
+      {/* trust badges */}
+      {(communityVerified || certifiedHalal || isVeganOrVegetarian || hasPorkAllergen) && (
+        <View style={vh.badges}>
           {communityVerified && (
-            <View style={[vb.badge, { backgroundColor: '#eef4ff', borderColor: '#3b82f6' }]}>
-              <Ionicons name="shield-checkmark-outline" size={13} color="#3b82f6" />
-              <Text style={[vb.badgeText, { color: '#3b82f6' }]}>Verified by HalalForMe team</Text>
+            <View style={vh.badge}>
+              <Ionicons name="shield-checkmark-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={vh.badgeText}>Verified by Rihdal team</Text>
             </View>
           )}
           {certifiedHalal && (
-            <View style={[vb.badge, { backgroundColor: '#e6f9f2', borderColor: GREEN }]}>
-              <Ionicons name="ribbon-outline" size={13} color={GREEN} />
-              <Text style={[vb.badgeText, { color: GREEN }]}>Halal Certified (per product label)</Text>
+            <View style={vh.badge}>
+              <Ionicons name="ribbon-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={vh.badgeText}>Halal Certified (per label)</Text>
             </View>
           )}
           {isVeganOrVegetarian && (
-            <View style={[vb.badge, { backgroundColor: '#f0fdf4', borderColor: '#16a34a' }]}>
-              <Ionicons name="leaf-outline" size={13} color="#16a34a" />
-              <Text style={[vb.badgeText, { color: '#16a34a' }]}>Vegan / Vegetarian label — plant-sourced ingredients assumed</Text>
+            <View style={vh.badge}>
+              <Ionicons name="leaf-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={vh.badgeText}>Vegan / Vegetarian</Text>
             </View>
           )}
           {hasPorkAllergen && (
-            <View style={[vb.badge, { backgroundColor: '#fff5f5', borderColor: RED }]}>
-              <Ionicons name="warning-outline" size={13} color={RED} />
-              <Text style={[vb.badgeText, { color: RED }]}>Pork declared as allergen on label</Text>
+            <View style={vh.badge}>
+              <Ionicons name="warning-outline" size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={vh.badgeText}>Pork allergen declared on label</Text>
             </View>
           )}
         </View>
@@ -501,26 +528,27 @@ function VerdictBanner({ verdict, certifiedHalal, hasPorkAllergen, nonEnglishTex
   );
 }
 
-const vb = StyleSheet.create({
-  outer: { marginHorizontal: 16, marginBottom: 12 },
-  wrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: '#fff', borderRadius: 18, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 }, elevation: 3,
-  },
-  iconBadge: {
-    width: 48, height: 48, borderRadius: 24,
+const vh = StyleSheet.create({
+  block:  { paddingHorizontal: 24, paddingBottom: 32 },
+  navRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  navBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  heading: { fontSize: 17, fontWeight: '800', color: TEXT_DARK },
-  sub:     { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
-  badges:  { gap: 6, marginTop: 10 },
+  center:      { alignItems: 'center', gap: 8, marginBottom: 28 },
+  verdict:     { fontSize: 48, fontWeight: '900', color: '#fff', letterSpacing: 2 },
+  sub:         { fontSize: 14, color: 'rgba(255,255,255,0.82)', textAlign: 'center', lineHeight: 20 },
+  product:     { marginBottom: 16, gap: 2 },
+  productName: { fontSize: 18, fontWeight: '700', color: '#fff', lineHeight: 24 },
+  brand:       { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
+  badges:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.18)', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
-  badgeText: { fontSize: 12, fontWeight: '600', flex: 1 },
+  badgeText: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.9)' },
 });
 
 function IngredientItem({ text, flag }: { text: string; flag?: FlaggedItem }) {
@@ -574,16 +602,22 @@ const REPORT_OPTIONS = [
   'Other',
 ];
 
-function ReportModal({ visible, productName, barcode, verdict, onClose }: {
+function ReportModal({ visible, productName, barcode, verdict, preselectedReason, onClose }: {
   visible: boolean;
   productName: string;
   barcode: string;
   verdict: ProductResult['verdict'];
+  preselectedReason?: string;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [selected, setSelected]   = useState<string | null>(null);
+  const [selected, setSelected]   = useState<string | null>(preselectedReason ?? null);
   const [submitted, setSubmitted] = useState(false);
+
+  // Sync preselected reason when the modal opens with a different value
+  useEffect(() => {
+    if (visible) setSelected(preselectedReason ?? null);
+  }, [visible, preselectedReason]);
 
   const submit = async () => {
     if (!selected) return;
@@ -715,7 +749,8 @@ export default function ScannerScreen() {
   const [result,      setResult]        = useState<ProductResult | null>(null);
   const [errorMsg,    setErrorMsg]      = useState<string | null>(null);
   const [lastBarcode, setLastBarcode]   = useState<string | null>(null);
-  const [reportOpen,  setReportOpen]    = useState(false);
+  const [reportOpen,        setReportOpen]        = useState(false);
+  const [reportPreselected, setReportPreselected] = useState<string | undefined>(undefined);
 
   // scan history
   const [history,     setHistory]       = useState<ScanHistoryEntry[]>([]);
@@ -723,6 +758,7 @@ export default function ScannerScreen() {
   // manual barcode entry
   const [manualBarcode, setManualBarcode] = useState('');
   const manualInputRef = useRef<TextInput>(null);
+
 
   useEffect(() => {
     loadScanHistory().then(setHistory);
@@ -744,7 +780,7 @@ export default function ScannerScreen() {
         verdict: product.verdict,
         timestamp: Date.now(),
       };
-      saveScanHistory(entry);
+      await saveScanHistory(entry);
       setHistory(prev => [entry, ...prev.filter(e => e.barcode !== barcode)].slice(0, MAX_HISTORY));
     } catch (e: any) {
       setErrorMsg(formatError(e));
@@ -807,27 +843,39 @@ export default function ScannerScreen() {
     const haramCount   = result.flagged.filter(f => f.severity === 'haram').length;
     const unclearCount = result.flagged.filter(f => f.severity === 'unclear').length;
 
-    return (
-      <SafeAreaView style={s.flex} edges={['top', 'left', 'right']}>
-        {/* sticky header */}
-        <View style={s.resultHeader}>
-          <TouchableOpacity style={s.backBtn} onPress={reset}>
-            <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
-          </TouchableOpacity>
-          <Text style={s.resultHeaderTitle} numberOfLines={1}>{result.name}</Text>
-          <TouchableOpacity
-            style={s.scanAgainBtn}
-            onPress={() => { setScanned(false); setResult(null); setScreenState('scanning'); }}
-          >
-            <Ionicons name="scan-outline" size={16} color={GREEN} />
-          </TouchableOpacity>
-        </View>
+    const handleShare = () => {
+      const name = result.name || 'This product';
+      const verdictLine = {
+        halal:   `✅ ${name} appears to be halal — no prohibited ingredients detected.`,
+        haram:   `❌ ${name} contains prohibited ingredients: ${result.flagged.filter(f => f.severity === 'haram').map(f => f.label).join(', ')}.`,
+        unclear: `⚠️ ${name} has ingredients that need verification: ${result.flagged.filter(f => f.severity === 'unclear').map(f => f.label).join(', ')}.`,
+        no_data: `❓ No ingredient data found for ${name} — verify manually.`,
+      }[result.verdict];
+      Share.share({ message: `${verdictLine}\n\nChecked with Rihdal — the Muslim lifestyle app.` });
+    };
 
+    return (
+      <SafeAreaView style={s.flex} edges={[]}>
         <ScrollView
           style={s.flex}
           contentContainerStyle={{ paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* full-bleed verdict hero */}
+          <VerdictHero
+            verdict={result.verdict}
+            productName={result.name}
+            brand={result.brand}
+            onBack={reset}
+            onScanAgain={() => { setScanned(false); setResult(null); setScreenState('scanning'); }}
+            onShare={handleShare}
+            certifiedHalal={result.certifiedHalal}
+            hasPorkAllergen={result.hasPorkAllergen}
+            nonEnglishText={result.nonEnglishText}
+            isVeganOrVegetarian={result.isVeganOrVegetarian}
+            communityVerified={result.communityVerified}
+          />
+
           {/* product image */}
           <View style={s.photoFrame}>
             <View style={s.photoInner}>
@@ -873,30 +921,36 @@ export default function ScannerScreen() {
             )}
           </View>
 
-          {/* product info */}
+          {/* barcode */}
           <View style={s.productInfo}>
-            <Text style={s.productName}>{result.name}</Text>
-            {result.brand && <Text style={s.productBrand}>{result.brand}</Text>}
             <Text style={s.productBarcode}>Barcode: {result.barcode}</Text>
           </View>
 
-          {/* verdict */}
-          <VerdictBanner
-            verdict={result.verdict}
-            certifiedHalal={result.certifiedHalal}
-            hasPorkAllergen={result.hasPorkAllergen}
-            nonEnglishText={result.nonEnglishText}
-            isVeganOrVegetarian={result.isVeganOrVegetarian}
-            communityVerified={result.communityVerified}
-          />
-
-          {/* e-number disclaimer */}
+          {/* analysis disclaimer */}
           <View style={s.eNumDisclaimer}>
             <Ionicons name="information-circle-outline" size={14} color={TEXT_MUTED} />
             <Text style={s.eNumDisclaimerText}>
-              E-number status can vary by manufacturer. When in doubt, contact the brand directly.
+              Results are based on ingredient text analysis and may not be fully accurate. E-number status can vary by manufacturer. Verify with the manufacturer for certainty.
             </Text>
           </View>
+
+          {/* fast-path wrong verdict report */}
+          <TouchableOpacity
+            style={s.wrongVerdictBtn}
+            onPress={() => {
+              const preselect =
+                result.verdict === 'halal'   ? 'Verdict should be Haram' :
+                result.verdict === 'haram'   ? 'Verdict should be Halal' :
+                result.verdict === 'unclear' ? 'Verdict should be Halal' :
+                'Missing product information';
+              setReportPreselected(preselect);
+              setReportOpen(true);
+            }}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="alert-circle-outline" size={15} color={AMBER} />
+            <Text style={s.wrongVerdictText}>This seems wrong?</Text>
+          </TouchableOpacity>
 
           {/* flag summary chips */}
           {(haramCount > 0 || unclearCount > 0) && (
@@ -924,13 +978,21 @@ export default function ScannerScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Ingredients</Text>
 
+            {result.nonEnglishText && result.ingredients.length > 0 && (
+              <View style={s.langWarning}>
+                <Ionicons name="language-outline" size={14} color={AMBER} />
+                <Text style={s.langWarningText}>
+                  Ingredient list is not in English — analysis is based on available text and may miss some ingredients. Verify manually.
+                </Text>
+              </View>
+            )}
+
             {result.notFound ? (
               <View style={s.noDataBox}>
                 <Ionicons name="cube-outline" size={32} color={TEXT_MUTED} />
                 <Text style={s.noDataTitle}>Product not in database</Text>
                 <Text style={s.noDataText}>
-                  This barcode isn't in the Open Food Facts database yet.{'\n'}
-                  You can add it at openfoodfacts.org
+                  We couldn't find this product. Try searching by name or report it to help us improve.
                 </Text>
               </View>
             ) : result.ingredients.length === 0 ? (
@@ -954,10 +1016,10 @@ export default function ScannerScreen() {
             )}
           </View>
 
-          {/* report button */}
+          {/* report button — general issues, no preselection */}
           <TouchableOpacity
             style={s.reportBtn}
-            onPress={() => setReportOpen(true)}
+            onPress={() => { setReportPreselected(undefined); setReportOpen(true); }}
           >
             <Ionicons name="flag-outline" size={16} color={TEXT_MUTED} />
             <Text style={s.reportText}>Report this result</Text>
@@ -969,6 +1031,7 @@ export default function ScannerScreen() {
           productName={result.name}
           barcode={result.barcode}
           verdict={result.verdict}
+          preselectedReason={reportPreselected}
           onClose={() => setReportOpen(false)}
         />
       </SafeAreaView>
@@ -1061,6 +1124,32 @@ export default function ScannerScreen() {
           </Text>
         </TouchableOpacity>
 
+        {/* recent scans — shown immediately after scan button for returning users */}
+        {history.length > 0 && (
+          <View style={s.historyCard}>
+            <Text style={s.historyTitle}>Recent Scans</Text>
+            {history.map((entry, idx) => {
+              const verdictColor = entry.verdict === 'halal' ? GREEN : entry.verdict === 'haram' ? RED : entry.verdict === 'unclear' ? AMBER : TEXT_MUTED;
+              const verdictIcon  = entry.verdict === 'halal' ? 'checkmark-circle' : entry.verdict === 'haram' ? 'close-circle' : entry.verdict === 'unclear' ? 'warning' : 'help-circle-outline';
+              return (
+                <TouchableOpacity
+                  key={entry.barcode + entry.timestamp}
+                  style={[s.historyRow, idx === 0 && s.historyRowFirst]}
+                  onPress={() => { setScanned(true); runLookup(entry.barcode); }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={verdictIcon as any} size={18} color={verdictColor} />
+                  <View style={s.historyInfo}>
+                    <Text style={s.historyName} numberOfLines={1}>{entry.name}</Text>
+                    <Text style={s.historyBarcode}>{entry.barcode}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* or divider */}
         <View style={s.orDivider}>
           <View style={s.orLine} />
@@ -1089,32 +1178,6 @@ export default function ScannerScreen() {
             <Ionicons name="search" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
-
-        {/* recent scans */}
-        {history.length > 0 && (
-          <View style={s.historyCard}>
-            <Text style={s.historyTitle}>Recent Scans</Text>
-            {history.map((entry, idx) => {
-              const verdictColor = entry.verdict === 'halal' ? GREEN : entry.verdict === 'haram' ? RED : entry.verdict === 'unclear' ? AMBER : TEXT_MUTED;
-              const verdictIcon  = entry.verdict === 'halal' ? 'checkmark-circle' : entry.verdict === 'haram' ? 'close-circle' : entry.verdict === 'unclear' ? 'warning' : 'help-circle-outline';
-              return (
-                <TouchableOpacity
-                  key={entry.barcode + entry.timestamp}
-                  style={[s.historyRow, idx === 0 && s.historyRowFirst]}
-                  onPress={() => { setScanned(true); runLookup(entry.barcode); }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name={verdictIcon as any} size={18} color={verdictColor} />
-                  <View style={s.historyInfo}>
-                    <Text style={s.historyName} numberOfLines={1}>{entry.name}</Text>
-                    <Text style={s.historyBarcode}>{entry.barcode}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
 
         {/* what we check */}
         <View style={s.infoCard}>
@@ -1190,22 +1253,6 @@ const s = StyleSheet.create({
     width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
 
-  // result header
-  resultHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: CREAM, paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE, gap: 10,
-  },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
-  },
-  resultHeaderTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: TEXT_DARK },
-  scanAgainBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#e6f9f2', alignItems: 'center', justifyContent: 'center',
-  },
-
   // product photo frame
   photoFrame: {
     marginHorizontal: 16, marginTop: 4, marginBottom: 28,
@@ -1232,12 +1279,9 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   productInfo: {
-    paddingHorizontal: 20, paddingVertical: 16,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+    paddingHorizontal: 20, paddingVertical: 10,
     marginBottom: 12,
   },
-  productName:    { fontSize: 20, fontWeight: '800', color: TEXT_DARK, marginBottom: 4 },
-  productBrand:   { fontSize: 14, color: TEXT_MUTED, marginBottom: 4 },
   productBarcode: { fontSize: 12, color: TEXT_MUTED, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
 
   eNumDisclaimer: {
@@ -1268,8 +1312,21 @@ const s = StyleSheet.create({
   noDataBox: { alignItems: 'center', paddingVertical: 28, gap: 8 },
   noDataTitle: { fontSize: 16, fontWeight: '600', color: TEXT_MUTED },
   noDataText:  { fontSize: 13, color: TEXT_MUTED, textAlign: 'center', lineHeight: 19 },
+  langWarning: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: 'rgba(217,119,6,0.08)', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: 'rgba(217,119,6,0.2)', marginBottom: 12,
+  },
+  langWarningText: { flex: 1, fontSize: 12, color: AMBER, lineHeight: 17 },
 
   // report button
+  wrongVerdictBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginBottom: 12, paddingVertical: 11, borderRadius: 12,
+    borderWidth: 1.5, borderColor: '#EEDCB8', backgroundColor: '#FBF3E6',
+  },
+  wrongVerdictText: { fontSize: 13, color: AMBER, fontWeight: '600' },
+
   reportBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginHorizontal: 16, paddingVertical: 14, borderRadius: 12,

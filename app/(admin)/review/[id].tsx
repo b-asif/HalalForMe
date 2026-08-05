@@ -10,6 +10,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
+import { isValidImageBytes } from '../../../lib/validateImageBytes';
 import { CERTIFIERS, Certifier } from '../../../lib/certifiers';
 import { Brand } from '../../../lib/theme';
 
@@ -60,6 +61,7 @@ interface Submission {
   lat: number | null;
   lng: number | null;
   created_at: string;
+  submitted_as_owner: boolean;
 }
 
 export default function AdminReviewScreen() {
@@ -82,6 +84,7 @@ export default function AdminReviewScreen() {
   const [weekHours,    setWeekHours]    = useState<WeekHours>(DEFAULT_HOURS);
   const [rejectNote,   setRejectNote]   = useState('');
   const [mainImage,    setMainImage]    = useState<{ uri: string; base64: string } | null>(null);
+  const [certPhotoUrl, setCertPhotoUrl] = useState<string | null>(null);
 
   // Modals
   const [lightboxUrl,   setLightboxUrl]   = useState<string | null>(null);
@@ -98,7 +101,7 @@ export default function AdminReviewScreen() {
     setLoading(true);
     const { data, error } = await supabase
       .from('submissions')
-      .select('id, user_id, name, address, cuisine_type, phone, website, notes, certification_photo_url, food_photo_urls, restaurant_photo_urls, lat, lng, created_at')
+      .select('id, user_id, name, address, cuisine_type, phone, website, notes, certification_photo_url, food_photo_urls, restaurant_photo_urls, lat, lng, created_at, submitted_as_owner')
       .eq('id', id)
       .single();
 
@@ -113,6 +116,22 @@ export default function AdminReviewScreen() {
     setAdminWebsite(sub.website ?? '');
     if (sub.lat != null) setAdminLat(String(sub.lat));
     if (sub.lng != null) setAdminLng(String(sub.lng));
+
+    // Generate a signed URL for the cert/proof photo so it's always accessible
+    // regardless of whether the storage bucket has a public policy.
+    const rawUrl = sub.certification_photo_url;
+    const marker = '/halal_certificates/';
+    const markerIdx = rawUrl?.indexOf(marker) ?? -1;
+    if (rawUrl && markerIdx >= 0) {
+      const storagePath = rawUrl.slice(markerIdx + marker.length);
+      const { data: signed } = await supabase.storage
+        .from('halal_certificates')
+        .createSignedUrl(storagePath, 3600);
+      setCertPhotoUrl(signed?.signedUrl ?? rawUrl);
+    } else {
+      setCertPhotoUrl(rawUrl ?? null);
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -213,6 +232,7 @@ export default function AdminReviewScreen() {
     const uuid = Math.random().toString(36).slice(2);
     const path = `main/${uuid}.jpg`;
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    if (!isValidImageBytes(bytes)) throw new Error('Invalid image file.');
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
@@ -223,6 +243,8 @@ export default function AdminReviewScreen() {
 
   const doApprove = async () => {
     if (!submission) return;
+    const latNum = parseFloat(adminLat);
+    const lngNum = parseFloat(adminLng);
     setSaving(true);
     try {
       const imageUrl = mainImage ? await uploadMainImage(mainImage.base64) : null;
@@ -260,13 +282,15 @@ export default function AdminReviewScreen() {
         is_verified:        true,
         phone:              adminPhone.trim() || null,
         website:            adminWebsite.trim() || null,
-        lat:                parseFloat(adminLat),
-        lng:                parseFloat(adminLng),
+        lat:                latNum,
+        lng:                lngNum,
         opening_hours:      Object.keys(openingHours).length > 0 ? openingHours : null,
         categorized_photos: Object.keys(categorizedPhotos).length > 0 ? categorizedPhotos : null,
         image_url:          firstPhoto,
         zabihah_status:     zabihahStatus,
         zabihah_notes:      zabihahNotes.trim() || null,
+        // If the submitter claimed ownership, wire them up as owner immediately
+        owner_id:           submission.submitted_as_owner ? submission.user_id : null,
       }).select('id').single();
 
       if (insertErr) throw new Error(insertErr.message);
@@ -283,7 +307,7 @@ export default function AdminReviewScreen() {
         body: {
           userId: submission.user_id,
           title: '🎉 Restaurant Approved!',
-          body: `${submission.name} has been approved and is now live on HalalForMe.`,
+          body: `${submission.name} has been approved and is now live on Rihdal.`,
         },
       }).catch(() => {});
 
@@ -299,7 +323,9 @@ export default function AdminReviewScreen() {
 
   const handleApprove = async () => {
     if (!submission) return;
-    if (!adminLat || !adminLng) {
+    const latNum = parseFloat(adminLat);
+    const lngNum = parseFloat(adminLng);
+    if (adminLat.trim() === '' || adminLng.trim() === '' || isNaN(latNum) || isNaN(lngNum)) {
       Alert.alert('Missing coordinates', 'Please fill in lat and lng before approving.');
       return;
     }
@@ -406,6 +432,16 @@ export default function AdminReviewScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Owner submission banner ───────────────────────────── */}
+        {submission.submitted_as_owner && (
+          <View style={s.ownerBanner}>
+            <Ionicons name="storefront-outline" size={16} color="#245737" />
+            <Text style={s.ownerBannerText}>
+              This person claims to be the business owner. Approving will grant them manage access to the listing.
+            </Text>
+          </View>
+        )}
+
         {/* ── Section 1: Submitted info ──────────────────────────── */}
         <Text style={s.sectionTitle}>Submitted Info</Text>
         <View style={s.card}>
@@ -417,15 +453,18 @@ export default function AdminReviewScreen() {
           {submission.notes   ? <InfoRow label="Notes"   value={submission.notes} /> : null}
         </View>
 
-        {/* ── Section 2: Certification photo ────────────────────── */}
-        <Text style={s.sectionTitle}>Halal Certificate</Text>
+        {/* ── Section 2: Certification / proof photo ────────────── */}
+        <Text style={s.sectionTitle}>
+          {submission.submitted_as_owner ? 'Proof Document' : 'Halal Certificate'}
+        </Text>
+        {certPhotoUrl ? (
         <TouchableOpacity
           style={s.certPhotoWrap}
-          onPress={() => setLightboxUrl(submission.certification_photo_url)}
+          onPress={() => setLightboxUrl(certPhotoUrl)}
           activeOpacity={0.85}
         >
           <Image
-            source={submission.certification_photo_url}
+            source={certPhotoUrl}
             style={s.certPhoto}
             contentFit="cover"
           />
@@ -434,6 +473,12 @@ export default function AdminReviewScreen() {
             <Text style={s.certPhotoTap}>Tap to expand</Text>
           </View>
         </TouchableOpacity>
+        ) : (
+          <View style={s.certPhotoWrap}>
+            <Ionicons name="document-outline" size={32} color="#ccc" />
+            <Text style={{ color: TEXT_MUTED, fontSize: 13, marginTop: 8 }}>Loading proof document…</Text>
+          </View>
+        )}
 
         {/* ── Section 3: Gallery photos ──────────────────────────── */}
         {allGallery.length > 0 ? (
@@ -902,6 +947,13 @@ const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CREAM },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
+  ownerBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#e6f9f2', borderWidth: 1, borderColor: '#a7dfc9',
+    borderRadius: 12, padding: 12, marginBottom: 16,
+  },
+  ownerBannerText: { flex: 1, fontSize: 13, color: '#245737', lineHeight: 19 },
+
   header: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
@@ -932,6 +984,7 @@ const s = StyleSheet.create({
 
   certPhotoWrap: {
     borderRadius: 14, overflow: 'hidden', marginBottom: 4, height: 200,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: CREAM,
   },
   certPhoto: { width: '100%', height: '100%' },
   certPhotoOverlay: {

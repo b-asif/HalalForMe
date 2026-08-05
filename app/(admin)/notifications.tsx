@@ -22,12 +22,13 @@ interface AdminNotification {
 }
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
-  submission:   { icon: 'document-text-outline', color: '#3b82f6', bg: '#eff6ff' },
-  review:       { icon: 'star-outline',          color: '#f6a623', bg: '#fffbeb' },
-  claim:        { icon: 'storefront-outline',    color: '#b7791f', bg: '#fefce8' },
-  owner_signup: { icon: 'person-add-outline',    color: GREEN,     bg: '#e6f9f2' },
-  digest:       { icon: 'bar-chart-outline',     color: '#8b5cf6', bg: '#f5f3ff' },
-  general:      { icon: 'notifications-outline', color: '#aaa',    bg: '#f5f5f5' },
+  submission:    { icon: 'document-text-outline', color: '#3b82f6', bg: '#eff6ff' },
+  review:        { icon: 'star-outline',          color: '#f6a623', bg: '#fffbeb' },
+  claim:         { icon: 'storefront-outline',    color: '#b7791f', bg: '#fefce8' },
+  mosque_claimed:{ icon: 'key-outline',           color: GREEN,     bg: '#e6f9f2' },
+  owner_signup:  { icon: 'person-add-outline',    color: GREEN,     bg: '#e6f9f2' },
+  digest:        { icon: 'bar-chart-outline',     color: '#8b5cf6', bg: '#f5f3ff' },
+  general:       { icon: 'notifications-outline', color: '#aaa',    bg: '#f5f5f5' },
 };
 
 function timeAgo(iso: string): string {
@@ -84,8 +85,9 @@ export default function AdminNotificationsScreen() {
     switch (n.link_type) {
       case 'submission': router.push(`/(admin)/review/${n.link_id}`); break;
       case 'review':     router.push(`/(admin)/reviews`);             break;
-      case 'claim':      router.push(`/(admin)/claim/${n.link_id}`);  break;
-      case 'restaurant': router.push(`/restaurant/${n.link_id}`);     break;
+      case 'claim':         router.push(`/(admin)/claim/${n.link_id}`);  break;
+      case 'mosque_claimed':router.push(`/mosque/${n.link_id}`);        break;
+      case 'restaurant':    router.push(`/restaurant/${n.link_id}`);    break;
     }
   };
 

@@ -4,17 +4,20 @@ import {
   StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
+
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { getGuestLoginIntent } from '../../lib/guestLoginIntent';
+
 import { Brand } from '../../lib/theme';
 
 const CREAM      = Brand.cream;
 const DEEP_GREEN = Brand.deepGreen;
 const GREEN = Brand.green;
+const GOLD  = Brand.gold;
 const RED   = Brand.red;
 const TEXT_DARK  = Brand.textDark;
 const TEXT_MUTED = Brand.textMuted;
@@ -30,6 +33,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused]         = useState<'email' | 'password' | null>(null);
   const [loading, setLoading]         = useState(false);
+
   const [error, setError]             = useState<string | null>(null);
   // Track intent as state so re-focus triggers a re-render check
   const [hasIntent, setHasIntent]     = useState(() => getGuestLoginIntent());
@@ -89,21 +93,21 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.flex}>
-    {canGoBack && (
-      <TouchableOpacity
-        style={[styles.backBtn, { top: insets.top + 8 }]}
-        onPress={() => router.back()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="arrow-back" size={20} color={TEXT_MUTED} />
-      </TouchableOpacity>
-    )}
+      {canGoBack && (
+        <TouchableOpacity
+          style={[styles.backBtn, { top: insets.top + 10 }]}
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="arrow-back" size={20} color={CREAM} />
+        </TouchableOpacity>
+      )}
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -114,8 +118,9 @@ export default function LoginScreen() {
             style={styles.logoImage}
             resizeMode="cover"
           />
-          <Text style={styles.appName}>HalalForMe</Text>
-          <Text style={styles.tagline}>Your daily prayer companion</Text>
+          <Text style={styles.appName}>Rihdal</Text>
+          <Text style={styles.tagline}>Guide Your Journey</Text>
+          <View style={styles.taglineDivider} />
         </View>
 
         {/* Form card */}
@@ -210,13 +215,14 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CREAM },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  flex: { flex: 1, backgroundColor: DEEP_GREEN },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 40 },
 
   logoSection: { alignItems: 'center', marginBottom: 24 },
-  logoImage: { width: 90, height: 90, marginBottom: 10, borderRadius: 20, overflow: 'hidden' },
-  appName: { fontSize: 28, fontWeight: '800', color: DEEP_GREEN, letterSpacing: -0.5 },
-  tagline: { fontSize: 14, color: TEXT_MUTED, marginTop: 4 },
+  logoImage: { width: 90, height: 90, marginBottom: 10, borderRadius: 20 },
+  appName: { fontSize: 24, fontWeight: '800', color: CREAM, letterSpacing: 8, textTransform: 'uppercase', textAlign: 'center', paddingLeft: 8 },
+  tagline: { fontSize: 11, color: GOLD, letterSpacing: 4, textTransform: 'uppercase', marginTop: 6, paddingLeft: 4 },
+  taglineDivider: { width: 36, height: 1.5, backgroundColor: GOLD, marginTop: 10, borderRadius: 1 },
 
   card: {
     backgroundColor: '#fff', borderRadius: 20, padding: 24,
@@ -266,9 +272,7 @@ const styles = StyleSheet.create({
   backBtn: {
     position: 'absolute', left: 16, zIndex: 10,
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
 });

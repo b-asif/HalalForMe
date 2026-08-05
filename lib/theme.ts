@@ -123,6 +123,11 @@ export const Brand = {
   red:       '#C0392B',
   amber:     '#B7791F',
   white:     '#FFFFFF',
+  // Zabihah badges — teal, distinct from Brand.green
+  zabihah:          '#0C6E78',
+  zabihahBg:        '#E0F7F8',
+  zabihahPartial:   '#6D9EA4',
+  zabihahPartialBg: '#F0F7F8',
 };
 
 // ── Shadows ───────────────────────────────────────────────────────────────────

@@ -103,7 +103,10 @@ export async function rescheduleAllPrayerNotifications(
   await ensureAndroidNotificationChannel();
   await Notifications.cancelAllScheduledNotificationsAsync();
 
-  const permissionGranted = await requestNotificationPermission();
+  // Check current permission status without requesting — callers are responsible
+  // for requesting permission at the appropriate UX moment before calling this.
+  const { status } = await Notifications.getPermissionsAsync();
+  const permissionGranted = status === 'granted';
   if (!permissionGranted) return { scheduled: 0, permissionGranted: false, plan: [] };
 
   const plan = computeNotificationPlan(coords, settings, new Date());

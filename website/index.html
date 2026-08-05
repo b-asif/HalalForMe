@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rihdal — Guide Your Journey</title>
+  <meta name="description" content="Halal food, prayer times, mosques, Quran, and duas — one app for every Muslim, wherever you are." />
+  <meta property="og:title" content="Rihdal — Guide Your Journey" />
+  <meta property="og:description" content="Halal food, prayer times, mosques, Quran, and duas — one app for every Muslim." />
+  <meta property="og:image" content="icon.png" />
+  <link rel="icon" href="icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #1F3D2B;
+      --green-mid:  #245737;
+      --cream:      #F7F2E7;
+      --cream-dim:  #EDE8DC;
+      --gold:       #B08D57;
+      --gold-light: rgba(176,141,87,0.18);
+      --text:       #20241F;
+      --muted:      #8C8776;
+      --line:       #EAE3D3;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ──────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 48px;
+    }
+
+    .nav-word {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(247,242,231,0.9);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(247,242,231,0.5);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: rgba(247,242,231,0.9); }
+
+    .nav-cta {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+      background: var(--cream);
+      text-decoration: none;
+      padding: 9px 20px;
+      border-radius: 50px;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Hero ─────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      background: var(--green);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle geometric ring behind wordmark */
+    .hero-ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 520px; height: 520px;
+      border-radius: 50%;
+      border: 1px solid rgba(176,141,87,0.07);
+      pointer-events: none;
+    }
+    .hero-ring::before {
+      content: '';
+      position: absolute;
+      top: 40px; left: 40px; right: 40px; bottom: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(176,141,87,0.05);
+    }
+
+    .hero-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      object-fit: cover;
+      margin-bottom: 40px;
+      border: 1.5px solid rgba(176,141,87,0.25);
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.05s both;
+    }
+
+    .hero-wordmark {
+      font-size: clamp(60px, 13vw, 108px);
+      font-weight: 800;
+      color: var(--cream);
+      letter-spacing: 0.2em;
+      padding-left: 0.2em; /* optical balance for letter-spacing */
+      line-height: 1;
+      margin-bottom: 22px;
+      position: relative;
+      z-index: 1;
+      animation: dropIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+    }
+
+    .hero-tagline {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 36px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.5s both;
+    }
+
+    .hero-desc {
+      font-size: 17px;
+      font-weight: 400;
+      color: rgba(247,242,231,0.58);
+      line-height: 1.75;
+      max-width: 440px;
+      margin-bottom: 52px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.65s both;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.8s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--cream);
+      color: var(--green);
+      padding: 15px 28px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      border: 1.5px solid rgba(247,242,231,0.18);
+      color: rgba(247,242,231,0.6);
+      padding: 14px 26px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(247,242,231,0.4);
+      color: var(--cream);
+    }
+
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 1.1s both;
+    }
+    .scroll-bar {
+      width: 1px;
+      height: 44px;
+      background: linear-gradient(to bottom, rgba(176,141,87,0.6), transparent);
+      animation: scrollPulse 2.2s ease-in-out infinite;
+    }
+    .scroll-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(247,242,231,0.25);
+    }
+
+    /* ── Features ─────────────────────────────────────────────── */
+    .features {
+      background: var(--cream);
+      padding: 112px 24px;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: clamp(30px, 5vw, 46px);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      max-width: 580px;
+      margin-bottom: 72px;
+    }
+
+    /* Grid — hairline border between cells, no shadows */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .feature-cell {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 36px 30px;
+      transition: background 0.18s;
+    }
+    .feature-cell:hover { background: rgba(31,61,43,0.03); }
+
+    .cell-num {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    .cell-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .cell-body {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── Privacy strip ────────────────────────────────────────── */
+    .privacy {
+      background: var(--green);
+      padding: 88px 24px;
+    }
+
+    .privacy-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .privacy-heading {
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      color: var(--cream);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .privacy-sub {
+      font-size: 15px;
+      color: rgba(247,242,231,0.55);
+      line-height: 1.7;
+    }
+
+    .privacy-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .privacy-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 0;
+      border-bottom: 1px solid rgba(247,242,231,0.07);
+      font-size: 14px;
+      color: rgba(247,242,231,0.7);
+      font-weight: 500;
+    }
+    .privacy-item:first-child { border-top: 1px solid rgba(247,242,231,0.07); }
+
+    .privacy-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+    }
+
+    /* ── Download CTA ─────────────────────────────────────────── */
+    .download {
+      background: var(--cream-dim);
+      padding: 112px 24px;
+      text-align: center;
+      border-top: 1px solid var(--line);
+    }
+
+    .download-title {
+      font-size: clamp(30px, 5vw, 52px);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      margin-bottom: 18px;
+    }
+
+    .download-sub {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 44px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      background: #131510;
+      padding: 48px 48px;
+    }
+
+    .footer-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-word {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(247,242,231,0.22);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: rgba(247,242,231,0.28);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-link:hover { color: rgba(247,242,231,0.6); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: rgba(247,242,231,0.15);
+    }
+
+    /* ── Apple SVG icon ───────────────────────────────────────── */
+    .apple-icon {
+      display: block;
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+
+    /* ── Animations ───────────────────────────────────────────── */
+    @keyframes dropIn {
+      from { transform: translateY(-56px); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+      from { transform: translateY(22px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.35; transform: scaleY(1); }
+      50%       { opacity: 1;    transform: scaleY(1.1); }
+    }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      nav { padding: 18px 24px; }
+      .nav-right { gap: 20px; }
+      .nav-link { display: none; }
+
+      .feature-grid { grid-template-columns: 1fr 1fr; }
+
+      .privacy-inner {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      footer { padding: 40px 24px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 500px) {
+      .hero-actions { flex-direction: column; width: 100%; }
+      .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
+      .feature-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <span class="nav-word">Rihdal</span>
+    <div class="nav-right">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="partners.html" class="nav-link">Partner with us</a>
+      <a href="#download" class="nav-cta">Download</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-ring"></div>
+
+    <img src="icon.png" alt="Rihdal app icon" class="hero-icon" />
+
+    <h1 class="hero-wordmark">RIHDAL</h1>
+
+    <p class="hero-tagline">Guide Your Journey</p>
+
+    <p class="hero-desc">
+      Halal food, prayer times, mosques, Quran, and duas —
+      one app for every Muslim, wherever you are in the world.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#download" class="btn-primary">
+        <svg class="apple-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+        Download on the App Store
+      </a>
+      <a href="#features" class="btn-ghost">See what's inside</a>
+    </div>
+
+    <div class="hero-scroll-hint">
+      <div class="scroll-bar"></div>
+      <span class="scroll-label">Scroll</span>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <p class="eyebrow">Features</p>
+      <h2 class="section-title">Everything your journey needs, in one place.</h2>
+
+      <div class="feature-grid">
+        <div class="feature-cell">
+          <p class="cell-num">01</p>
+          <h3 class="cell-title">Prayer Times</h3>
+          <p class="cell-body">Accurate times calculated on your device. Calculation method auto-detected for your country. Reminders that arrive when they should.</p>
+        </div>
+        <div class="feature-cell">
+          <p class="cell-num">02</p>
+          <h3 class="cell-title">Qibla Direction</h3>
+          <p class="cell-body">A live compass pointing toward Makkah, wherever you are. Works the moment you open the app — no account, no setup.</p>
+        </div>
+        <div class="feature-cell">
+          <p class="cell-num">03</p>
+          <h3 class="cell-title">Mosque Finder</h3>
+          <p class="cell-body">Find mosques worldwide. See Jummah times, khateeb names, and live announcements from your local mosque.</p>
+        </div>
+        <div class="feature-cell">
+          <p class="cell-num">04</p>
+          <h3 class="cell-title">Halal Food</h3>
+          <p class="cell-body">Discover certified halal restaurants, groceries, and butchers near you — with full certification details on every listing.</p>
+        </div>
+        <div class="feature-cell">
+          <p class="cell-num">05</p>
+          <h3 class="cell-title">Ingredient Scanner</h3>
+          <p class="cell-body">Scan any product barcode to check for haram ingredients — E-numbers, pork derivatives, alcohol, and more. Works offline.</p>
+        </div>
+        <div class="feature-cell">
+          <p class="cell-num">06</p>
+          <h3 class="cell-title">Quran &amp; Duas</h3>
+          <p class="cell-body">All 114 surahs with Arabic, transliteration, and translation. A full duas library and a fresh reminder every day.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section class="privacy">
+    <div class="container">
+      <div class="privacy-inner">
+        <div>
+          <h2 class="privacy-heading">Built for Muslims.<br />Built with trust.</h2>
+          <p class="privacy-sub">
+            Your data is yours. We built Rihdal the way we'd want an app built for ourselves — minimal collection, maximum transparency.
+          </p>
+        </div>
+        <div class="privacy-list">
+          <div class="privacy-item"><div class="privacy-dot"></div>No ads, ever</div>
+          <div class="privacy-item"><div class="privacy-dot"></div>No data sold to third parties</div>
+          <div class="privacy-item"><div class="privacy-dot"></div>Prayer times calculated on your device</div>
+          <div class="privacy-item"><div class="privacy-dot"></div>Browse fully without an account</div>
+          <div class="privacy-item"><div class="privacy-dot"></div>Delete your account and data anytime</div>
+          <div class="privacy-item"><div class="privacy-dot"></div>Location never stored on our servers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section class="download" id="download">
+    <div class="container">
+      <h2 class="download-title">Your journey starts here.</h2>
+      <p class="download-sub">Free to download. No subscription. No account required to browse.</p>
+      <a href="https://apps.apple.com/us/app/rihdal/id6767651676" target="_blank" rel="noopener noreferrer" class="btn-primary" style="display:inline-flex;">
+        <svg class="apple-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+        Download on the App Store
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-word">Rihdal</span>
+      <div class="footer-links">
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <a href="terms.html" class="footer-link">Terms of Service</a>
+        <a href="mailto:support@rihdal.com" class="footer-link">Contact</a>
+      </div>
+      <span class="footer-copy">&copy; 2026 Rihdal</span>
+    </div>
+  </footer>
+
+</body>
+</html>

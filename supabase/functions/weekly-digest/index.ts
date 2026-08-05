@@ -11,32 +11,38 @@ Deno.serve(async (req) => {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  // Require a shared secret so this endpoint cannot be triggered by anyone
+  // on the public internet. Set CRON_SECRET in Supabase Edge Function secrets,
+  // then configure pg_cron / the Supabase scheduler to pass:
+  //   Authorization: Bearer <CRON_SECRET>
+  const secret = Deno.env.get('CRON_SECRET');
+  const authHeader = req.headers.get('Authorization');
+  if (!secret || authHeader !== `Bearer ${secret}`) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   // ── Query all stats in parallel ───────────────────────────
   const [
     restaurantsRes,
     usersRes,
-    ownerSignupsRes,
     submissionsRes,
     claimsRes,
     reviewsRes,
     approvedRes,
   ] = await Promise.all([
-    // Total restaurants
-    supabase.from('restaurants').select('id', { count: 'exact', head: true }),
+    // Total verified restaurants
+    supabase.from('restaurants').select('id', { count: 'exact', head: true })
+      .eq('is_verified', true),
 
     // New users this week
     supabase.from('profiles').select('id', { count: 'exact', head: true })
       .gte('created_at', since),
 
-    // New owner signups this week (users who flagged themselves as owners)
-    supabase.from('profiles').select('id', { count: 'exact', head: true })
-      .gte('created_at', since)
-      .eq('is_restaurant_owner', true),
-
-    // New submissions this week
-    supabase.from('submissions').select('id', { count: 'exact', head: true })
+    // New restaurant submissions this week (unverified = pending review)
+    supabase.from('restaurants').select('id', { count: 'exact', head: true })
+      .eq('is_verified', false)
       .gte('created_at', since),
 
     // New ownership claims this week
@@ -48,22 +54,21 @@ Deno.serve(async (req) => {
       .gte('created_at', since),
 
     // Restaurants approved this week
-    supabase.from('submissions').select('id', { count: 'exact', head: true })
-      .eq('status', 'approved')
+    supabase.from('restaurants').select('id', { count: 'exact', head: true })
+      .eq('is_verified', true)
       .gte('updated_at', since),
   ]);
 
   const totalRestaurants = restaurantsRes.count ?? 0;
-  const newUsers         = usersRes.count         ?? 0;
-  const ownerSignups     = ownerSignupsRes.count   ?? 0;
-  const newSubmissions   = submissionsRes.count    ?? 0;
-  const newClaims        = claimsRes.count         ?? 0;
-  const newReviews       = reviewsRes.count        ?? 0;
-  const approved         = approvedRes.count       ?? 0;
+  const newUsers         = usersRes.count       ?? 0;
+  const newSubmissions   = submissionsRes.count  ?? 0;
+  const newClaims        = claimsRes.count       ?? 0;
+  const newReviews       = reviewsRes.count      ?? 0;
+  const approved         = approvedRes.count     ?? 0;
 
   // ── Build digest message ──────────────────────────────────
   const lines: string[] = [];
-  if (newUsers > 0)       lines.push(`👤 ${newUsers} new user${newUsers !== 1 ? 's' : ''}${ownerSignups > 0 ? ` (${ownerSignups} owner${ownerSignups !== 1 ? 's' : ''})` : ''}`);
+  if (newUsers > 0)       lines.push(`👤 ${newUsers} new user${newUsers !== 1 ? 's' : ''}`);
   if (newSubmissions > 0) lines.push(`📋 ${newSubmissions} new submission${newSubmissions !== 1 ? 's' : ''}`);
   if (approved > 0)       lines.push(`✅ ${approved} restaurant${approved !== 1 ? 's' : ''} approved`);
   if (newClaims > 0)      lines.push(`🏪 ${newClaims} ownership claim${newClaims !== 1 ? 's' : ''}`);
@@ -76,13 +81,21 @@ Deno.serve(async (req) => {
   const digestTitle = `Weekly Digest — ${totalRestaurants} restaurant${totalRestaurants !== 1 ? 's' : ''} total`;
 
   // ── Log to admin_notifications ────────────────────────────
-  await supabase.from('admin_notifications').insert({
+  const { error: insertError } = await supabase.from('admin_notifications').insert({
     type:  'digest',
     title: digestTitle,
     body:  digestBody,
     link_type: null,
     link_id:   null,
   });
+
+  if (insertError) {
+    console.error('weekly-digest: failed to insert admin_notification:', insertError.message);
+    return new Response(
+      JSON.stringify({ error: 'DB insert failed', detail: insertError.message }),
+      { status: 500 },
+    );
+  }
 
   // ── Send push to all admins ───────────────────────────────
   const { data: adminProfiles } = await supabase
@@ -109,11 +122,16 @@ Deno.serve(async (req) => {
       data:  { type: 'digest' },
     }));
 
-    await fetch('https://exp.host/--/api/v2/push/send', {
+    const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messages),
     });
+
+    if (!pushRes.ok) {
+      const pushBody = await pushRes.text().catch(() => '(unreadable)');
+      console.error(`weekly-digest: Expo push API returned ${pushRes.status}:`, pushBody);
+    }
   }
 
   return new Response(

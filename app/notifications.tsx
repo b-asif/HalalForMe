@@ -114,7 +114,7 @@ export default function NotificationsScreen() {
             id: `sub-${sub.id}`,
             type: 'submission_approved',
             title: 'Submission approved',
-            body: `${sub.name} is now live on HalalForMe.`,
+            body: `${sub.name} is now live on Rihdal.`,
             timestamp: sub.created_at,
           });
         } else if (sub.status === 'rejected') {

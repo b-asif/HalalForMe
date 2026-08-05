@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>List Your Mosque — Rihdal</title>
+  <meta name="description" content="List your mosque on Rihdal and reach Muslims searching nearby. Free, verified, and takes minutes." />
+  <link rel="icon" href="icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #1F3D2B;
+      --green-mid:  #245737;
+      --cream:      #F7F2E7;
+      --cream-dim:  #EDE8DC;
+      --gold:       #B08D57;
+      --text:       #20241F;
+      --muted:      #8C8776;
+      --line:       #EAE3D3;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ──────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 48px;
+    }
+
+    .nav-word {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(247,242,231,0.9);
+      text-decoration: none;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(247,242,231,0.5);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: rgba(247,242,231,0.9); }
+    .nav-link.active { color: rgba(247,242,231,0.9); }
+
+    .nav-cta {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+      background: var(--cream);
+      text-decoration: none;
+      padding: 9px 20px;
+      border-radius: 50px;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Page Hero ────────────────────────────────────────────── */
+    .page-hero {
+      background: var(--green);
+      padding: 160px 24px 88px;
+    }
+
+    .hero-inner {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(247,242,231,0.35);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      margin-bottom: 32px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: rgba(247,242,231,0.65); }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: clamp(32px, 5.5vw, 52px);
+      font-weight: 800;
+      color: var(--cream);
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .page-sub {
+      font-size: 16px;
+      color: rgba(247,242,231,0.55);
+      line-height: 1.7;
+      max-width: 480px;
+    }
+
+    /* ── Form Section ─────────────────────────────────────────── */
+    .form-section {
+      background: var(--cream);
+      padding: 88px 24px 112px;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .form-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    /* Benefits column */
+    .benefits-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 24px;
+    }
+
+    .benefits-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 32px;
+    }
+
+    .benefit-list {
+      list-style: none;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .benefit-item:first-child { border-top: 1px solid var(--line); }
+
+    .benefit-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .benefit-text {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .benefit-text strong {
+      display: block;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    /* Form card */
+    .form-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 44px 40px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .form-label .optional {
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: rgba(140,135,118,0.6);
+      font-size: 11px;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      background: #FDFCF9;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus,
+    .form-textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(31,61,43,0.06);
+    }
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: rgba(140,135,118,0.5);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.6;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 28px 0;
+    }
+
+    .btn-submit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      background: var(--green);
+      color: var(--cream);
+      padding: 16px 28px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .form-note {
+      font-size: 12px;
+      color: rgba(140,135,118,0.7);
+      text-align: center;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────── */
+    footer {
+      background: #131510;
+      padding: 48px 48px;
+    }
+
+    .footer-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-word {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: rgba(247,242,231,0.22);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: rgba(247,242,231,0.28);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-link:hover { color: rgba(247,242,231,0.6); }
+
+    .footer-copy {
+      font-size: 12px;
+      color: rgba(247,242,231,0.15);
+    }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      nav { padding: 18px 24px; }
+      .nav-right { gap: 20px; }
+      .nav-link { display: none; }
+
+      .form-layout {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      footer { padding: 40px 24px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 500px) {
+      .form-card { padding: 32px 24px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a href="index.html" class="nav-word">Rihdal</a>
+    <div class="nav-right">
+      <a href="index.html#features" class="nav-link">Features</a>
+      <a href="partners.html" class="nav-link active">Partner with us</a>
+      <a href="index.html#download" class="nav-cta">Download</a>
+    </div>
+  </nav>
+
+  <!-- Page Hero -->
+  <section class="page-hero">
+    <div class="hero-inner">
+      <a href="partners.html" class="back-link">← Back to partnerships</a>
+      <p class="eyebrow">For Mosques</p>
+      <h1 class="page-title">List your mosque on Rihdal</h1>
+      <p class="page-sub">Reach Muslims searching for a mosque nearby. Submit your details and we'll have your profile live within 48 hours.</p>
+    </div>
+  </section>
+
+  <!-- Form -->
+  <section class="form-section">
+    <div class="container">
+      <div class="form-layout">
+
+        <!-- Benefits -->
+        <div class="benefits-col">
+          <p class="benefits-label">What you get</p>
+          <h2 class="benefits-title">Your mosque, in front of thousands of Muslims.</h2>
+          <ul class="benefit-list">
+            <li class="benefit-item">
+              <span class="benefit-dot"></span>
+              <span class="benefit-text">
+                <strong>Free, permanent listing</strong>
+                No fees, no subscriptions — ever.
+              </span>
+            </li>
+            <li class="benefit-item">
+              <span class="benefit-dot"></span>
+              <span class="benefit-text">
+                <strong>Jummah times front and center</strong>
+                Shown to users searching for mosques in your area.
+              </span>
+            </li>
+            <li class="benefit-item">
+              <span class="benefit-dot"></span>
+              <span class="benefit-text">
+                <strong>Community announcements</strong>
+                Post events and updates that reach your local community.
+              </span>
+            </li>
+            <li class="benefit-item">
+              <span class="benefit-dot"></span>
+              <span class="benefit-text">
+                <strong>Verified badge</strong>
+                A verified mark so users know your listing is official.
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <form
+            action="https://formspree.io/f/meeygzrb"
+            method="POST"
+          >
+            <input type="hidden" name="_subject" value="New Mosque Partnership Inquiry — Rihdal" />
+            <input type="hidden" name="_next" value="thanks.html" />
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="contact-name">Your name</label>
+                <input class="form-input" type="text" id="contact-name" name="contact_name" placeholder="Ali Hassan" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email">Email address</label>
+                <input class="form-input" type="email" id="email" name="email" placeholder="admin@mosque.org" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="mosque-name">Mosque / Masjid name</label>
+              <input class="form-input" type="text" id="mosque-name" name="mosque_name" placeholder="Masjid Al-Noor" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="city">City</label>
+                <input class="form-input" type="text" id="city" name="city" placeholder="Chicago" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="country">Country</label>
+                <input class="form-input" type="text" id="country" name="country" placeholder="United States" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="website">Website <span class="optional">(optional)</span></label>
+              <input class="form-input" type="url" id="website" name="website" placeholder="https://yourmasjid.org" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="message">Anything else you'd like to share <span class="optional">(optional)</span></label>
+              <textarea class="form-textarea" id="message" name="message" placeholder="Jummah times, capacity, services offered, etc."></textarea>
+            </div>
+
+            <div class="form-divider"></div>
+
+            <button type="submit" class="btn-submit">Submit your mosque</button>
+            <p class="form-note">We'll be in touch within 48 hours. No account needed.</p>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-word">Rihdal</span>
+      <div class="footer-links">
+        <a href="privacy.html" class="footer-link">Privacy Policy</a>
+        <a href="terms.html" class="footer-link">Terms of Service</a>
+        <a href="mailto:support@rihdal.com" class="footer-link">Contact</a>
+      </div>
+      <span class="footer-copy">&copy; 2026 Rihdal</span>
+    </div>
+  </footer>
+
+</body>
+</html>

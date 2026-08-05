@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thank You — Rihdal</title>
+  <link rel="icon" href="icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #1F3D2B;
+      --cream: #F7F2E7;
+      --gold:  #B08D57;
+      --text:  #20241F;
+      --muted: #8C8776;
+      --line:  #EAE3D3;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--green);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+
+    .card {
+      background: var(--cream);
+      border-radius: 20px;
+      padding: 64px 56px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .check {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(31,61,43,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+    }
+
+    .check svg {
+      width: 24px;
+      height: 24px;
+      color: var(--green);
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 40px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green);
+      color: var(--cream);
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+
+    @media (max-width: 500px) {
+      .card { padding: 48px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </div>
+    <p class="eyebrow">Received</p>
+    <h1>We'll be in touch soon.</h1>
+    <p>Thank you for reaching out. We review every submission and will get back to you within 48 hours.</p>
+    <a href="index.html" class="btn">Back to Rihdal</a>
+  </div>
+
+</body>
+</html>

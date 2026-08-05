@@ -164,7 +164,7 @@ export default function MySubmissionsScreen() {
                 {item.status === 'approved' && (
                   <View style={s.approvedNote}>
                     <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-                    <Text style={s.approvedNoteText}>Now live on HalalForMe</Text>
+                    <Text style={s.approvedNoteText}>Now live on Rihdal</Text>
                   </View>
                 )}
 

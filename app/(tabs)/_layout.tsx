@@ -52,6 +52,13 @@ export default function TabLayout() {
           tabBarIcon: tabIcon('scan', 'scan-outline'),
         }}
       />
+      <Tabs.Screen
+        name="guides"
+        options={{
+          title: 'Guides',
+          tabBarIcon: tabIcon('book', 'book-outline'),
+        }}
+      />
       {/* Community deliberately removed from the tab bar — deferred until
           there's real user activity to populate it (see the "keep it simple
           until there's a real content plan" decision). community.tsx and its

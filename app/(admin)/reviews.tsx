@@ -109,7 +109,7 @@ export default function AdminReviewsScreen() {
             ? `Your review of ${restaurantName} has been approved and is now live.`
             : `Your review of ${restaurantName} was not approved by our moderation team.`,
         },
-      }).catch(() => {});
+      }).catch(e => console.warn('[notify-user] invoke failed:', e));
     }
 
     // Remove from current tab list

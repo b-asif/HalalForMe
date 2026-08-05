@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { isValidImageBytes } from '../../lib/validateImageBytes';
 import { Brand } from '../../lib/theme';
 
 const CREAM      = Brand.cream;
@@ -77,6 +78,7 @@ export default function ClaimRestaurantScreen() {
     if (!proofBase64) return null;
     const path = `claims/${id}_${user!.id}_${Date.now()}.jpg`;
     const bytes = Uint8Array.from(atob(proofBase64), c => c.charCodeAt(0));
+    if (!isValidImageBytes(bytes)) throw new Error('Invalid image file.');
     const { error } = await supabase.storage
       .from('halal_certificates')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
@@ -130,13 +132,10 @@ export default function ClaimRestaurantScreen() {
       // notify admin with link so it appears in notifications page
       supabase.functions.invoke('notify-admin', {
         body: {
-          type:      'claim',
-          title:     '🏪 New Ownership Claim',
-          body:      `${contactName} (${role}) claims ${restaurantName}.`,
-          link_type: 'claim',
-          link_id:   inserted?.id ?? null,
+          type:    'claim',
+          link_id: inserted?.id ?? null,
         },
-      }).catch(() => {});
+      }).catch((err: unknown) => console.warn('notify-admin failed:', err));
 
       setSubmitted(true);
     } catch (e: any) {

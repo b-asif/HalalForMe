@@ -149,7 +149,7 @@ export default function CertificationGuideScreen() {
           <Ionicons name="shield-checkmark" size={32} color={GREEN} style={{ marginBottom: 10 }} />
           <Text style={s.introTitle}>Understanding Halal Certification</Text>
           <Text style={s.introText}>
-            Halal certification confirms that food is prepared according to Islamic dietary law. In HalalForMe, every restaurant displays a badge showing its certification status. Here's what each one means.
+            Halal certification confirms that food is prepared according to Islamic dietary law. In Rihdal, every restaurant displays a badge showing its certification status. Here's what each one means.
           </Text>
         </View>
 
@@ -181,6 +181,38 @@ export default function CertificationGuideScreen() {
               <CertifierItem item={item} />
             </View>
           ))}
+        </View>
+
+        {/* Zabihah section */}
+        <Text style={s.sectionLabel}>ZABIHAH HALAL</Text>
+        <View style={s.certCard}>
+          <View style={s.certItem}>
+            <View style={s.certHeader}>
+              <View style={s.certHeaderLeft}>
+                <View style={[s.badge, { backgroundColor: '#E0F7F8' }]}>
+                  <Ionicons name="leaf-outline" size={13} color="#0C6E78" />
+                  <Text style={[s.badgeText, { color: '#0C6E78' }]}>Zabihah Halal</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={s.certDesc}>
+              The restaurant owner reports that all meat is hand-slaughtered according to strict Islamic requirements (zabihah), with no stunning before slaughter. This is self-reported and not independently verified by a third-party body. It may appear alongside a third-party certification badge.
+            </Text>
+          </View>
+          <View style={s.certDivider} />
+          <View style={s.certItem}>
+            <View style={s.certHeader}>
+              <View style={s.certHeaderLeft}>
+                <View style={[s.badge, { backgroundColor: '#F0F7F8' }]}>
+                  <Ionicons name="leaf-outline" size={13} color="#6D9EA4" />
+                  <Text style={[s.badgeText, { color: '#6D9EA4' }]}>Partial Zabihah</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={s.certDesc}>
+              Some meats served (e.g. beef or lamb) are zabihah, while others (e.g. chicken) may use a different halal method. Check the restaurant detail page for specific notes, and ask staff about the items you plan to order.
+            </Text>
+          </View>
         </View>
 
         {/* Footer note */}

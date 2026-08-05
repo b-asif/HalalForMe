@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { isValidImageBytes } from '../lib/validateImageBytes';
 import { setGuestLoginIntent } from '../lib/guestLoginIntent';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import { Brand } from '../lib/theme';
@@ -138,6 +139,7 @@ export default function SubmitRestaurantScreen() {
     if (base64Data.length > 6_700_000) throw new Error('Certification photo is too large. Please choose an image under 5 MB.');
     const fileName  = `${user!.id}/${Crypto.randomUUID()}.jpg`;
     const byteArray = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    if (!isValidImageBytes(byteArray)) throw new Error('Invalid image file.');
 
     const { error: uploadError } = await supabase.storage
       .from('halal_certificates')
@@ -156,6 +158,7 @@ export default function SubmitRestaurantScreen() {
     if (base64Data.length > 6_700_000) throw new Error('A gallery photo is too large. Please choose images under 5 MB.');
     const fileName  = `${user!.id}/${type}/${Crypto.randomUUID()}.jpg`;
     const byteArray = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    if (!isValidImageBytes(byteArray)) throw new Error('Invalid image file.');
 
     const { error: uploadError } = await supabase.storage
       .from('gallery_photos')
@@ -175,12 +178,32 @@ export default function SubmitRestaurantScreen() {
     setError(null);
 
     if (!name.trim())             { setError('Restaurant name is required.'); return; }
+    if (name.trim().length > 100) { setError('Restaurant name must be under 100 characters.'); return; }
     if (!address.trim())          { setError('Address is required.'); return; }
+    if (address.trim().length > 300) { setError('Address must be under 300 characters.'); return; }
+    if (cuisine.trim().length > 80)  { setError('Cuisine type must be under 80 characters.'); return; }
+    if (phone.trim().length > 30)    { setError('Phone number must be under 30 characters.'); return; }
+    if (website.trim().length > 255) { setError('Website must be under 255 characters.'); return; }
+    if (notes.trim().length > 500)   { setError('Notes must be under 500 characters.'); return; }
     if (lat === null || lng === null) { setError('Please select an address from the suggestions to confirm the location.'); return; }
     if (!photoBase64)             { setError('A photo of the halal certification is required.'); return; }
 
     setSubmitting(true);
     try {
+      // Rate limit: max 3 submissions per rolling 24-hour window.
+      // Checked here (before photo uploads) so we don't waste bandwidth
+      // uploading files only to be blocked at the DB insert.
+      // The RLS policy enforces the same limit server-side as a backstop.
+      const { count: recentCount } = await supabase
+        .from('submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user!.id)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if ((recentCount ?? 0) >= 3) {
+        throw new Error('You\'ve reached the limit of 3 submissions in 24 hours. Thank you for contributing — please try again tomorrow.');
+      }
+
       const certUrl = await uploadPhoto(photoBase64);
 
       const foodPhotoUrls = foodPhotos.length > 0
@@ -223,12 +246,9 @@ export default function SubmitRestaurantScreen() {
       supabase.functions.invoke('notify-admin', {
         body: {
           type: 'submission',
-          title: 'New Restaurant Submission',
-          body: `"${name.trim()}" was submitted for review.`,
-          link_type: 'submission',
           link_id: insertedSubmission?.id ?? null,
         },
-      }).catch(() => {});
+      }).catch((err: unknown) => console.warn('notify-admin failed:', err));
 
       router.replace('/my-submissions');
     } catch (e: any) {
@@ -357,6 +377,7 @@ export default function SubmitRestaurantScreen() {
               onChangeText={v => { setName(v); setError(null); }}
               onFocus={() => setFocused('name')}
               onBlur={() => setFocused(null)}
+              maxLength={100}
               returnKeyType="next"
               onSubmitEditing={() => addressRef.current?.focus()}
             />
@@ -391,6 +412,7 @@ export default function SubmitRestaurantScreen() {
               onChangeText={setCuisine}
               onFocus={() => setFocused('cuisine')}
               onBlur={() => setFocused(null)}
+              maxLength={80}
               returnKeyType="next"
               onSubmitEditing={() => phoneRef.current?.focus()}
             />
@@ -406,6 +428,7 @@ export default function SubmitRestaurantScreen() {
               onChangeText={setPhone}
               onFocus={() => setFocused('phone')}
               onBlur={() => setFocused(null)}
+              maxLength={30}
               keyboardType="phone-pad"
               returnKeyType="next"
               onSubmitEditing={() => websiteRef.current?.focus()}
@@ -422,6 +445,7 @@ export default function SubmitRestaurantScreen() {
               onChangeText={setWebsite}
               onFocus={() => setFocused('website')}
               onBlur={() => setFocused(null)}
+              maxLength={255}
               keyboardType="url"
               autoCapitalize="none"
               returnKeyType="next"
@@ -439,6 +463,7 @@ export default function SubmitRestaurantScreen() {
               onChangeText={setNotes}
               onFocus={() => setFocused('notes')}
               onBlur={() => setFocused(null)}
+              maxLength={500}
               multiline
               numberOfLines={3}
               returnKeyType="done"

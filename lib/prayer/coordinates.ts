@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import tzlookup from 'tz-lookup';
+
+const GPS_CACHE_KEY = 'last_gps_coords_v1';
 
 export interface ResolvedCoordinates {
   latitude: number;
@@ -31,6 +34,36 @@ export function toResolvedCoordinates(latitude: number, longitude: number): Reso
 }
 
 /**
+ * Returns the last GPS coordinates that were successfully resolved, or null
+ * on first launch. Used to render prayer times instantly on relaunch while
+ * a fresh GPS fix is in flight.
+ */
+export async function loadCachedGpsCoordinates(): Promise<ResolvedCoordinates | null> {
+  try {
+    const raw = await AsyncStorage.getItem(GPS_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ResolvedCoordinates;
+  } catch {
+    return null;
+  }
+}
+
+/** Persists a freshly resolved GPS fix for use on the next cold launch. Fire-and-forget. */
+export function saveGpsCoordinatesCache(coords: ResolvedCoordinates): void {
+  AsyncStorage.setItem(GPS_CACHE_KEY, JSON.stringify(coords)).catch(() => {});
+}
+
+/**
+ * Returns the current foreground location permission status without requesting
+ * it. Use this to decide whether to show an explanation UI before triggering
+ * the native dialog.
+ */
+export async function getForegroundPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
+  const { status } = await Location.getForegroundPermissionsAsync();
+  return status as 'granted' | 'denied' | 'undetermined';
+}
+
+/**
  * Resolves the device's current GPS location. Returns null if permission is
  * denied or location is unavailable — callers should fall back to manual
  * city selection in that case, never treat this as a fatal error.
@@ -40,7 +73,8 @@ export async function resolveGpsCoordinates(): Promise<ResolvedCoordinates | nul
   if (status !== 'granted') return null;
 
   try {
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const last = await Location.getLastKnownPositionAsync();
+    const pos  = last ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
     return toResolvedCoordinates(pos.coords.latitude, pos.coords.longitude);
   } catch {
     return null;

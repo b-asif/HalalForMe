@@ -4,16 +4,18 @@ import {
   StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
+
 import { Link, useFocusEffect, useRouter } from 'expo-router';
-import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { getGuestLoginIntent } from '../../lib/guestLoginIntent';
+import { getGuestLoginIntent, setBusinessSignupIntent } from '../../lib/guestLoginIntent';
+
 import { Brand } from '../../lib/theme';
 
 const CREAM = Brand.cream;
 const GREEN = Brand.green;
+const GOLD  = Brand.gold;
 const RED   = Brand.red;
 const AMBER = Brand.amber;
 const DARK_GREEN = Brand.deepGreen;
@@ -25,7 +27,6 @@ type FocusedField = 'name' | 'email' | 'password' | 'confirm' | null;
 
 export default function SignupScreen() {
   const router     = useRouter();
-  const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
 
   const [hasIntent, setHasIntent] = useState(() => getGuestLoginIntent());
@@ -34,9 +35,9 @@ export default function SignupScreen() {
     const intent = getGuestLoginIntent();
     setHasIntent(intent);
     if (!intent) {
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: '(tabs)' }] }));
+      router.replace('/(tabs)');
     }
-  }, [navigation]));
+  }, [router]));
 
   const canGoBack = router.canGoBack();
 
@@ -49,7 +50,8 @@ export default function SignupScreen() {
   const [focused, setFocused] = useState<FocusedField>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToTerms,    setAgreedToTerms]    = useState(false);
+  const [isBusinessOwner,  setIsBusinessOwner]  = useState(false);
 
   const clearError = () => setError(null);
 
@@ -71,7 +73,8 @@ export default function SignupScreen() {
 
     if (!name.trim()) { setError('Please enter your name.'); return; }
     if (!email.trim()) { setError('Please enter your email address.'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (passwordStrength <= 1) { setError('Password is too weak. Add uppercase letters, numbers, or symbols.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (!agreedToTerms) { setError('Please agree to the Terms of Service and Privacy Policy.'); return; }
 
@@ -94,6 +97,7 @@ export default function SignupScreen() {
         }
         setLoading(false);
       } else {
+        setBusinessSignupIntent(isBusinessOwner);
         router.replace({
           pathname: '/(auth)/verify-otp',
           params: { email: email.trim(), type: 'signup' },
@@ -108,16 +112,7 @@ export default function SignupScreen() {
   if (!hasIntent) return null;
 
   return (
-    <View style={styles.flex}>
-    {canGoBack && (
-      <TouchableOpacity
-        style={[styles.backBtn, { top: insets.top + 8 }]}
-        onPress={() => router.back()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="arrow-back" size={20} color={TEXT_MUTED} />
-      </TouchableOpacity>
-    )}
+    <View style={[styles.flex, { paddingTop: insets.top }]}>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -127,6 +122,16 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Back button in flow */}
+        {canGoBack && (
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={20} color={CREAM} />
+          </TouchableOpacity>
+        )}
         {/* Logo */}
         <View style={styles.logoSection}>
           <Image
@@ -134,8 +139,9 @@ export default function SignupScreen() {
             style={styles.logoImage}
             resizeMode="cover"
           />
-          <Text style={styles.appName}>HalalForMe</Text>
-          <Text style={styles.tagline}>Your daily prayer companion</Text>
+          <Text style={styles.appName}>Rihdal</Text>
+          <Text style={styles.tagline}>Guide Your Journey</Text>
+          <View style={styles.taglineDivider} />
         </View>
 
         {/* Form card */}
@@ -182,7 +188,7 @@ export default function SignupScreen() {
           <View style={[styles.passwordRow, focused === 'password' && styles.inputFocused]}>
             <TextInput
               style={styles.passwordInput}
-              placeholder="Min. 6 characters"
+              placeholder="Min. 8 characters"
               placeholderTextColor={TEXT_MUTED}
               value={password}
               onChangeText={(v) => { setPassword(v); clearError(); }}
@@ -251,6 +257,21 @@ export default function SignupScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Business / masjid owner toggle */}
+          <TouchableOpacity
+            style={styles.businessRow}
+            onPress={() => setIsBusinessOwner(v => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, isBusinessOwner && styles.checkboxChecked]}>
+              {isBusinessOwner && <Ionicons name="checkmark" size={13} color="#fff" />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.businessLabel}>I'm registering as a business or masjid</Text>
+              <Text style={styles.businessSub}>Restaurant, cafe, masjid, or other halal business</Text>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.agreeRow}
             onPress={() => setAgreedToTerms(v => !v)}
@@ -299,20 +320,21 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: CREAM },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  flex: { flex: 1, backgroundColor: DARK_GREEN },
+  container: { flexGrow: 1, padding: 24, paddingTop: 16, paddingBottom: 40 },
 
-  logoSection: { alignItems: 'center', marginBottom: 24 },
-  logoImage: { width: 90, height: 90, marginBottom: 10, borderRadius: 20, overflow: 'hidden' },
-  appName: { fontSize: 28, fontWeight: '800', color: DARK_GREEN, letterSpacing: -0.5 },
-  tagline: { fontSize: 14, color: TEXT_MUTED, marginTop: 4 },
+  logoSection: { alignItems: 'center', marginBottom: 20 },
+  logoImage: { width: 72, height: 72, marginBottom: 8, borderRadius: 16 },
+  appName: { fontSize: 20, fontWeight: '800', color: CREAM, letterSpacing: 7, textTransform: 'uppercase', textAlign: 'center', paddingLeft: 7 },
+  tagline: { fontSize: 10, color: GOLD, letterSpacing: 4, textTransform: 'uppercase', marginTop: 5, paddingLeft: 4 },
+  taglineDivider: { width: 36, height: 1.5, backgroundColor: GOLD, marginTop: 8, borderRadius: 1 },
 
   card: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 24,
+    backgroundColor: '#fff', borderRadius: 20, padding: 20,
     shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
-  heading: { fontSize: 22, fontWeight: '700', color: TEXT_DARK, marginBottom: 20 },
+  heading: { fontSize: 20, fontWeight: '700', color: TEXT_DARK, marginBottom: 16 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
@@ -321,18 +343,18 @@ const styles = StyleSheet.create({
   },
   errorText: { flex: 1, fontSize: 13, color: RED, lineHeight: 18 },
 
-  label: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED, marginBottom: 7 },
+  label: { fontSize: 12, fontWeight: '600', color: TEXT_MUTED, marginBottom: 5 },
   input: {
-    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
-    paddingVertical: 13, paddingHorizontal: 14,
-    fontSize: 15, color: TEXT_DARK, marginBottom: 16, backgroundColor: CREAM,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 12,
+    paddingVertical: 11, paddingHorizontal: 14,
+    fontSize: 14, color: TEXT_DARK, marginBottom: 12, backgroundColor: CREAM,
   },
   inputFocused: { borderColor: GREEN, backgroundColor: '#fff' },
 
   passwordRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 14,
-    backgroundColor: CREAM, marginBottom: 10,
+    borderWidth: 1.5, borderColor: HAIRLINE, borderRadius: 12,
+    backgroundColor: CREAM, marginBottom: 8,
   },
   passwordInput: {
     flex: 1, paddingVertical: 13, paddingHorizontal: 14, fontSize: 15, color: TEXT_DARK,
@@ -344,9 +366,17 @@ const styles = StyleSheet.create({
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },
   strengthLabel: { fontSize: 12, fontWeight: '600', width: 44, textAlign: 'right' },
 
+  businessRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: '#f0faf6', borderWidth: 1.5, borderColor: '#c3e8d8',
+    borderRadius: 12, padding: 12, marginBottom: 12,
+  },
+  businessLabel: { fontSize: 13, fontWeight: '600', color: TEXT_DARK },
+  businessSub:   { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
+
   agreeRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    marginTop: 8, marginBottom: 16,
+    marginTop: 4, marginBottom: 14,
   },
   checkbox: {
     width: 22, height: 22, borderRadius: 6,
@@ -370,12 +400,11 @@ const styles = StyleSheet.create({
   switchLink: { color: DARK_GREEN, fontWeight: '700' },
 
   backBtn: {
-    position: 'absolute', left: 16, zIndex: 10,
+    alignSelf: 'flex-start',
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 }, elevation: 3,
+    marginBottom: 8,
   },
 });
 

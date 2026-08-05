@@ -25,6 +25,12 @@ export interface PrayerSettings {
    *  can be re-suggested — without ever touching a method the user picked
    *  manually while staying in the same country. */
   lastCountryCode: string | null;
+  /** mosques.id (UUID) of the mosque a user follows for Iqama times, shown
+   *  supplementary to (never instead of) the computed Adhan countdown/
+   *  notifications above — a mosque's posted times can go stale in a way
+   *  the astronomical calculation never can, so this only ever annotates,
+   *  never replaces. Null when not following any mosque. */
+  followedMosqueId: string | null;
 }
 
 function defaultSettings(isoCountryCode?: string | null): PrayerSettings {
@@ -36,6 +42,7 @@ function defaultSettings(isoCountryCode?: string | null): PrayerSettings {
     madhab,
     manualAdjustmentsMinutes: { ...DEFAULT_PRECAUTION_BUFFER_MINUTES },
     lastCountryCode: isoCountryCode ?? null,
+    followedMosqueId: null,
   };
 }
 
