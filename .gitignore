@@ -87,3 +87,6 @@ yarn-error.*
 
 # Supabase CLI cache
 supabase/.temp/
+
+# Separate website repo
+rihdal-website/
