@@ -2791,6 +2791,35 @@ Deno.serve(async (req) => {
         .update(mosqueUpdate)
         .eq('id', mosqueId);
 
+      // Auto-publish events to mosque_posts when called from the batch sync.
+      // Upsert on (mosque_id, title, event_start) so re-runs don't duplicate.
+      if (isBatchCall && scope !== 'times' && result.events.length > 0) {
+        const now = new Date().toISOString();
+        const posts = result.events
+          .filter((e: any) => e.event_start)
+          .map((e: any) => ({
+            mosque_id:   mosqueId,
+            type:        'event',
+            title:       e.title,
+            body:        e.body ?? null,
+            category:    e.categories?.[0] ?? null,
+            categories:  e.categories ?? [],
+            event_start: e.event_start,
+            event_end:   e.event_end ?? null,
+            source_url:  e.source_url ?? url,
+          }));
+        if (posts.length > 0) {
+          const { error: postsError } = await supabase
+            .from('mosque_posts')
+            .upsert(posts, { onConflict: 'mosque_id,title,event_start', ignoreDuplicates: true });
+          if (postsError) {
+            console.log('[parse-mosque-website] events auto-publish failed:', postsError.message);
+          } else {
+            console.log('[parse-mosque-website] auto-published', posts.length, 'events to mosque_posts');
+          }
+        }
+      }
+
       console.log('[parse-mosque-website] cache written — method:', extractionMethod, 'confidence:', finalConfidence, 'needs_review:', needsReview);
     } catch (e: any) {
       // Cache write failure is non-fatal — still return the parsed result
