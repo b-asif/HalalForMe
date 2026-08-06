@@ -21,6 +21,10 @@ async function isAuthorized(req: Request): Promise<boolean> {
   // pg_cron / scheduler calls carry the CRON_SECRET
   if (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) return true;
 
+  // GitHub Actions / external schedulers call with the service role key
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) return true;
+
   // Also allow admin users who explicitly trigger a batch sync from the UI
   const anon = Deno.env.get('SUPABASE_ANON_KEY');
   if (!anon) return false;
