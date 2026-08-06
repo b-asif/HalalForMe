@@ -104,12 +104,13 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // CRON_SECRET signals to the parse function that this is a trusted internal call
-          'Authorization': `Bearer ${CRON_SECRET}`,
+          // Use service role key — CRON_SECRET is not a JWT and gets rejected by gateway
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
           // Signal to parse function that this is an internal batch call
           'X-Batch-Sync': 'true',
         },
-        body: JSON.stringify({ url: mosque.website, mosqueId: mosque.id, scope }),
+        body: JSON.stringify({ url: mosque.website, mosqueId: mosque.id, scope, force: true }),
         signal: AbortSignal.timeout(90_000), // generous timeout for slow sites
       });
 
