@@ -2171,12 +2171,18 @@ Deno.serve(async (req) => {
   //   • SUPABASE_SERVICE_ROLE_KEY — used by the GitHub Actions Python scraper
   // Both are server-side secrets never exposed to the client.
   const cronSecret = Deno.env.get('CRON_SECRET');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  // Check JWT role claim (gateway already verified the JWT)
+  let jwtRole = '';
+  try {
+    const token = authHeader.replace('Bearer ', '');
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    jwtRole = payload?.role ?? '';
+  } catch { /* not a JWT */ }
   const isBatchCall =
     req.headers.get('X-Batch-Sync') === 'true' &&
     (
       (!!cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-      (!!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`)
+      jwtRole === 'service_role'
     );
 
   let callerUserId: string | null = null;
@@ -2770,10 +2776,19 @@ Deno.serve(async (req) => {
           { onConflict: 'mosque_id' },
         );
 
-      // Update the top-level last_website_sync_at on the mosque row
+      // Write parsed times back to the mosques table so the app can read them
+      const mosqueUpdate: Record<string, any> = {
+        last_website_sync_at: new Date().toISOString(),
+      };
+      if (scope !== 'events' && result.iqama_times) {
+        mosqueUpdate.iqama_times = result.iqama_times;
+      }
+      if (scope !== 'events' && result.jummah_sessions?.length > 0) {
+        mosqueUpdate.jummah_sessions = result.jummah_sessions;
+      }
       await supabase
         .from('mosques')
-        .update({ last_website_sync_at: new Date().toISOString() })
+        .update(mosqueUpdate)
         .eq('id', mosqueId);
 
       console.log('[parse-mosque-website] cache written — method:', extractionMethod, 'confidence:', finalConfidence, 'needs_review:', needsReview);
