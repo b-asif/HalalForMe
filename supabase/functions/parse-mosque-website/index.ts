@@ -2216,7 +2216,7 @@ Deno.serve(async (req) => {
   // ── 3. Auth check: caller must own this mosque, be admin, or be batch call ─
   const { data: mosque } = await supabase
     .from('mosques')
-    .select('id, owner_id, name, website_location, lat, lng, events_url')
+    .select('id, owner_id, name, website_location, lat, lng, events_url, masjidi_id')
     .eq('id', mosqueId)
     .maybeSingle();
 
@@ -2378,10 +2378,10 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Tier 1d: Masjidi/UmmahSoft — detect the masjid_id from the JS widget script
-  // embedded in the page HTML and fetch the widget directly.
+  // Tier 1d: Masjidi/UmmahSoft — use stored masjidi_id if set, otherwise
+  // detect from the JS widget script embedded in the page HTML.
   if (scope !== 'events' && !result.iqama_times) {
-    const masjidiId = findMasjidiId(url, htmlBlocks);
+    const masjidiId = (mosque as any).masjidi_id || findMasjidiId(url, htmlBlocks);
     if (masjidiId) {
       try {
         await tryMasjidi(masjidiId, result);
