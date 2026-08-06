@@ -98,7 +98,7 @@ def sync_mosque(mosque_id: str, url: str) -> dict:
     resp = requests.post(
         PARSE_FN_URL,
         headers={
-            'Authorization': f'Bearer {CRON_SECRET}',
+            'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
             'apikey': SUPABASE_SERVICE_KEY,
             'Content-Type': 'application/json',
             'X-Batch-Sync': 'true',
