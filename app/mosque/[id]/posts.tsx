@@ -55,6 +55,8 @@ export default function PostsScreen() {
   const [loading,      setLoading]      = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
   const [activeTab,    setActiveTab]    = useState<TabType>(initialTab === 'announcements' ? 'announcements' : 'events');
+  const [mosqueWebsite, setMosqueWebsite] = useState<string | null>(null);
+  const [syncing,      setSyncing]      = useState(false);
 
   // Form state
   const [showForm,      setShowForm]      = useState(false);
@@ -74,7 +76,7 @@ export default function PostsScreen() {
 
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, owner_id')
+      .select('id, owner_id, website')
       .eq('id', mosqueId)
       .maybeSingle();
 
@@ -83,6 +85,7 @@ export default function PostsScreen() {
       setLoading(false);
       return;
     }
+    setMosqueWebsite(m.website ?? null);
 
     const eventCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: p } = await supabase
@@ -184,6 +187,74 @@ export default function PostsScreen() {
       Alert.alert('Error', e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSyncFromWebsite = async () => {
+    if (!mosqueWebsite) {
+      Alert.alert('No website set', 'Add a website URL in portal settings before syncing.');
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const res = await fetch(`${supabaseUrl}/functions/v1/parse-mosque-website`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ url: mosqueWebsite, mosqueId, scope: 'events', force: true }),
+      });
+
+      if (!res.ok) throw new Error(`Sync failed (${res.status})`);
+      const data = await res.json();
+      const events: any[] = (data.events ?? []).filter((e: any) => e.event_start);
+
+      if (events.length === 0) {
+        Alert.alert('No events found', 'The website sync did not find any upcoming events.');
+        return;
+      }
+
+      Alert.alert(
+        `${events.length} event${events.length !== 1 ? 's' : ''} found`,
+        `Publish these to your mosque page?\n\n${events.slice(0, 3).map((e: any) => `• ${e.title}`).join('\n')}${events.length > 3 ? `\n+${events.length - 3} more` : ''}`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Publish',
+            onPress: async () => {
+              const posts = events.map((e: any) => ({
+                mosque_id:   mosqueId,
+                type:        'event',
+                title:       e.title,
+                body:        e.body ?? null,
+                category:    e.categories?.[0] ?? e.category ?? null,
+                categories:  e.categories ?? [],
+                event_start: e.event_start,
+                event_end:   e.event_end ?? null,
+                source_url:  e.source_url ?? mosqueWebsite,
+                created_by:  user!.id,
+              }));
+              const { error } = await supabase.from('mosque_posts').upsert(posts, {
+                onConflict: 'mosque_id,title,event_start',
+                ignoreDuplicates: true,
+              });
+              if (error) throw new Error(error.message);
+              loadData();
+              Alert.alert('Done', `${events.length} event${events.length !== 1 ? 's' : ''} published.`);
+            },
+          },
+        ],
+      );
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Sync failed');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -299,6 +370,23 @@ export default function PostsScreen() {
                 </View>
               </View>
             ))
+          )}
+
+          {/* Sync from website — events tab only */}
+          {!showForm && activeTab === 'events' && mosqueWebsite && (
+            <TouchableOpacity
+              style={[s.syncBtn, syncing && s.btnDisabled]}
+              onPress={handleSyncFromWebsite}
+              disabled={syncing}
+              activeOpacity={0.85}
+            >
+              {syncing
+                ? <ActivityIndicator size="small" color={DEEP_GREEN} />
+                : <Ionicons name="sync-outline" size={18} color={DEEP_GREEN} />}
+              <Text style={s.syncBtnText}>
+                {syncing ? 'Syncing…' : 'Sync Events from Website'}
+              </Text>
+            </TouchableOpacity>
           )}
 
           {/* Add / Edit button */}
@@ -575,6 +663,13 @@ const s = StyleSheet.create({
   postActions: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 },
   postEditBtn: { padding: 2 },
 
+  syncBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: DEEP_GREEN, backgroundColor: '#fff',
+    borderRadius: 14, paddingVertical: 14, marginTop: 6, marginBottom: 8,
+  },
+  syncBtnText: { fontSize: 14, fontWeight: '700', color: DEEP_GREEN },
+  btnDisabled: { opacity: 0.5 },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1.5, borderColor: '#c3e8d8', backgroundColor: '#f0faf6',
