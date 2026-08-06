@@ -293,6 +293,67 @@ async function tryMasjidal(masjidId: string, result: SyncResult): Promise<void> 
   console.log('[parse-mosque-website] Masjidal: found iqama + jummah');
 }
 
+// ── Tier 1c: Masjidi REST API ─────────────────────────────────────────────────
+// Searches the Masjidi/UmmahSoft API by mosque name + coordinates and extracts
+// iqama times directly from the API response — no scraping or widget needed.
+// Uses the public test key (documented in https://github.com/MasjidiApp/MasjidiAPI).
+async function tryMasjidiApi(
+  mosqueName: string,
+  lat: number | null,
+  lng: number | null,
+  result: SyncResult,
+): Promise<void> {
+  const apiKey = Deno.env.get('MASJIDI_API_KEY') ?? '123-test-key';
+  const params = new URLSearchParams({ masjidname: mosqueName, limit: '10' });
+  if (lat && lng) {
+    params.set('lat', String(lat));
+    params.set('long', String(lng));
+    params.set('dist', '15');
+  }
+
+  const res = await fetch(`https://api.masjidiapp.com/v2/masjids?${params}`, {
+    headers: { apikey: apiKey },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) { console.log('[parse-mosque-website] Masjidi API:', res.status); return; }
+
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  // Pick closest match by coordinates when available
+  let best = data[0];
+  if (lat && lng && data.length > 1) {
+    best = data.reduce((a: any, b: any) => {
+      const dA = Math.abs(parseFloat(a.latitude) - lat) + Math.abs(parseFloat(a.longitude) - lng);
+      const dB = Math.abs(parseFloat(b.latitude) - lat) + Math.abs(parseFloat(b.longitude) - lng);
+      return dA <= dB ? a : b;
+    });
+  }
+
+  const toNull = (v: string) => (v && v.trim() ? v.trim() : null);
+  const iqama = {
+    fajr:    toNull(best.fajr_iqama_time),
+    dhuhr:   toNull(best.zuhr_iqama_time),
+    asr:     toNull(best.asr_iqama_time),
+    // Maghrib iqama = adhan time (immediate)
+    maghrib: toNull(best.magrib_iqama_time) ?? toNull(best.magrib_start_time),
+    isha:    toNull(best.isha_iqama_time),
+  };
+
+  if (Object.values(iqama).some(Boolean)) {
+    result.iqama_times = iqama as IqamaTimes;
+    result.sources.push('masjidi_api');
+    console.log('[parse-mosque-website] Masjidi API: found iqama times for', best.title);
+  }
+
+  if (best.jumma1_iqama?.trim()) {
+    result.jummah_sessions.push({ time: best.jumma1_iqama.trim(), khateeb: null, hall: null });
+  }
+  if (best.jumma2_iqama?.trim()) {
+    result.jummah_sessions.push({ time: best.jumma2_iqama.trim(), khateeb: null, hall: null });
+  }
+}
+
 // ── Tier 1d: Masjidi / UmmahSoft prayer widget ────────────────────────────────
 // Many mosques embed the Masjidi prayer-time widget via a JS snippet that
 // builds an iframe at runtime:
@@ -2375,6 +2436,21 @@ Deno.serve(async (req) => {
       } catch (e: any) {
         console.log('[parse-mosque-website] Masjidal failed:', e.message);
       }
+    }
+  }
+
+  // Tier 1c: Masjidi REST API — search by mosque name + coordinates.
+  // Runs before HTML parsing so 403 sites still get times via API.
+  if (scope !== 'events' && !result.iqama_times) {
+    try {
+      await tryMasjidiApi(
+        (mosque as any).name,
+        (mosque as any).lat,
+        (mosque as any).lng,
+        result,
+      );
+    } catch (e: any) {
+      console.log('[parse-mosque-website] Masjidi API failed:', e.message);
     }
   }
 
