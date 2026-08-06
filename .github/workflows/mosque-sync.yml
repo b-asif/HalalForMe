@@ -46,11 +46,11 @@ jobs:
       - name: Run mosque scraper (Playwright fallback for 403 sites)
         run: python scripts/mosque_scraper.py
 
-  # Events: weekly Sunday run only
+  # Events: weekly Sunday run only, or manual trigger with scope=events/all
   sync-events:
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event.schedule == '0 6 * * 0'
+      github.event.schedule == '0 6 * * 0' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.scope == 'events' || github.event.inputs.scope == 'all'))
     runs-on: ubuntu-latest
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
