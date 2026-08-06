@@ -21,9 +21,14 @@ async function isAuthorized(req: Request): Promise<boolean> {
   // pg_cron / scheduler calls carry the CRON_SECRET
   if (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) return true;
 
-  // GitHub Actions / external schedulers call with the service role key
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) return true;
+  // GitHub Actions / external schedulers call with the service role key.
+  // The gateway already verified the JWT — just decode the payload and check
+  // the role claim rather than comparing raw key strings.
+  try {
+    const token = authHeader.replace('Bearer ', '');
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.role === 'service_role') return true;
+  } catch { /* not a JWT or malformed — fall through */ }
 
   // Also allow admin users who explicitly trigger a batch sync from the UI
   const anon = Deno.env.get('SUPABASE_ANON_KEY');
