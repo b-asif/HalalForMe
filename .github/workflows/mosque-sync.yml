@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Trigger prayer & jummah times sync
         run: |
-          curl -sf -X POST \
+          curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Trigger events sync
         run: |
-          curl -sf -X POST \
+          curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
