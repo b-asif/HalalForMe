@@ -31,14 +31,20 @@ jobs:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       SYNC_SCOPE: ${{ github.event.inputs.scope || 'times' }}
     steps:
-      - name: Trigger prayer & jummah times sync
-        run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"scope":"times"}' \
-            ${{ secrets.SUPABASE_URL }}/functions/v1/mosque-website-batch-sync
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests supabase playwright
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run mosque scraper (Playwright fallback for 403 sites)
+        run: python scripts/mosque_scraper.py
 
   # Events: weekly Sunday run only
   sync-events:
@@ -46,12 +52,23 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.schedule == '0 6 * * 0'
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SYNC_SCOPE: events
     steps:
-      - name: Trigger events sync
-        run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
-            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"scope":"events"}' \
-            ${{ secrets.SUPABASE_URL }}/functions/v1/mosque-website-batch-sync
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests supabase playwright
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run mosque scraper (Playwright fallback for 403 sites)
+        run: python scripts/mosque_scraper.py

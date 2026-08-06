@@ -108,6 +108,7 @@ def sync_mosque(mosque_id: str, url: str) -> dict:
             'mosqueId': mosque_id,
             'scope': SCOPE,
             'prerenderedHtml': html,
+            'force': True,
         },
         timeout=90,
     )
