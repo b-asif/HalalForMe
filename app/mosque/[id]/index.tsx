@@ -302,8 +302,8 @@ export default function MosqueDetailScreen() {
         .from('mosque_posts')
         .select('id, type, title, body, categories, category, event_start, event_end, source_url')
         .eq('mosque_id', m.id)
-        .or(`type.eq.announcement,event_start.gte.${eventCutoff}`)
-        .order('event_start', { ascending: true });
+        .or(`type.eq.announcement,event_start.is.null,event_start.gte.${eventCutoff}`)
+        .order('event_start', { ascending: true, nullsFirst: false });
       setPosts((p as MosquePost[]) ?? []);
 
       if (isAdmin && !m.owner_id) {

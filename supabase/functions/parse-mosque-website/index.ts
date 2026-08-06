@@ -2859,7 +2859,9 @@ Deno.serve(async (req) => {
       if (scope !== 'events' && result.iqama_times) {
         mosqueUpdate.iqama_times = result.iqama_times;
       }
-      if (scope !== 'events' && result.jummah_sessions?.length > 0) {
+      // Only write jummah_sessions on Friday runs (scope='times').
+      // Daily non-Friday runs use scope='prayer' and skip jummah.
+      if (scope === 'times' && result.jummah_sessions?.length > 0) {
         mosqueUpdate.jummah_sessions = result.jummah_sessions;
       }
       await supabase
@@ -2872,7 +2874,7 @@ Deno.serve(async (req) => {
       if (isBatchCall && scope !== 'times' && result.events.length > 0) {
         const now = new Date().toISOString();
         const posts = result.events
-          .filter((e: any) => e.event_start)
+          .filter((e: any) => e.event_start && e.event_start >= now)
           .map((e: any) => ({
             mosque_id:   mosqueId,
             type:        'event',

@@ -20,6 +20,7 @@ import os
 import sys
 import time
 import json
+import datetime
 import requests
 from supabase import create_client
 
@@ -27,7 +28,12 @@ SUPABASE_URL = os.environ['SUPABASE_URL']
 SUPABASE_SERVICE_KEY = os.environ['SUPABASE_SERVICE_KEY']
 CRON_SECRET = os.environ['CRON_SECRET']
 PARSE_FN_URL = f"{SUPABASE_URL}/functions/v1/parse-mosque-website"
-SCOPE = os.environ.get('SYNC_SCOPE', 'times')
+
+# On Fridays use scope='times' (iqama + jummah). Other days use scope='prayer'
+# (iqama only — jummah times rarely change mid-week).
+# An explicit SYNC_SCOPE env var (e.g. from workflow_dispatch) overrides this.
+_is_friday = datetime.datetime.utcnow().weekday() == 4  # 0=Mon … 4=Fri
+SCOPE = os.environ.get('SYNC_SCOPE') or ('times' if _is_friday else 'prayer')
 
 # Minimum chars of stripped HTML to consider a fetch successful.
 # Below this threshold we assume the page is JS-rendered and try Playwright.

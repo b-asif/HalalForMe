@@ -92,7 +92,7 @@ export default function PostsScreen() {
       .from('mosque_posts')
       .select('id, type, title, body, category, event_start, event_end')
       .eq('mosque_id', mosqueId)
-      .or(`type.eq.announcement,event_start.gte.${eventCutoff}`)
+      .or(`type.eq.announcement,event_start.is.null,event_start.gte.${eventCutoff}`)
       .order('created_at', { ascending: false });
 
     setPosts((p as MosquePost[]) ?? []);
@@ -213,7 +213,14 @@ export default function PostsScreen() {
 
       if (!res.ok) throw new Error(`Sync failed (${res.status})`);
       const data = await res.json();
-      const events: any[] = (data.events ?? []).filter((e: any) => e.event_start);
+      const now = new Date().toISOString();
+      const allWithDates: any[] = (data.events ?? []).filter((e: any) => e.event_start);
+      const events: any[] = allWithDates.filter((e: any) => e.event_start >= now);
+
+      if (allWithDates.length > 0 && events.length === 0) {
+        Alert.alert('No upcoming events', 'Events were found on the website but they all have past dates. The mosque page may not have updated their events calendar yet.');
+        return;
+      }
 
       if (events.length === 0) {
         Alert.alert('No events found', 'The website sync did not find any upcoming events.');
@@ -228,25 +235,55 @@ export default function PostsScreen() {
           {
             text: 'Publish',
             onPress: async () => {
-              const posts = events.map((e: any) => ({
-                mosque_id:   mosqueId,
-                type:        'event',
-                title:       e.title,
-                body:        e.body ?? null,
-                category:    e.categories?.[0] ?? e.category ?? null,
-                categories:  e.categories ?? [],
-                event_start: e.event_start,
-                event_end:   e.event_end ?? null,
-                source_url:  e.source_url ?? mosqueWebsite,
-                created_by:  user!.id,
-              }));
-              const { error } = await supabase.from('mosque_posts').upsert(posts, {
-                onConflict: 'mosque_id,title,event_start',
-                ignoreDuplicates: true,
-              });
-              if (error) throw new Error(error.message);
-              loadData();
-              Alert.alert('Done', `${events.length} event${events.length !== 1 ? 's' : ''} published.`);
+              try {
+                const rows = events.map((e: any) => ({
+                  mosque_id:   mosqueId,
+                  type:        'event',
+                  title:       e.title,
+                  body:        e.body ?? null,
+                  category:    e.categories?.[0] ?? e.category ?? null,
+                  categories:  e.categories ?? [],
+                  event_start: e.event_start ?? null,
+                  event_end:   e.event_end ?? null,
+                  source_url:  e.source_url ?? mosqueWebsite,
+                  created_by:  user!.id,
+                }));
+
+                // Events with a date: upsert to avoid duplicates on re-sync.
+                // Events without a date (null event_start): plain insert — the
+                // partial unique index only covers non-null event_start, so
+                // upsert with onConflict would fail for null rows.
+                const dated   = rows.filter(r => r.event_start);
+                const undated = rows.filter(r => !r.event_start);
+
+                if (dated.length > 0) {
+                  const { error } = await supabase.from('mosque_posts').upsert(dated, {
+                    onConflict: 'mosque_id,title,event_start',
+                    ignoreDuplicates: true,
+                  });
+                  if (error) throw new Error(error.message);
+                }
+
+                if (undated.length > 0) {
+                  // Fetch existing undated events for this mosque to skip exact-title dupes.
+                  const { data: existing } = await supabase
+                    .from('mosque_posts')
+                    .select('title')
+                    .eq('mosque_id', mosqueId)
+                    .is('event_start', null);
+                  const existingTitles = new Set((existing ?? []).map((r: any) => r.title));
+                  const newUndated = undated.filter(r => !existingTitles.has(r.title));
+                  if (newUndated.length > 0) {
+                    const { error } = await supabase.from('mosque_posts').insert(newUndated);
+                    if (error) throw new Error(error.message);
+                  }
+                }
+
+                loadData();
+                Alert.alert('Done', `${events.length} event${events.length !== 1 ? 's' : ''} published.`);
+              } catch (e: any) {
+                Alert.alert('Error', e.message ?? 'Failed to publish events');
+              }
             },
           },
         ],
