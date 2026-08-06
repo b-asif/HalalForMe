@@ -18,7 +18,7 @@ jobs:
           version: latest
 
       - name: Deploy parse-mosque-website
-        run: supabase functions deploy parse-mosque-website --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase functions deploy parse-mosque-website --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
