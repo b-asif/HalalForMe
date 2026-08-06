@@ -28,6 +28,7 @@ interface JummahSession { time: string; khateeb: string | null; hall?: string | 
 
 interface MosqueRow {
   id: string;
+  osm_id: string;
   name: string;
   address: string | null;
   owner_id: string | null;
@@ -117,7 +118,7 @@ export default function MosquePortalScreen() {
 
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, name, address, owner_id, cover_image_url, iqama_times, jummah_sessions, amenities, contact_phone, contact_email, website, last_website_sync_at')
+      .select('id, osm_id, name, address, owner_id, cover_image_url, iqama_times, jummah_sessions, amenities, contact_phone, contact_email, website, last_website_sync_at')
       .eq('id', mosqueId)
       .maybeSingle();
 
@@ -299,7 +300,11 @@ export default function MosquePortalScreen() {
 
         {/* ── Grouped nav rows ─────────────────────────────────────────── */}
         <View style={s.navCard}>
-          <TouchableOpacity style={s.navRow} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={s.navRow}
+            onPress={() => mosque && router.push(`/mosque/${mosque.osm_id.replace('/', ':')}` as any)}
+            activeOpacity={0.7}
+          >
             <View style={[s.navIcon, { backgroundColor: '#E8F4FF' }]}>
               <Ionicons name="eye-outline" size={17} color="#2563EB" />
             </View>
