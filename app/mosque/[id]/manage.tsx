@@ -107,10 +107,11 @@ export default function MosquePortalScreen() {
   const insets = useSafeAreaInsets();
   const { user, isAdmin } = useAuth();
 
-  const [mosque,       setMosque]       = useState<MosqueRow | null>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [deleting,     setDeleting]     = useState(false);
-  const [unauthorized, setUnauthorized] = useState(false);
+  const [mosque,        setMosque]        = useState<MosqueRow | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [deleting,      setDeleting]      = useState(false);
+  const [unauthorized,  setUnauthorized]  = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!mosqueId || !user) return;
@@ -129,6 +130,13 @@ export default function MosquePortalScreen() {
     }
 
     setMosque(m as MosqueRow);
+
+    const { count } = await supabase
+      .from('mosque_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('mosque_id', mosqueId);
+    setFollowerCount(count ?? 0);
+
     setLoading(false);
   }, [mosqueId, user, isAdmin]);
 
@@ -231,6 +239,12 @@ export default function MosquePortalScreen() {
               <Text style={s.heroAddress} numberOfLines={1}>{mosque.address}</Text>
             </View>
           ) : null}
+          <View style={s.heroAddressRow}>
+            <Ionicons name="people-outline" size={12} color="rgba(255,255,255,0.8)" />
+            <Text style={s.heroAddress}>
+              {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
+            </Text>
+          </View>
         </View>
       </View>
 

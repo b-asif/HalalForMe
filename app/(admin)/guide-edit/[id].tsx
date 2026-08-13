@@ -21,17 +21,18 @@ const TEXT_MUTED = Brand.textMuted;
 const HAIRLINE   = Brand.hairline;
 const RED        = Brand.red;
 
-type Category = 'universities' | 'cities' | 'travel' | 'food' | 'cafes' | 'ramadan' | 'family' | 'reverts';
+type Category = 'universities' | 'cities' | 'travel' | 'food' | 'cafes' | 'butcher' | 'ramadan' | 'family' | 'reverts';
 
 const GUIDE_CATEGORIES: { key: Category; label: string; icon: string }[] = [
-  { key: 'universities', label: 'Universities', icon: 'school-outline'     },
-  { key: 'cities',       label: 'Cities',       icon: 'business-outline'   },
-  { key: 'travel',       label: 'Travel',       icon: 'airplane-outline'   },
-  { key: 'food',         label: 'Food',         icon: 'restaurant-outline' },
-  { key: 'cafes',        label: 'Cafés',        icon: 'cafe-outline'       },
-  { key: 'ramadan',      label: 'Ramadan',      icon: 'moon-outline'       },
-  { key: 'family',       label: 'Family',       icon: 'people-outline'     },
-  { key: 'reverts',      label: 'Reverts',      icon: 'book-outline'       },
+  { key: 'universities', label: 'Universities',      icon: 'school-outline'      },
+  { key: 'cities',       label: 'Cities',            icon: 'business-outline'    },
+  { key: 'travel',       label: 'Travel',            icon: 'airplane-outline'    },
+  { key: 'food',         label: 'Food',              icon: 'restaurant-outline'  },
+  { key: 'cafes',        label: 'Cafés',             icon: 'cafe-outline'        },
+  { key: 'butcher',      label: 'Butcher & Grocery', icon: 'storefront-outline'  },
+  { key: 'ramadan',      label: 'Ramadan',           icon: 'moon-outline'        },
+  { key: 'family',       label: 'Family',            icon: 'people-outline'      },
+  { key: 'reverts',      label: 'Reverts',           icon: 'book-outline'        },
 ];
 
 const PRESET_TAGS = [
@@ -39,10 +40,10 @@ const PRESET_TAGS = [
   'Mosques', 'Community', 'Groceries', 'Family-Friendly',
 ];
 
-type SearchTab = 'restaurant' | 'mosque' | 'prayer_room';
+type SearchTab = 'restaurant' | 'butcher' | 'mosque' | 'prayer_room';
 
 type GuideItem =
-  | { type: 'restaurant';  restaurant_id: string;  name: string; address: string }
+  | { type: 'restaurant';  restaurant_id: string;  name: string; address: string; category?: string }
   | { type: 'mosque';      mosque_id: string;       name: string; address: string | null }
   | { type: 'prayer_room'; prayer_room_id: string;  building_name: string; room_number: string | null;
       wudu_available: boolean; hours: string | null; lat: number | null; lng: number | null };
@@ -51,6 +52,7 @@ interface RestaurantResult {
   id: string;
   name: string;
   address: string;
+  category?: string;
 }
 
 interface MosqueResult {
@@ -100,17 +102,21 @@ export default function AdminGuideEditScreen() {
   const [searchQuery,         setSearchQuery]         = useState('');
   const [searchResults,       setSearchResults]       = useState<RestaurantResult[]>([]);
   const [searching,           setSearching]           = useState(false);
-  const [mosqueSearchQuery,   setMosqueSearchQuery]   = useState('');
-  const [mosqueSearchResults, setMosqueSearchResults] = useState<MosqueResult[]>([]);
-  const [searchingMosques,    setSearchingMosques]    = useState(false);
-  const searchTimer       = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mosqueSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mosqueSearchQuery,    setMosqueSearchQuery]    = useState('');
+  const [mosqueSearchResults,  setMosqueSearchResults]  = useState<MosqueResult[]>([]);
+  const [searchingMosques,     setSearchingMosques]     = useState(false);
+  const [butcherSearchQuery,   setButcherSearchQuery]   = useState('');
+  const [butcherSearchResults, setButcherSearchResults] = useState<RestaurantResult[]>([]);
+  const [searchingButchers,    setSearchingButchers]    = useState(false);
+  const searchTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mosqueSearchTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const butcherSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Prayer room form (inline create)
   const [prBuildingName,  setPrBuildingName]  = useState('');
   const [prRoomNumber,    setPrRoomNumber]    = useState('');
   const [prWudu,          setPrWudu]          = useState(false);
-  const [prHours,         setPrHours]         = useState('');
+  const [prHourSections,  setPrHourSections]  = useState<{ label: string; time: string }[]>([{ label: '', time: '' }]);
   const [prLat,           setPrLat]           = useState('');
   const [prLng,           setPrLng]           = useState('');
   const [savingPrayer,    setSavingPrayer]    = useState(false);
@@ -133,7 +139,7 @@ export default function AdminGuideEditScreen() {
         supabase
           .from('guide_items')
           .select(`restaurant_id, mosque_id, prayer_room_id, position,
-            restaurants(id, name, address),
+            restaurants(id, name, address, category),
             mosques(id, osm_id, name, address),
             prayer_rooms(id, building_name, room_number, wudu_available, hours, lat, lng)`)
           .eq('guide_id', id)
@@ -163,8 +169,9 @@ export default function AdminGuideEditScreen() {
               return {
                 type: 'restaurant' as const,
                 restaurant_id: row.restaurant_id,
-                name:    row.restaurants?.name    ?? '',
-                address: row.restaurants?.address ?? '',
+                name:     row.restaurants?.name     ?? '',
+                address:  row.restaurants?.address  ?? '',
+                category: row.restaurants?.category ?? undefined,
               };
             } else if (row.mosque_id) {
               return {
@@ -213,7 +220,8 @@ export default function AdminGuideEditScreen() {
     setSearching(true);
     const { data } = await supabase
       .from('restaurants')
-      .select('id, name, address')
+      .select('id, name, address, category')
+      .not('category', 'in', '("grocery","butcher")')
       .ilike('name', `%${q.trim()}%`)
       .order('name')
       .limit(20);
@@ -225,6 +233,27 @@ export default function AdminGuideEditScreen() {
     setSearchQuery(q);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => runSearch(q), 350);
+  };
+
+  // ── Butcher/Grocery search (debounced)
+  const runButcherSearch = async (q: string) => {
+    if (q.trim().length < 2) { setButcherSearchResults([]); return; }
+    setSearchingButchers(true);
+    const { data } = await supabase
+      .from('restaurants')
+      .select('id, name, address, category')
+      .in('category', ['grocery', 'butcher'])
+      .ilike('name', `%${q.trim()}%`)
+      .order('name')
+      .limit(20);
+    setButcherSearchResults((data as RestaurantResult[]) ?? []);
+    setSearchingButchers(false);
+  };
+
+  const onButcherSearchChange = (q: string) => {
+    setButcherSearchQuery(q);
+    if (butcherSearchTimer.current) clearTimeout(butcherSearchTimer.current);
+    butcherSearchTimer.current = setTimeout(() => runButcherSearch(q), 350);
   };
 
   // ── Mosque search (debounced)
@@ -250,9 +279,16 @@ export default function AdminGuideEditScreen() {
   // ── Add / remove helpers
   const addRestaurantItem = (r: RestaurantResult) => {
     if (items.some(i => i.type === 'restaurant' && i.restaurant_id === r.id)) return;
-    setItems(prev => [...prev, { type: 'restaurant', restaurant_id: r.id, name: r.name, address: r.address }]);
+    setItems(prev => [...prev, { type: 'restaurant', restaurant_id: r.id, name: r.name, address: r.address, category: r.category }]);
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const addButcherItem = (r: RestaurantResult) => {
+    if (items.some(i => i.type === 'restaurant' && i.restaurant_id === r.id)) return;
+    setItems(prev => [...prev, { type: 'restaurant', restaurant_id: r.id, name: r.name, address: r.address, category: r.category }]);
+    setButcherSearchQuery('');
+    setButcherSearchResults([]);
   };
 
   const addMosqueItem = (m: MosqueResult) => {
@@ -265,13 +301,18 @@ export default function AdminGuideEditScreen() {
   const addPrayerRoom = async () => {
     if (!prBuildingName.trim()) { Alert.alert('Building name is required.'); return; }
     setSavingPrayer(true);
+    const filledSections = prHourSections.filter(s => s.time.trim());
+    const hoursValue = filledSections.length === 0 ? null
+      : filledSections.length === 1 && !filledSections[0].label.trim()
+        ? filledSections[0].time.trim()
+        : JSON.stringify(filledSections.map(s => ({ label: s.label.trim(), time: s.time.trim() })));
     const { data, error } = await supabase
       .from('prayer_rooms')
       .insert({
         building_name:  prBuildingName.trim(),
         room_number:    prRoomNumber.trim() || null,
         wudu_available: prWudu,
-        hours:          prHours.trim() || null,
+        hours:          hoursValue,
         lat:            prLat ? parseFloat(prLat) : null,
         lng:            prLng ? parseFloat(prLng) : null,
       })
@@ -290,7 +331,7 @@ export default function AdminGuideEditScreen() {
       lng:            (data as any).lng,
     }]);
     setPrBuildingName(''); setPrRoomNumber(''); setPrWudu(false);
-    setPrHours(''); setPrLat(''); setPrLng('');
+    setPrHourSections([{ label: '', time: '' }]); setPrLat(''); setPrLng('');
   };
 
   const removeItem = (item: GuideItem) => {
@@ -720,15 +761,21 @@ export default function AdminGuideEditScreen() {
                         s.itemBadge,
                         item.type === 'mosque'      ? s.itemBadgeTeal   : undefined,
                         item.type === 'prayer_room' ? s.itemBadgePurple : undefined,
+                        item.type === 'restaurant' && (item.category === 'grocery' || item.category === 'butcher')
+                          ? s.itemBadgeAmber : undefined,
                       ]}>
                         <Text style={[
                           s.itemBadgeText,
                           item.type === 'mosque'      ? s.itemBadgeTextTeal   : undefined,
                           item.type === 'prayer_room' ? s.itemBadgeTextPurple : undefined,
+                          item.type === 'restaurant' && (item.category === 'grocery' || item.category === 'butcher')
+                            ? s.itemBadgeTextAmber : undefined,
                         ]}>
-                          {item.type === 'restaurant' ? 'Restaurant'
-                           : item.type === 'mosque'   ? 'Mosque'
-                           : 'Prayer Room'}
+                          {item.type === 'mosque' ? 'Mosque'
+                           : item.type === 'prayer_room' ? 'Prayer Room'
+                           : (item.category === 'grocery' || item.category === 'butcher') ? 'Butcher/Grocery'
+                           : item.category === 'cafe' ? 'Café'
+                           : 'Restaurant'}
                         </Text>
                       </View>
                     </View>
@@ -747,14 +794,17 @@ export default function AdminGuideEditScreen() {
 
         {/* ── Search tab switcher ── */}
         <View style={s.searchTabs}>
-          {(['restaurant', 'mosque', ...(category === 'universities' ? ['prayer_room'] as const : [])] as SearchTab[]).map(tab => (
+          {(['restaurant', 'butcher', 'mosque', ...(category === 'universities' ? ['prayer_room'] as const : [])] as SearchTab[]).map(tab => (
             <TouchableOpacity
               key={tab}
               style={[s.searchTab, activeSearchTab === tab && s.searchTabActive]}
               onPress={() => setActiveSearchTab(tab)}
             >
               <Text style={[s.searchTabText, activeSearchTab === tab && s.searchTabTextActive]}>
-                {tab === 'restaurant' ? 'Restaurant' : tab === 'mosque' ? 'Mosque' : 'Prayer Room'}
+                {tab === 'restaurant' ? 'Restaurant'
+                 : tab === 'butcher'  ? 'Butcher/Grocery'
+                 : tab === 'mosque'   ? 'Mosque'
+                 : 'Prayer Room'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -784,6 +834,49 @@ export default function AdminGuideEditScreen() {
                       key={r.id}
                       style={[s.resultRow, idx > 0 && s.resultBorder, added && s.resultAdded]}
                       onPress={() => !added && addRestaurantItem(r)}
+                      activeOpacity={added ? 1 : 0.7}
+                    >
+                      <View style={s.resultBody}>
+                        <Text style={s.resultName} numberOfLines={1}>{r.name}</Text>
+                        <Text style={s.resultAddr} numberOfLines={1}>{r.address}</Text>
+                      </View>
+                      <Ionicons
+                        name={added ? 'checkmark-circle' : 'add-circle-outline'}
+                        size={20}
+                        color={added ? GREEN : '#ccc'}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ── Butcher/Grocery search ── */}
+        {activeSearchTab === 'butcher' && (
+          <>
+            <View style={s.searchWrap}>
+              <Ionicons name="search-outline" size={15} color={TEXT_MUTED} />
+              <TextInput
+                style={s.searchInput}
+                value={butcherSearchQuery}
+                onChangeText={onButcherSearchChange}
+                placeholder="Search to add a butcher or grocery store..."
+                placeholderTextColor="#bbb"
+                returnKeyType="search"
+              />
+              {searchingButchers && <ActivityIndicator size="small" color={GREEN} />}
+            </View>
+            {butcherSearchResults.length > 0 && (
+              <View style={s.resultsList}>
+                {butcherSearchResults.map((r, idx) => {
+                  const added = items.some(i => i.type === 'restaurant' && i.restaurant_id === r.id);
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={[s.resultRow, idx > 0 && s.resultBorder, added && s.resultAdded]}
+                      onPress={() => !added && addButcherItem(r)}
                       activeOpacity={added ? 1 : 0.7}
                     >
                       <View style={s.resultBody}>
@@ -881,16 +974,42 @@ export default function AdminGuideEditScreen() {
                 thumbColor="#fff"
               />
             </View>
-            <View style={s.fieldWrap}>
-              <Text style={s.fieldLabel}>HOURS</Text>
-              <TextInput
-                style={s.input}
-                value={prHours}
-                onChangeText={setPrHours}
-                placeholder="e.g. Mon–Fri 8 AM – 10 PM"
-                placeholderTextColor="#bbb"
-              />
-            </View>
+            <Text style={[s.fieldLabel, { marginBottom: 6 }]}>HOURS</Text>
+            {prHourSections.map((section, idx) => (
+              <View key={idx} style={s.hourSectionRow}>
+                <View style={s.hourSectionInputs}>
+                  <TextInput
+                    style={[s.input, s.hourLabelInput]}
+                    value={section.label}
+                    onChangeText={v => setPrHourSections(prev => prev.map((s, i) => i === idx ? { ...s, label: v } : s))}
+                    placeholder="Label (e.g. Weekdays)"
+                    placeholderTextColor="#bbb"
+                  />
+                  <TextInput
+                    style={[s.input, s.hourTimeInput]}
+                    value={section.time}
+                    onChangeText={v => setPrHourSections(prev => prev.map((s, i) => i === idx ? { ...s, time: v } : s))}
+                    placeholder="e.g. 8:00 AM – 10:00 PM"
+                    placeholderTextColor="#bbb"
+                  />
+                </View>
+                {prHourSections.length > 1 && (
+                  <TouchableOpacity
+                    onPress={() => setPrHourSections(prev => prev.filter((_, i) => i !== idx))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity
+              style={s.addHourBtn}
+              onPress={() => setPrHourSections(prev => [...prev, { label: '', time: '' }])}
+            >
+              <Ionicons name="add" size={14} color={GREEN} />
+              <Text style={s.addHourBtnText}>Add Hours Section</Text>
+            </TouchableOpacity>
             <View style={[s.fieldWrap, { flexDirection: 'row', gap: 8 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>LATITUDE (optional)</Text>
@@ -1138,9 +1257,11 @@ const s = StyleSheet.create({
   },
   itemBadgeTeal:   { backgroundColor: '#e0f7f8' },
   itemBadgePurple: { backgroundColor: '#ede9fe' },
+  itemBadgeAmber:  { backgroundColor: '#fef3c7' },
   itemBadgeText:       { fontSize: 9, fontWeight: '700', color: GREEN, letterSpacing: 0.2 },
   itemBadgeTextTeal:   { color: '#0d9488' },
   itemBadgeTextPurple: { color: '#6d28d9' },
+  itemBadgeTextAmber:  { color: '#b45309' },
 
   // ── Search tabs
   searchTabs: {
@@ -1155,6 +1276,27 @@ const s = StyleSheet.create({
   searchTabTextActive: { color: '#fff' },
 
   searchHint: { fontSize: 11, color: TEXT_MUTED, marginBottom: 8, marginLeft: 2 },
+
+  // ── Prayer room hours sections
+  hourSectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8,
+  },
+  hourSectionInputs: { flex: 1, gap: 6 },
+  hourLabelInput: {
+    backgroundColor: '#fff', borderRadius: 10,
+    borderWidth: 1.5, borderColor: HAIRLINE,
+    paddingHorizontal: 12, paddingVertical: 8, minHeight: 0,
+  },
+  hourTimeInput: {
+    backgroundColor: '#fff', borderRadius: 10,
+    borderWidth: 1.5, borderColor: HAIRLINE,
+    paddingHorizontal: 12, paddingVertical: 8, minHeight: 0,
+  },
+  addHourBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 8, marginBottom: 10,
+  },
+  addHourBtnText: { fontSize: 13, fontWeight: '600', color: GREEN },
 
   // ── Prayer room form
   prayerForm: {

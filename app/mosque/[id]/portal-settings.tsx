@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
@@ -28,6 +28,16 @@ interface Amenities {
   halal_food?: boolean;
 }
 
+const US_TIMEZONES = [
+  { tz: 'America/New_York',    label: 'Eastern (ET)'    },
+  { tz: 'America/Chicago',     label: 'Central (CT)'    },
+  { tz: 'America/Denver',      label: 'Mountain (MT)'   },
+  { tz: 'America/Phoenix',     label: 'Arizona (no DST)'},
+  { tz: 'America/Los_Angeles', label: 'Pacific (PT)'    },
+  { tz: 'America/Anchorage',   label: 'Alaska (AKT)'    },
+  { tz: 'Pacific/Honolulu',    label: 'Hawaii (HT)'     },
+];
+
 const AMENITY_ROWS: { key: keyof Amenities; label: string; icon: string; desc: string }[] = [
   { key: 'sisters_section', label: "Sisters' Section",   icon: 'people-outline',      desc: 'Dedicated area for women' },
   { key: 'wudu',            label: 'Wudu Facilities',    icon: 'water-outline',        desc: 'Washing facilities on-site' },
@@ -53,6 +63,8 @@ export default function PortalSettingsScreen() {
   const [saving,        setSaving]        = useState(false);
   const [uploadingPhoto,setUploadingPhoto] = useState(false);
   const [unauthorized,  setUnauthorized]  = useState(false);
+  const [savedVisible,  setSavedVisible]  = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fields
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
@@ -62,6 +74,7 @@ export default function PortalSettingsScreen() {
   const [website,       setWebsite]       = useState('');
   const [eventsUrl,     setEventsUrl]     = useState('');
   const [amenities,     setAmenities]     = useState<Amenities>({});
+  const [timezone,      setTimezone]      = useState('America/Los_Angeles');
 
   const loadData = useCallback(async () => {
     if (!mosqueId || !user) return;
@@ -69,7 +82,7 @@ export default function PortalSettingsScreen() {
 
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, owner_id, cover_image_url, description, contact_phone, contact_email, website, events_url, amenities')
+      .select('id, owner_id, cover_image_url, description, contact_phone, contact_email, website, events_url, amenities, timezone')
       .eq('id', mosqueId)
       .maybeSingle();
 
@@ -86,10 +99,27 @@ export default function PortalSettingsScreen() {
     setWebsite(m.website ?? '');
     setEventsUrl(m.events_url ?? '');
     setAmenities((m.amenities as Amenities) ?? {});
+    setTimezone((m as any).timezone ?? 'America/Los_Angeles');
     setLoading(false);
   }, [mosqueId, user, isAdmin]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+
+  const showSaved = () => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setSavedVisible(true);
+    savedTimerRef.current = setTimeout(() => setSavedVisible(false), 2000);
+  };
+
+  const autoSave = async (patch: Record<string, any>) => {
+    try {
+      const { error } = await supabase.from('mosques').update(patch).eq('id', mosqueId);
+      if (error) throw new Error(error.message);
+      showSaved();
+    } catch (e: any) {
+      Alert.alert('Save Failed', e.message);
+    }
+  };
 
   const pickCoverPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -133,8 +163,13 @@ export default function PortalSettingsScreen() {
       {
         text: 'Remove', style: 'destructive',
         onPress: async () => {
-          await supabase.from('mosques').update({ cover_image_url: null }).eq('id', mosqueId);
-          setCoverImageUrl(null);
+          try {
+            const { error } = await supabase.from('mosques').update({ cover_image_url: null }).eq('id', mosqueId);
+            if (error) throw new Error(error.message);
+            setCoverImageUrl(null);
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
         },
       },
     ]);
@@ -152,10 +187,11 @@ export default function PortalSettingsScreen() {
           website:       website.trim() || null,
           events_url:    eventsUrl.trim() || null,
           amenities,
+          timezone,
         })
         .eq('id', mosqueId);
       if (error) throw new Error(error.message);
-      Alert.alert('Saved', 'Page settings updated.');
+      showSaved();
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -163,8 +199,11 @@ export default function PortalSettingsScreen() {
     }
   };
 
-  const toggleAmenity = (key: keyof Amenities) =>
-    setAmenities(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleAmenity = (key: keyof Amenities) => {
+    const newAmenities = { ...amenities, [key]: !amenities[key] };
+    setAmenities(newAmenities);
+    autoSave({ amenities: newAmenities });
+  };
 
   if (loading) {
     return (
@@ -189,7 +228,7 @@ export default function PortalSettingsScreen() {
 
   return (
     <SafeAreaView style={s.flex} edges={['top', 'left', 'right']}>
-      <Header router={router} />
+      <Header router={router} savedVisible={savedVisible} />
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 48 }]}
@@ -251,6 +290,7 @@ export default function PortalSettingsScreen() {
             placeholderTextColor={TEXT_MUTED}
             value={description}
             onChangeText={setDescription}
+            onBlur={() => autoSave({ description: description.trim() || null })}
             multiline
           />
 
@@ -265,6 +305,7 @@ export default function PortalSettingsScreen() {
                 placeholderTextColor={TEXT_MUTED}
                 value={contactPhone}
                 onChangeText={setContactPhone}
+                onBlur={() => autoSave({ contact_phone: contactPhone.trim() || null })}
                 keyboardType="phone-pad"
               />
             </View>
@@ -277,6 +318,7 @@ export default function PortalSettingsScreen() {
                 placeholderTextColor={TEXT_MUTED}
                 value={contactEmail}
                 onChangeText={setContactEmail}
+                onBlur={() => autoSave({ contact_email: contactEmail.trim() || null })}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -290,6 +332,7 @@ export default function PortalSettingsScreen() {
                 placeholderTextColor={TEXT_MUTED}
                 value={website}
                 onChangeText={setWebsite}
+                onBlur={() => autoSave({ website: website.trim() || null })}
                 autoCapitalize="none"
               />
             </View>
@@ -302,6 +345,7 @@ export default function PortalSettingsScreen() {
             placeholderTextColor={TEXT_MUTED}
             value={eventsUrl}
             onChangeText={setEventsUrl}
+            onBlur={() => autoSave({ events_url: eventsUrl.trim() || null })}
             autoCapitalize="none"
           />
           <Text style={s.fieldHint}>Used to automatically import events. Leave blank to add events manually.</Text>
@@ -334,6 +378,35 @@ export default function PortalSettingsScreen() {
             ))}
           </View>
 
+          {/* ── Timezone ─────────────────────────────────── */}
+          <Text style={[s.sectionLabel, { marginTop: 28 }]}>TIMEZONE</Text>
+          <Text style={s.sectionHint}>Used to schedule recurring events at the correct local time.</Text>
+          <View style={s.amenitiesCard}>
+            {US_TIMEZONES.map((row, i) => (
+              <View key={row.tz}>
+                {i > 0 && <View style={s.amenityDivider} />}
+                <TouchableOpacity
+                  style={s.amenityRow}
+                  onPress={() => { setTimezone(row.tz); autoSave({ timezone: row.tz }); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={s.amenityIconWrap}>
+                    <Ionicons
+                      name={timezone === row.tz ? 'radio-button-on' : 'radio-button-off'}
+                      size={20}
+                      color={timezone === row.tz ? DEEP_GREEN : TEXT_MUTED}
+                    />
+                  </View>
+                  <View style={s.amenityText}>
+                    <Text style={[s.amenityLabel, timezone === row.tz && s.amenityLabelActive]}>
+                      {row.label}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
           {/* ── Save ─────────────────────────────────────── */}
           <TouchableOpacity
             style={[s.saveBtn, saving && s.btnDisabled]}
@@ -351,14 +424,21 @@ export default function PortalSettingsScreen() {
   );
 }
 
-function Header({ router }: { router: ReturnType<typeof useRouter> }) {
+function Header({ router, savedVisible }: { router: ReturnType<typeof useRouter>; savedVisible?: boolean }) {
   return (
     <View style={s.header}>
       <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
         <Ionicons name="arrow-back" size={20} color={DEEP_GREEN} />
       </TouchableOpacity>
       <Text style={s.headerTitle}>Page Settings</Text>
-      <View style={{ width: 38 }} />
+      {savedVisible ? (
+        <View style={s.savedBadge}>
+          <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+          <Text style={s.savedBadgeText}>Saved</Text>
+        </View>
+      ) : (
+        <View style={{ width: 52 }} />
+      )}
     </View>
   );
 }
@@ -375,6 +455,8 @@ const s = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: TEXT_DARK, textAlign: 'center', marginHorizontal: 8 },
+  savedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, width: 52, justifyContent: 'flex-end' },
+  savedBadgeText: { fontSize: 12, fontWeight: '600', color: GREEN },
 
   content: { padding: 20 },
 

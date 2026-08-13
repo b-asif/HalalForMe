@@ -21,6 +21,17 @@ const HAIRLINE   = Brand.hairline;
 
 const EVENT_CATEGORIES = ['lectures', 'quran', 'youth', 'sisters', 'community', 'other'];
 
+// Index matches Postgres EXTRACT(DOW) (0=Sunday..6=Saturday), consumed
+// server-side by materialize_recurring_mosque_events() (052_recurring_mosque_events.sql).
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const ANCHOR_PRAYERS = [
+  { key: 'fajr',    label: 'Fajr'    },
+  { key: 'dhuhr',   label: 'Dhuhr'   },
+  { key: 'asr',     label: 'Asr'     },
+  { key: 'maghrib', label: 'Maghrib' },
+  { key: 'isha',    label: 'Isha'    },
+];
+
 type PostType = 'event' | 'announcement';
 type TabType = 'events' | 'announcements';
 
@@ -34,6 +45,17 @@ interface MosquePost {
   event_end: string | null;
 }
 
+interface RecurringEvent {
+  id: string;
+  title: string;
+  body: string | null;
+  category: string | null;
+  day_of_week: number;
+  anchor_prayer: string;
+  anchor_offset_minutes: number;
+  active: boolean;
+}
+
 function formatEventRange(startIso: string, endIso: string | null): string {
   const start = new Date(startIso);
   const startStr = start.toLocaleString('en-US', {
@@ -44,6 +66,12 @@ function formatEventRange(startIso: string, endIso: string | null): string {
   return `${startStr} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+function offsetLabel(mins: number): string {
+  if (mins === 0) return 'right after';
+  if (mins > 0) return `${mins} min after`;
+  return `${Math.abs(mins)} min before`;
+}
+
 export default function PostsScreen() {
   const { id: mosqueId, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
@@ -51,12 +79,15 @@ export default function PostsScreen() {
   const { height: screenH } = useWindowDimensions();
   const { user, isAdmin } = useAuth();
 
-  const [posts,        setPosts]        = useState<MosquePost[]>([]);
+  const [posts,           setPosts]           = useState<MosquePost[]>([]);
+  const [recurringEvents, setRecurringEvents] = useState<RecurringEvent[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [unauthorized, setUnauthorized] = useState(false);
   const [activeTab,    setActiveTab]    = useState<TabType>(initialTab === 'announcements' ? 'announcements' : 'events');
   const [mosqueWebsite, setMosqueWebsite] = useState<string | null>(null);
+  const [mosqueName,    setMosqueName]    = useState<string>('');
   const [syncing,      setSyncing]      = useState(false);
+  const [formDirty,    setFormDirty]    = useState(false);
 
   // Form state
   const [showForm,      setShowForm]      = useState(false);
@@ -70,13 +101,21 @@ export default function PostsScreen() {
   const [endTime,       setEndTime]       = useState<Date | null>(null);
   const [saving,        setSaving]        = useState(false);
 
+  // Recurring event form state
+  const [isRecurring,         setIsRecurring]         = useState(false);
+  const [editingRecurringId,  setEditingRecurringId]  = useState<string | null>(null);
+  const [recurDayOfWeek,      setRecurDayOfWeek]      = useState(1); // Monday
+  const [recurAnchorPrayer,   setRecurAnchorPrayer]   = useState('isha');
+  const [recurOffsetMinutes,  setRecurOffsetMinutes]  = useState('0');
+  const [recurOffsetSign,     setRecurOffsetSign]     = useState<'before' | 'after'>('after');
+
   const loadData = useCallback(async () => {
     if (!mosqueId || !user) return;
     setLoading(true);
 
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, owner_id, website')
+      .select('id, owner_id, name, website')
       .eq('id', mosqueId)
       .maybeSingle();
 
@@ -86,6 +125,7 @@ export default function PostsScreen() {
       return;
     }
     setMosqueWebsite(m.website ?? null);
+    setMosqueName(m.name ?? '');
 
     const eventCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: p } = await supabase
@@ -96,15 +136,37 @@ export default function PostsScreen() {
       .order('created_at', { ascending: false });
 
     setPosts((p as MosquePost[]) ?? []);
+
+    const { data: re } = await supabase
+      .from('recurring_mosque_events')
+      .select('id, title, body, category, day_of_week, anchor_prayer, anchor_offset_minutes, active')
+      .eq('mosque_id', mosqueId)
+      .order('day_of_week', { ascending: true });
+
+    setRecurringEvents((re as RecurringEvent[]) ?? []);
     setLoading(false);
   }, [mosqueId, user, isAdmin]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const clearForm = () => {
+    setFormDirty(false);
     setPostTitle(''); setPostBody(''); setPostCategory('');
     setEventDate(null); setStartTime(null); setEndTime(null);
     setEditingPostId(null); setShowForm(false);
+    setIsRecurring(false); setEditingRecurringId(null);
+    setRecurDayOfWeek(1); setRecurAnchorPrayer('isha'); setRecurOffsetMinutes('0'); setRecurOffsetSign('after');
+  };
+
+  const handleCloseForm = () => {
+    if (formDirty) {
+      Alert.alert('Discard changes?', 'Your unsaved changes will be lost.', [
+        { text: 'Keep Editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: clearForm },
+      ]);
+    } else {
+      clearForm();
+    }
   };
 
   const openAddForm = () => {
@@ -114,11 +176,14 @@ export default function PostsScreen() {
   };
 
   const openEditForm = (p: MosquePost) => {
+    setFormDirty(false);
     setPostType(p.type);
     setPostTitle(p.title);
     setPostBody(p.body ?? '');
     setPostCategory(p.category ?? '');
     setEditingPostId(p.id);
+    setIsRecurring(false);
+    setEditingRecurringId(null);
     if (p.event_start) {
       const d = new Date(p.event_start);
       setEventDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -130,11 +195,88 @@ export default function PostsScreen() {
     setShowForm(true);
   };
 
+  const openEditRecurringForm = (r: RecurringEvent) => {
+    setFormDirty(false);
+    setPostType('event');
+    setPostTitle(r.title);
+    setPostBody(r.body ?? '');
+    setPostCategory(r.category ?? '');
+    setEditingPostId(null);
+    setEventDate(null); setStartTime(null); setEndTime(null);
+    setIsRecurring(true);
+    setEditingRecurringId(r.id);
+    setRecurDayOfWeek(r.day_of_week);
+    setRecurAnchorPrayer(r.anchor_prayer);
+    setRecurOffsetSign(r.anchor_offset_minutes < 0 ? 'before' : 'after');
+    setRecurOffsetMinutes(String(Math.abs(r.anchor_offset_minutes)));
+    setShowForm(true);
+  };
+
+  const toggleRecurringActive = async (r: RecurringEvent) => {
+    try {
+      const { error } = await supabase.from('recurring_mosque_events').update({ active: !r.active }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      loadData();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
+  const handleDeleteRecurring = (id: string) => {
+    Alert.alert('Delete', 'Remove this recurring event?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await supabase.from('recurring_mosque_events').delete().eq('id', id);
+            if (error) throw new Error(error.message);
+            loadData();
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
+        },
+      },
+    ]);
+  };
+
   const handleSave = async () => {
     if (!postTitle.trim()) {
       Alert.alert('Required', 'Enter a title.');
       return;
     }
+
+    if (postType === 'event' && isRecurring) {
+      const catVal = postCategory || null;
+      const payload = {
+        title: postTitle.trim(),
+        body: postBody.trim() || null,
+        category: catVal,
+        day_of_week: recurDayOfWeek,
+        anchor_prayer: recurAnchorPrayer,
+        anchor_offset_minutes: (parseInt(recurOffsetMinutes, 10) || 0) * (recurOffsetSign === 'before' ? -1 : 1),
+      };
+      setSaving(true);
+      try {
+        if (editingRecurringId) {
+          const { error } = await supabase.from('recurring_mosque_events').update(payload).eq('id', editingRecurringId);
+          if (error) throw new Error(error.message);
+        } else {
+          const { error } = await supabase.from('recurring_mosque_events').insert({
+            ...payload, mosque_id: mosqueId, created_by: user!.id,
+          });
+          if (error) throw new Error(error.message);
+        }
+        clearForm();
+        loadData();
+      } catch (e: any) {
+        Alert.alert('Error', e.message);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (postType === 'event' && (startTime || endTime) && !eventDate) {
       Alert.alert('Date required', 'Pick the date before setting a start or end time.');
       return;
@@ -180,6 +322,17 @@ export default function PostsScreen() {
           ...payload, mosque_id: mosqueId, created_by: user!.id,
         });
         if (error) throw new Error(error.message);
+        // Notify followers when a new announcement is published.
+        if (postType === 'announcement') {
+          supabase.functions.invoke('notify-mosque-followers', {
+            body: {
+              mosqueId,
+              mosqueName,
+              notifTitle: postTitle.trim(),
+              notifBody: postBody.trim() || 'New announcement — tap to view.',
+            },
+          }).then(() => {}).catch(() => {});
+        }
       }
       clearForm();
       loadData();
@@ -192,7 +345,14 @@ export default function PostsScreen() {
 
   const handleSyncFromWebsite = async () => {
     if (!mosqueWebsite) {
-      Alert.alert('No website set', 'Add a website URL in portal settings before syncing.');
+      Alert.alert(
+        'No website set',
+        'Add a website URL in Page Settings to sync events automatically.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go to Settings', onPress: () => router.push(`/mosque/${mosqueId}/portal-settings` as any) },
+        ],
+      );
       return;
     }
     setSyncing(true);
@@ -301,8 +461,13 @@ export default function PostsScreen() {
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
-          await supabase.from('mosque_posts').delete().eq('id', postId);
-          loadData();
+          try {
+            const { error } = await supabase.from('mosque_posts').delete().eq('id', postId);
+            if (error) throw new Error(error.message);
+            loadData();
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
         },
       },
     ]);
@@ -364,6 +529,43 @@ export default function PostsScreen() {
           contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Recurring events */}
+          {activeTab === 'events' && recurringEvents.length > 0 && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={s.sectionLabel}>Recurring</Text>
+              {recurringEvents.map(r => (
+                <View key={r.id} style={[s.postCard, !r.active && s.postCardInactive]}>
+                  <View style={{ flex: 1 }}>
+                    {r.category ? (
+                      <Text style={s.postCategory}>{r.category.toUpperCase()}</Text>
+                    ) : null}
+                    <Text style={s.postTitle}>{r.title}</Text>
+                    <Text style={s.postMeta}>
+                      Every {DAY_NAMES[r.day_of_week]}, {offsetLabel(r.anchor_offset_minutes)}{' '}
+                      {ANCHOR_PRAYERS.find(p => p.key === r.anchor_prayer)?.label ?? r.anchor_prayer}
+                    </Text>
+                    {!r.active ? <Text style={s.postInactiveLabel}>Paused</Text> : null}
+                  </View>
+                  <View style={s.postActions}>
+                    <TouchableOpacity onPress={() => toggleRecurringActive(r)} hitSlop={8}>
+                      <Ionicons
+                        name={r.active ? 'pause-circle-outline' : 'play-circle-outline'}
+                        size={18}
+                        color={r.active ? TEXT_MUTED : GREEN}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openEditRecurringForm(r)} hitSlop={8} style={s.postEditBtn}>
+                      <Ionicons name="pencil-outline" size={16} color={GREEN} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteRecurring(r.id)} hitSlop={8}>
+                      <Ionicons name="trash-outline" size={18} color={RED} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* Post list */}
           {filteredPosts.length === 0 ? (
             <View style={s.emptyState}>
@@ -443,7 +645,7 @@ export default function PostsScreen() {
         visible={showForm}
         animationType="slide"
         transparent
-        onRequestClose={clearForm}
+        onRequestClose={handleCloseForm}
       >
         <View style={fm.overlay}>
           <View style={[fm.sheet, { height: screenH * 0.92 }]}>
@@ -452,9 +654,13 @@ export default function PostsScreen() {
               <Text style={fm.formTitle}>
                 {editingPostId
                   ? `Edit ${postType === 'event' ? 'Event' : 'Announcement'}`
+                  : editingRecurringId
+                  ? 'Edit Recurring Event'
+                  : isRecurring
+                  ? 'New Recurring Event'
                   : `New ${activeTab === 'events' ? 'Event' : 'Announcement'}`}
               </Text>
-              <TouchableOpacity onPress={clearForm} hitSlop={8}>
+              <TouchableOpacity onPress={handleCloseForm} hitSlop={8}>
                 <Ionicons name="close" size={22} color={TEXT_MUTED} />
               </TouchableOpacity>
             </View>
@@ -466,7 +672,7 @@ export default function PostsScreen() {
                 showsVerticalScrollIndicator={false}
               >
                 {/* Type toggle — only shown when adding (editing type is fixed) */}
-                {!editingPostId && (
+                {!editingPostId && !editingRecurringId && (
                   <View style={fm.typeToggle}>
                     <TouchableOpacity
                       style={[fm.typeChip, postType === 'event' && fm.typeChipActive]}
@@ -476,7 +682,7 @@ export default function PostsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[fm.typeChip, postType === 'announcement' && fm.typeChipActive]}
-                      onPress={() => setPostType('announcement')}
+                      onPress={() => { setPostType('announcement'); setIsRecurring(false); }}
                     >
                       <Text style={[fm.typeChipText, postType === 'announcement' && fm.typeChipTextActive]}>Announcement</Text>
                     </TouchableOpacity>
@@ -489,7 +695,7 @@ export default function PostsScreen() {
                   placeholder="Event or announcement title"
                   placeholderTextColor={TEXT_MUTED}
                   value={postTitle}
-                  onChangeText={setPostTitle}
+                  onChangeText={(t) => { setPostTitle(t); setFormDirty(true); }}
                 />
                 <Text style={fm.label}>Details (optional)</Text>
                 <TextInput
@@ -497,7 +703,7 @@ export default function PostsScreen() {
                   placeholder="Additional details..."
                   placeholderTextColor={TEXT_MUTED}
                   value={postBody}
-                  onChangeText={setPostBody}
+                  onChangeText={(t) => { setPostBody(t); setFormDirty(true); }}
                   multiline
                 />
 
@@ -509,7 +715,7 @@ export default function PostsScreen() {
                         <TouchableOpacity
                           key={cat}
                           style={[fm.catChip, postCategory === cat && fm.catChipActive]}
-                          onPress={() => setPostCategory(prev => prev === cat ? '' : cat)}
+                          onPress={() => { setPostCategory(prev => prev === cat ? '' : cat); setFormDirty(true); }}
                           activeOpacity={0.75}
                         >
                           <Text style={[fm.catChipText, postCategory === cat && fm.catChipTextActive]}>
@@ -519,11 +725,92 @@ export default function PostsScreen() {
                       ))}
                     </View>
 
-                    <PickerField label="Date" mode="date" value={eventDate} onChange={setEventDate} />
-                    <View style={fm.timeRow}>
-                      <PickerField label="Starts" mode="time" value={startTime} onChange={setStartTime} style={fm.timeRowItem} />
-                      <PickerField label="Ends"   mode="time" value={endTime}   onChange={setEndTime}   style={fm.timeRowItem} />
-                    </View>
+                    <TouchableOpacity
+                      style={fm.recurringToggle}
+                      onPress={() => { setIsRecurring(v => !v); setFormDirty(true); }}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons
+                        name={isRecurring ? 'checkbox' : 'square-outline'}
+                        size={20}
+                        color={isRecurring ? GREEN : TEXT_MUTED}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={fm.recurringToggleTitle}>Recurring weekly</Text>
+                        <Text style={fm.recurringToggleSubtitle}>
+                          Repeats every week, timed to a prayer instead of a fixed clock time
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {isRecurring ? (
+                      <>
+                        <Text style={fm.label}>Repeats every</Text>
+                        <View style={fm.categoryRow}>
+                          {DAY_NAMES.map((day, i) => (
+                            <TouchableOpacity
+                              key={day}
+                              style={[fm.catChip, recurDayOfWeek === i && fm.catChipActive]}
+                              onPress={() => setRecurDayOfWeek(i)}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={[fm.catChipText, recurDayOfWeek === i && fm.catChipTextActive]}>{day}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        <Text style={fm.label}>Starts after</Text>
+                        <View style={fm.categoryRow}>
+                          {ANCHOR_PRAYERS.map(p => (
+                            <TouchableOpacity
+                              key={p.key}
+                              style={[fm.catChip, recurAnchorPrayer === p.key && fm.catChipActive]}
+                              onPress={() => setRecurAnchorPrayer(p.key)}
+                              activeOpacity={0.75}
+                            >
+                              <Text style={[fm.catChipText, recurAnchorPrayer === p.key && fm.catChipTextActive]}>{p.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        <Text style={fm.label}>Timing (0 = right at prayer time)</Text>
+                        <View style={fm.timeRow}>
+                          <TextInput
+                            style={[fm.input, fm.timeRowItem, { marginBottom: 0 }]}
+                            placeholder="0"
+                            placeholderTextColor={TEXT_MUTED}
+                            value={recurOffsetMinutes}
+                            onChangeText={setRecurOffsetMinutes}
+                            keyboardType="number-pad"
+                          />
+                          <View style={[fm.typeToggle, fm.timeRowItem, { marginBottom: 0 }]}>
+                            <TouchableOpacity
+                              style={[fm.typeChip, recurOffsetSign === 'before' && fm.typeChipActive]}
+                              onPress={() => setRecurOffsetSign('before')}
+                            >
+                              <Text style={[fm.typeChipText, recurOffsetSign === 'before' && fm.typeChipTextActive]}>Before</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[fm.typeChip, recurOffsetSign === 'after' && fm.typeChipActive]}
+                              onPress={() => setRecurOffsetSign('after')}
+                            >
+                              <Text style={[fm.typeChipText, recurOffsetSign === 'after' && fm.typeChipTextActive]}>After</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 6, marginBottom: 16 }}>
+                          Minutes {recurOffsetSign} the {ANCHOR_PRAYERS.find(p => p.key === recurAnchorPrayer)?.label ?? recurAnchorPrayer} iqama time
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <PickerField label="Date" mode="date" value={eventDate} onChange={(d) => { setEventDate(d); setFormDirty(true); }} />
+                        <View style={fm.timeRow}>
+                          <PickerField label="Starts" mode="time" value={startTime} onChange={(d) => { setStartTime(d); setFormDirty(true); }} style={fm.timeRowItem} />
+                          <PickerField label="Ends"   mode="time" value={endTime}   onChange={(d) => { setEndTime(d); setFormDirty(true); }}   style={fm.timeRowItem} />
+                        </View>
+                      </>
+                    )}
                   </>
                 )}
 
@@ -536,7 +823,11 @@ export default function PostsScreen() {
                   {saving
                     ? <ActivityIndicator color="#fff" />
                     : <Text style={fm.saveBtnText}>
-                        {editingPostId ? 'Save Changes' : `Add ${postType === 'event' ? 'Event' : 'Announcement'}`}
+                        {editingPostId || editingRecurringId
+                          ? 'Save Changes'
+                          : isRecurring
+                          ? 'Add Recurring Event'
+                          : `Add ${postType === 'event' ? 'Event' : 'Announcement'}`}
                       </Text>}
                 </TouchableOpacity>
               </ScrollView>
@@ -648,6 +939,13 @@ const fm = StyleSheet.create({
   catChipActive: { backgroundColor: DEEP_GREEN, borderColor: DEEP_GREEN },
   catChipText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
   catChipTextActive: { color: '#fff' },
+  recurringToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: CREAM, borderWidth: 1.5, borderColor: HAIRLINE,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 16,
+  },
+  recurringToggleTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
+  recurringToggleSubtitle: { fontSize: 12, color: TEXT_MUTED, marginTop: 1, lineHeight: 16 },
   timeRow: { flexDirection: 'row', gap: 10 },
   timeRowItem: { flex: 1, marginBottom: 0 },
   dateBtn: {
@@ -686,6 +984,8 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
   emptySubtitle: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center', lineHeight: 19, maxWidth: 260 },
 
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.6, marginBottom: 8, textTransform: 'uppercase' },
+
   postCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10,
@@ -693,10 +993,12 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
   postCardEditing: { borderWidth: 1.5, borderColor: GREEN },
+  postCardInactive: { opacity: 0.55 },
   postCategory: { fontSize: 10, fontWeight: '700', color: GREEN, letterSpacing: 0.6, marginBottom: 2 },
   postTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
   postMeta: { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
   postBody: { fontSize: 12, color: TEXT_MUTED, marginTop: 3, lineHeight: 17 },
+  postInactiveLabel: { fontSize: 11, fontWeight: '700', color: RED, marginTop: 3 },
   postActions: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2 },
   postEditBtn: { padding: 2 },
 

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const { mosqueId, mosqueName } = await req.json();
+  const { mosqueId, mosqueName, notifTitle, notifBody } = await req.json();
 
   if (!mosqueId) {
     return new Response('Missing mosqueId', { status: 400 });
@@ -84,12 +84,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
   }
 
+  const pushTitle = notifTitle ?? `Iqama times updated at ${displayName}`;
+  const pushBody  = notifBody  ?? 'Tap to see the new schedule.';
+
   const messages = tokens.map((t: any) => ({
     to: t.token,
     sound: 'default',
-    title: `Iqama times updated at ${displayName}`,
-    body: 'Tap to see the new schedule.',
-    data: { type: 'iqama_update', mosqueId, mosqueOsmId: mosque.osm_id },
+    title: pushTitle,
+    body: pushBody,
+    data: { type: notifTitle ? 'announcement' : 'iqama_update', mosqueId, mosqueOsmId: mosque.osm_id },
   }));
 
   const response = await fetch('https://exp.host/--/api/v2/push/send', {

@@ -11,6 +11,14 @@ const PURPLE    = '#6d28d9';
 const PURPLE_BG = '#ede9fe';
 const ICON_BG   = '#EFF6F1';
 
+function parseHours(raw: string): { label: string; time: string }[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return [{ label: '', time: raw }];
+}
+
 export interface PrayerRoomGuideCardData {
   id: string;
   building_name: string;
@@ -68,8 +76,14 @@ export default function PrayerRoomGuideCard({ room, onPress }: Props) {
 
         {room.hours ? (
           <View style={s.infoRow}>
-            <Ionicons name="time-outline" size={12} color={TEXT_MUTED} />
-            <Text style={[s.infoText, { color: TEXT_MUTED }]}>{room.hours}</Text>
+            <Ionicons name="time-outline" size={12} color={TEXT_MUTED} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              {parseHours(room.hours).map((line, i) => (
+                <Text key={i} style={[s.infoText, { color: TEXT_MUTED }]}>
+                  {line.label ? <Text style={{ fontWeight: '700' }}>{line.label}{'  '}</Text> : null}{line.time}
+                </Text>
+              ))}
+            </View>
           </View>
         ) : null}
 

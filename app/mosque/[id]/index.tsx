@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Alert, Linking, Modal, Platform,
-  ScrollView, Share, StyleSheet, Text, TouchableOpacity, View,
+  ScrollView, SectionList, Share, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -125,6 +125,7 @@ interface MosqueRow {
   website: string | null;
   iqama_times: Record<string, string> | null;
   jummah_sessions: JummahSession[] | null;
+  iqama_updated_at: string | null;
 }
 
 
@@ -167,6 +168,15 @@ function stripHtml(raw: string): string {
     .replace(/\\n/g, ' ')   // literal \n escape sequences from JSON-LD sources
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+function formatIqamaUpdated(iso: string): string {
+  const d = new Date(iso);
+  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (diffDays === 0) return 'Updated today';
+  if (diffDays === 1) return 'Updated yesterday';
+  if (diffDays < 7) return `Updated ${diffDays} days ago`;
+  return `Updated ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 }
 
 function formatEventRange(startIso: string, endIso: string | null): string {
@@ -284,7 +294,7 @@ export default function MosqueDetailScreen() {
 
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, osm_id, name, address, lat, lng, owner_id, cover_image_url, amenities, description, contact_phone, contact_email, website, iqama_times, jummah_sessions')
+      .select('id, osm_id, name, address, lat, lng, owner_id, cover_image_url, amenities, description, contact_phone, contact_email, website, iqama_times, jummah_sessions, iqama_updated_at')
       .eq('osm_id', osmId)
       .maybeSingle();
 
@@ -392,8 +402,8 @@ export default function MosqueDetailScreen() {
 
   const upcomingEvents = posts.filter(p => p.type === 'event' && (!p.event_start || new Date(p.event_start) >= new Date()));
   const announcements  = posts.filter(p => p.type === 'announcement');
-  const [showAllEvents, setShowAllEvents] = useState(false);
-  const visibleEvents = showAllEvents ? upcomingEvents : upcomingEvents.slice(0, 3);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const previewEvents = upcomingEvents.slice(0, 3);
 
   if (loading) {
     return (
@@ -448,8 +458,9 @@ export default function MosqueDetailScreen() {
             </View>
             {displayAddress ? (
               <TouchableOpacity style={s.addressRow} onPress={openDirections}>
-                <Ionicons name="location-outline" size={13} color={TEXT_MUTED} />
+                <Ionicons name="location-outline" size={13} color={GREEN} />
                 <Text style={s.addressText} numberOfLines={1}>{displayAddress}</Text>
+                <Ionicons name="chevron-forward" size={12} color={GREEN} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -459,35 +470,17 @@ export default function MosqueDetailScreen() {
           <Text style={s.description}>{mosque.description}</Text>
         ) : null}
 
-        {/* follow for Iqama times — placed before iqama grid so the action
-            is contextually obvious when users land on the prayer times */}
-        {mosque && (
-          <TouchableOpacity
-            style={followedMosqueId === mosque.id ? s.followBtnActive : s.followBtn}
-            onPress={toggleFollow}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name={followedMosqueId === mosque.id ? 'checkmark-circle' : 'notifications-outline'}
-              size={16}
-              color={followedMosqueId === mosque.id ? GREEN : '#fff'}
-            />
-            <Text style={followedMosqueId === mosque.id ? s.followBtnTextActive : s.followBtnText}>
-              {followedMosqueId === mosque.id ? 'Following for Iqama Times' : 'Follow for Iqama Times'}
-            </Text>
-            {followedMosqueId !== mosque.id && <Ionicons name="chevron-forward" size={14} color="#fff" />}
-          </TouchableOpacity>
-        )}
-        {mosque && followedMosqueId === mosque.id && !user && (
-          <Text style={s.followNote}>Sign in to get notified when times change.</Text>
-        )}
-
         {/* iqama times */}
         {mosque?.iqama_times && Object.keys(mosque.iqama_times).length > 0 ? (() => {
           const { active, next } = getIqamaState(mosque.iqama_times!);
           return (
             <View style={s.card}>
-              <Text style={s.sectionTitle}>Iqama Times</Text>
+              <View style={s.sectionHeader}>
+                <Text style={s.sectionTitle}>Iqama Times</Text>
+                {mosque.iqama_updated_at ? (
+                  <Text style={s.iqamaUpdated}>{formatIqamaUpdated(mosque.iqama_updated_at)}</Text>
+                ) : null}
+              </View>
               <View style={s.iqamaGrid}>
                 {IQAMA_LABELS.map((l, i) => {
                   const time    = mosque.iqama_times?.[l.key];
@@ -526,6 +519,29 @@ export default function MosqueDetailScreen() {
             </View>
           );
         })() : null}
+
+        {/* follow for Iqama times — placed after the iqama grid so the
+            payoff (actual times) is visible before asking for the follow */}
+        {mosque && (
+          <TouchableOpacity
+            style={followedMosqueId === mosque.id ? s.followBtnActive : s.followBtn}
+            onPress={toggleFollow}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name={followedMosqueId === mosque.id ? 'checkmark-circle' : 'notifications-outline'}
+              size={16}
+              color={followedMosqueId === mosque.id ? GREEN : '#fff'}
+            />
+            <Text style={followedMosqueId === mosque.id ? s.followBtnTextActive : s.followBtnText}>
+              {followedMosqueId === mosque.id ? 'Following for Iqama Times' : 'Follow for Iqama Times'}
+            </Text>
+            {followedMosqueId !== mosque.id && <Ionicons name="chevron-forward" size={14} color="#fff" />}
+          </TouchableOpacity>
+        )}
+        {mosque && followedMosqueId === mosque.id && !user && (
+          <Text style={s.followNote}>Sign in to get notified when times change.</Text>
+        )}
 
         {/* jummah sessions — multiple slots, each with its own khateeb,
             re-entered weekly by the mosque, so shown separately from the
@@ -587,12 +603,12 @@ export default function MosqueDetailScreen() {
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Upcoming Events</Text>
               {upcomingEvents.length > 3 ? (
-                <TouchableOpacity onPress={() => setShowAllEvents(v => !v)} hitSlop={8}>
-                  <Text style={s.viewAll}>{showAllEvents ? 'Show less' : 'View all'}</Text>
+                <TouchableOpacity onPress={() => setShowEventsModal(true)} hitSlop={8}>
+                  <Text style={s.viewAll}>View all ({upcomingEvents.length})</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-            {visibleEvents.map((ev, i) => {
+            {previewEvents.map((ev, i) => {
               const { location } = parseEventBody(ev.body);
               const date = ev.event_start ? new Date(ev.event_start) : null;
               const month = date ? date.toLocaleString('en-US', { month: 'short' }).toUpperCase() : null;
@@ -605,7 +621,6 @@ export default function MosqueDetailScreen() {
                   onPress={() => setSelectedEvent(ev)}
                   activeOpacity={0.7}
                 >
-                  {/* date tile */}
                   {date ? (
                     <View style={s.dateTile}>
                       <Text style={s.dateTileMonth}>{month}</Text>
@@ -616,8 +631,6 @@ export default function MosqueDetailScreen() {
                       <Ionicons name="calendar-outline" size={20} color={GREEN} />
                     </View>
                   )}
-
-                  {/* details */}
                   <View style={s.eventDetails}>
                     <Text style={s.eventTitle} numberOfLines={1}>{ev.title}</Text>
                     {time ? <Text style={s.eventMeta} numberOfLines={1}>{time}</Text> : null}
@@ -628,8 +641,6 @@ export default function MosqueDetailScreen() {
                       </View>
                     ) : null}
                   </View>
-
-                  {/* badge + chevron */}
                   <View style={s.eventRight}>
                     <View style={s.upcomingBadge}>
                       <Text style={s.upcomingBadgeText}>Upcoming</Text>
@@ -639,8 +650,28 @@ export default function MosqueDetailScreen() {
                 </TouchableOpacity>
               );
             })}
+            {upcomingEvents.length > 3 && (
+              <TouchableOpacity
+                style={s.viewAllRow}
+                onPress={() => setShowEventsModal(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={s.viewAllRowText}>View all {upcomingEvents.length} events</Text>
+                <Ionicons name="arrow-forward" size={14} color={GREEN} />
+              </TouchableOpacity>
+            )}
           </View>
         ) : null}
+
+        {/* all events modal */}
+        <AllEventsModal
+          visible={showEventsModal}
+          onClose={() => setShowEventsModal(false)}
+          events={upcomingEvents}
+          mosqueName={displayName}
+          user={user}
+          router={router}
+        />
 
         {/* event detail modal */}
         <Modal
@@ -730,7 +761,7 @@ export default function MosqueDetailScreen() {
                               color={activeReminder ? GREEN : TEXT_MUTED}
                             />
                         }
-                        <Text style={[s.modalCloseBtnText, activeReminder && { color: GREEN }]}>
+                        <Text style={[s.modalReminderBtnText, activeReminder && { color: GREEN }]}>
                           {activeReminder
                             ? `Reminder set (${activeReminder.lead_minutes === 60 ? '1 hr' : '1 day'} before) · Remove`
                             : !user ? 'Sign in to set a reminder' : 'Set Reminder'}
@@ -879,7 +910,13 @@ const s = StyleSheet.create({
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
+  iqamaUpdated: { fontSize: 11, color: TEXT_MUTED, fontWeight: '500' },
   viewAll: { fontSize: 13, fontWeight: '600', color: GREEN },
+  viewAllRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingTop: 12, borderTopWidth: 1, borderTopColor: HAIRLINE,
+  },
+  viewAllRowText: { fontSize: 14, fontWeight: '700', color: GREEN },
 
   eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   eventRowBorder: { borderTopWidth: 1, borderTopColor: HAIRLINE },
@@ -990,6 +1027,7 @@ const s = StyleSheet.create({
   modalReminderBtnActive: {
     backgroundColor: GREEN + '12', borderColor: GREEN + '40',
   },
+  modalReminderBtnText: { color: TEXT_MUTED, fontSize: 15, fontWeight: '700' },
 
   manageBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1036,4 +1074,387 @@ const s = StyleSheet.create({
     fontSize: 22, fontWeight: '800', color: TEXT_DARK, letterSpacing: 3,
     textAlign: 'center', backgroundColor: '#fff', borderRadius: 10, paddingVertical: 10,
   },
+});
+
+// ─── All Events Modal ────────────────────────────────────────────────────────
+
+function AllEventsModal({
+  visible, onClose, events, mosqueName, user, router,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  events: MosquePost[];
+  mosqueName: string;
+  user: any;
+  router: any;
+}) {
+  const insets = useSafeAreaInsets();
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [detailEv, setDetailEv] = useState<MosquePost | null>(null);
+  const [activeReminder, setActiveReminder] = useState<{ lead_minutes: number } | null>(null);
+  const [reminderLoading, setReminderLoading] = useState(false);
+
+  // Reset filter and detail when modal opens/closes
+  useEffect(() => {
+    if (visible) setCategoryFilter(null);
+    else setDetailEv(null);
+  }, [visible]);
+
+  useEffect(() => {
+    if (!detailEv?.event_start || !user) { setActiveReminder(null); return; }
+    supabase
+      .from('event_reminders')
+      .select('lead_minutes')
+      .eq('post_id', detailEv.id)
+      .eq('user_id', user.id)
+      .eq('sent', false)
+      .maybeSingle()
+      .then(({ data }) => setActiveReminder(data ?? null));
+  }, [detailEv?.id, user?.id]);
+
+  const saveReminder = async (leadMinutes: number) => {
+    if (!detailEv) return;
+    setReminderLoading(true);
+    const { error } = await supabase.functions.invoke('set-event-reminder', {
+      body: { postId: detailEv.id, leadMinutes },
+    });
+    if (error) Alert.alert('Error', 'Could not save reminder. Please try again.');
+    else setActiveReminder({ lead_minutes: leadMinutes });
+    setReminderLoading(false);
+  };
+
+  const removeReminder = async () => {
+    if (!detailEv || !activeReminder) return;
+    setReminderLoading(true);
+    await supabase.functions.invoke('set-event-reminder', {
+      body: { postId: detailEv.id, leadMinutes: activeReminder.lead_minutes, action: 'delete' },
+    });
+    setActiveReminder(null);
+    setReminderLoading(false);
+  };
+
+  const promptSetReminder = () => {
+    Alert.alert('Set Reminder', 'How far in advance?', [
+      { text: '1 hour before', onPress: () => saveReminder(60) },
+      { text: '1 day before',  onPress: () => saveReminder(1440) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const ev of events) {
+      (ev.categories ?? []).forEach(c => { if (c) cats.add(c); });
+      if (ev.category) cats.add(ev.category);
+    }
+    return Array.from(cats).sort();
+  }, [events]);
+
+  const sections = useMemo(() => {
+    const filtered = categoryFilter
+      ? events.filter(e =>
+          (e.categories ?? []).includes(categoryFilter) || e.category === categoryFilter,
+        )
+      : events;
+
+    const byMonth: Record<string, MosquePost[]> = {};
+    for (const ev of filtered) {
+      const key = ev.event_start
+        ? new Date(ev.event_start).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : 'No Date';
+      if (!byMonth[key]) byMonth[key] = [];
+      byMonth[key].push(ev);
+    }
+    return Object.entries(byMonth).map(([title, data]) => ({ title, data }));
+  }, [events, categoryFilter]);
+
+  const filteredCount = sections.reduce((n, s) => n + s.data.length, 0);
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={[am.flex, { paddingTop: insets.top }]}>
+        {/* Header */}
+        <View style={am.header}>
+          <TouchableOpacity style={am.backBtn} onPress={onClose} hitSlop={10}>
+            <Ionicons name="arrow-back" size={20} color={DEEP_GREEN} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={am.headerTitle}>Upcoming Events</Text>
+            <Text style={am.headerSub} numberOfLines={1}>{mosqueName}</Text>
+          </View>
+          <Text style={am.headerCount}>{filteredCount} event{filteredCount !== 1 ? 's' : ''}</Text>
+        </View>
+
+        {/* Category filter chips */}
+        {categories.length > 0 && (
+          <View style={am.chipsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={am.chipsRow}
+            >
+              <TouchableOpacity
+                style={[am.chip, !categoryFilter && am.chipActive]}
+                onPress={() => setCategoryFilter(null)}
+                activeOpacity={0.75}
+              >
+                <Text style={[am.chipText, !categoryFilter && am.chipTextActive]}>All</Text>
+              </TouchableOpacity>
+              {categories.map(cat => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[am.chip, categoryFilter === cat && am.chipActive]}
+                  onPress={() => setCategoryFilter(prev => prev === cat ? null : cat)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[am.chipText, categoryFilter === cat && am.chipTextActive]}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Events list */}
+        {sections.length === 0 ? (
+          <View style={am.empty}>
+            <Ionicons name="calendar-outline" size={40} color={HAIRLINE} />
+            <Text style={am.emptyText}>No events in this category</Text>
+          </View>
+        ) : (
+          <SectionList
+            sections={sections}
+            keyExtractor={(item, index) => `${index}-${item.id}`}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+            stickySectionHeadersEnabled
+            renderSectionHeader={({ section }) => (
+              <View style={am.monthHeader}>
+                <Text style={am.monthHeaderText}>{section.title.toUpperCase()}</Text>
+              </View>
+            )}
+            renderItem={({ item: ev, index, section }) => {
+              const { location } = parseEventBody(ev.body);
+              const date  = ev.event_start ? new Date(ev.event_start) : null;
+              const month = date ? date.toLocaleString('en-US', { month: 'short' }).toUpperCase() : null;
+              const day   = date ? date.getDate() : null;
+              const time  = date
+                ? date.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+                : null;
+              const isLast = index === section.data.length - 1;
+
+              return (
+                <TouchableOpacity
+                  style={[am.eventRow, !isLast && am.eventRowBorder]}
+                  onPress={() => setDetailEv(ev)}
+                  activeOpacity={0.7}
+                >
+                  {date ? (
+                    <View style={am.dateTile}>
+                      <Text style={am.dateTileMonth}>{month}</Text>
+                      <Text style={am.dateTileDay}>{day}</Text>
+                    </View>
+                  ) : (
+                    <View style={am.dateTile}>
+                      <Ionicons name="calendar-outline" size={20} color={GREEN} />
+                    </View>
+                  )}
+                  <View style={am.eventDetails}>
+                    <Text style={am.eventTitle} numberOfLines={2}>{ev.title}</Text>
+                    {time ? <Text style={am.eventTime}>{time}</Text> : null}
+                    {location ? (
+                      <View style={am.locationRow}>
+                        <Ionicons name="location-outline" size={11} color={TEXT_MUTED} />
+                        <Text style={am.locationText} numberOfLines={1}>{location}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+
+        {/* Event detail overlay — rendered inside this modal to avoid iOS stacked-modal issues */}
+        {detailEv ? (() => {
+          const { description, location } = parseEventBody(detailEv.body);
+          return (
+            <TouchableOpacity
+              style={am.detailOverlay}
+              activeOpacity={1}
+              onPress={() => setDetailEv(null)}
+            >
+              <TouchableOpacity activeOpacity={1} style={[am.detailSheet, { paddingBottom: insets.bottom + 24 }]}>
+                <View style={am.detailHandle} />
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {(detailEv.categories?.length > 0 ? detailEv.categories : detailEv.category ? [detailEv.category] : []).map(cat => (
+                    <Text key={cat} style={am.detailCategory}>{cat.toUpperCase()}</Text>
+                  ))}
+                  <Text style={am.detailTitle}>{detailEv.title}</Text>
+                  {detailEv.event_start ? (
+                    <View style={am.detailRow}>
+                      <Ionicons name="time-outline" size={16} color={GREEN} />
+                      <Text style={am.detailRowText}>{formatEventRange(detailEv.event_start, detailEv.event_end)}</Text>
+                    </View>
+                  ) : null}
+                  {location ? (
+                    <View style={am.detailRow}>
+                      <Ionicons name="location-outline" size={16} color={GREEN} />
+                      <Text style={am.detailRowText}>{location}</Text>
+                    </View>
+                  ) : null}
+                  {description ? <Text style={am.detailBody}>{description}</Text> : null}
+                </ScrollView>
+                {detailEv.source_url ? (
+                  <TouchableOpacity style={am.detailLinkBtn} onPress={() => Linking.openURL(detailEv.source_url!)}>
+                    <Ionicons name="open-outline" size={15} color={GREEN} />
+                    <Text style={am.detailLinkBtnText}>View on website</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {detailEv.event_start && new Date(detailEv.event_start) > new Date() && (
+                  <TouchableOpacity
+                    style={[am.detailBtn, am.detailReminderBtn, activeReminder && am.detailReminderBtnActive]}
+                    onPress={() => {
+                      if (!user) {
+                        setDetailEv(null);
+                        onClose();
+                        setGuestLoginIntent(true);
+                        router.push('/(auth)/login');
+                      } else if (activeReminder) {
+                        Alert.alert(
+                          'Remove Reminder',
+                          `Remove your ${activeReminder.lead_minutes === 60 ? '1 hour' : '1 day'} reminder?`,
+                          [
+                            { text: 'Remove', style: 'destructive', onPress: removeReminder },
+                            { text: 'Cancel', style: 'cancel' },
+                          ],
+                        );
+                      } else {
+                        promptSetReminder();
+                      }
+                    }}
+                    disabled={reminderLoading}
+                  >
+                    {reminderLoading
+                      ? <ActivityIndicator size="small" color={activeReminder ? GREEN : TEXT_MUTED} />
+                      : <Ionicons name={activeReminder ? 'notifications' : 'notifications-outline'} size={16} color={activeReminder ? GREEN : TEXT_MUTED} />
+                    }
+                    <Text style={[am.detailReminderBtnText, activeReminder && { color: GREEN }]}>
+                      {activeReminder
+                        ? `Reminder set (${activeReminder.lead_minutes === 60 ? '1 hr' : '1 day'} before) · Remove`
+                        : !user ? 'Sign in to set a reminder' : 'Set Reminder'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={am.detailBtn} onPress={() => setDetailEv(null)}>
+                  <Text style={am.detailBtnText}>Close</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          );
+        })() : null}
+      </View>
+    </Modal>
+  );
+}
+
+const am = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: CREAM },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  backBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: TEXT_DARK },
+  headerSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  headerCount: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
+
+  chipsContainer: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: HAIRLINE },
+  chipsRow: { paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', gap: 8 },
+  chip: {
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1.5, borderColor: HAIRLINE, backgroundColor: '#fff',
+  },
+  chipActive: { backgroundColor: DEEP_GREEN, borderColor: DEEP_GREEN },
+  chipText: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
+  chipTextActive: { color: '#fff' },
+
+  monthHeader: {
+    paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: CREAM, borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  monthHeaderText: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.8 },
+
+  eventRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14, paddingHorizontal: 16, backgroundColor: '#fff',
+  },
+  eventRowBorder: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
+
+  dateTile: {
+    width: 48, height: 52, borderRadius: 12,
+    backgroundColor: '#EFF6F1',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  dateTileMonth: { fontSize: 10, fontWeight: '700', color: GREEN, letterSpacing: 0.5 },
+  dateTileDay:   { fontSize: 20, fontWeight: '800', color: DEEP_GREEN, lineHeight: 24 },
+  dateTileEmpty: { width: 48, flexShrink: 0 },
+
+  eventDetails: { flex: 1, gap: 2 },
+  eventTitle:   { fontSize: 14, fontWeight: '700', color: TEXT_DARK, lineHeight: 20 },
+  eventTime:    { fontSize: 12, color: TEXT_MUTED },
+  locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
+  locationText: { fontSize: 12, color: TEXT_MUTED, flex: 1 },
+
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  emptyText: { fontSize: 14, color: TEXT_MUTED },
+
+  // Event detail overlay (shown inside this modal, no nested modal needed)
+  detailOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  detailSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingTop: 12,
+    maxHeight: '85%',
+  },
+  detailHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: HAIRLINE, alignSelf: 'center', marginBottom: 20,
+  },
+  detailCategory: { fontSize: 11, fontWeight: '700', color: GREEN, letterSpacing: 0.8, marginBottom: 6 },
+  detailTitle:    { fontSize: 20, fontWeight: '800', color: TEXT_DARK, lineHeight: 26, marginBottom: 16 },
+  detailRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  detailRowText:  { flex: 1, fontSize: 14, color: TEXT_DARK, lineHeight: 20 },
+  detailBody: {
+    fontSize: 14, color: TEXT_MUTED, lineHeight: 22,
+    marginTop: 16, paddingTop: 16,
+    borderTopWidth: 1, borderTopColor: HAIRLINE,
+  },
+  detailLinkBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 20, borderWidth: 1.5, borderColor: GREEN,
+    borderRadius: 14, paddingVertical: 13,
+  },
+  detailLinkBtnText: { fontSize: 14, fontWeight: '600', color: GREEN },
+  detailBtn: {
+    marginTop: 10, backgroundColor: DEEP_GREEN,
+    borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+  },
+  detailBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  detailReminderBtn: {
+    flexDirection: 'row', gap: 6, justifyContent: 'center',
+    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e5e7eb',
+  },
+  detailReminderBtnActive: { backgroundColor: GREEN + '12', borderColor: GREEN + '40' },
+  detailReminderBtnText:   { color: TEXT_MUTED, fontSize: 15, fontWeight: '700' },
 });

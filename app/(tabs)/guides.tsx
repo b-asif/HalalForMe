@@ -31,14 +31,15 @@ interface Guide {
 }
 
 const CATEGORIES: { key: string; label: string; icon: string }[] = [
-  { key: 'universities', label: 'Universities', icon: 'school-outline'      },
-  { key: 'cities',       label: 'Cities',       icon: 'business-outline'    },
-  { key: 'travel',       label: 'Travel',       icon: 'airplane-outline'    },
-  { key: 'food',         label: 'Food',         icon: 'restaurant-outline'  },
-  { key: 'cafes',        label: 'Cafés',        icon: 'cafe-outline'        },
-  { key: 'ramadan',      label: 'Ramadan',      icon: 'moon-outline'        },
-  { key: 'family',       label: 'Family',       icon: 'people-outline'      },
-  { key: 'reverts',      label: 'Reverts',      icon: 'book-outline'        },
+  { key: 'universities', label: 'Universities',      icon: 'school-outline'      },
+  { key: 'cities',       label: 'Cities',            icon: 'business-outline'    },
+  { key: 'travel',       label: 'Travel',            icon: 'airplane-outline'    },
+  { key: 'food',         label: 'Food',              icon: 'restaurant-outline'  },
+  { key: 'cafes',        label: 'Cafés',             icon: 'cafe-outline'        },
+  { key: 'butcher',      label: 'Butcher & Grocery', icon: 'storefront-outline'  },
+  { key: 'ramadan',      label: 'Ramadan',           icon: 'moon-outline'        },
+  { key: 'family',       label: 'Family',            icon: 'people-outline'      },
+  { key: 'reverts',      label: 'Reverts',           icon: 'book-outline'        },
 ];
 
 const CATEGORY_TYPE_LABEL: Record<string, string> = {
@@ -47,6 +48,7 @@ const CATEGORY_TYPE_LABEL: Record<string, string> = {
   travel:       'Travel Guide',
   food:         'Food Guide',
   cafes:        'Café Guide',
+  butcher:      'Butcher & Grocery Guide',
   ramadan:      'Ramadan Guide',
   family:       'Family Guide',
   reverts:      'Reverts Guide',

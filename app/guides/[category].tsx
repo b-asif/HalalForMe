@@ -39,6 +39,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   ramadan:      'Ramadan Guides',
   family:       'Family Guides',
   reverts:      'Reverts Guides',
+  butcher:      'Butcher & Grocery Guides',
 };
 
 const CATEGORY_ICON: Record<string, string> = {
@@ -51,6 +52,7 @@ const CATEGORY_ICON: Record<string, string> = {
   ramadan:      'moon-outline',
   family:       'people-outline',
   reverts:      'book-outline',
+  butcher:      'storefront-outline',
 };
 
 const SEARCH_PLACEHOLDER: Record<string, string> = {
@@ -62,6 +64,7 @@ const SEARCH_PLACEHOLDER: Record<string, string> = {
   ramadan:      'Search Ramadan guides...',
   family:       'Search family guides...',
   reverts:      'Search guides...',
+  butcher:      'Search butcher & grocery guides...',
   all:          'Search all guides...',
 };
 

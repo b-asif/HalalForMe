@@ -58,6 +58,16 @@ interface MonthlySummary {
   lowConfidenceCount: number;
 }
 
+function iqamaTimesEqual(
+  a: Record<string, string | null> | null | undefined,
+  b: Record<string, string | null> | null | undefined,
+): boolean {
+  for (const key of ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']) {
+    if ((a?.[key] ?? null) !== (b?.[key] ?? null)) return false;
+  }
+  return true;
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
@@ -239,6 +249,12 @@ export default function MosqueSyncScreen() {
 
               // Write iqama times back to the mosque row
               if (data?.iqama_times) {
+                const { data: current } = await supabase
+                  .from('mosques')
+                  .select('iqama_times')
+                  .eq('id', row.mosque_id)
+                  .maybeSingle();
+
                 await supabase
                   .from('mosques')
                   .update({
@@ -247,6 +263,15 @@ export default function MosqueSyncScreen() {
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', row.mosque_id);
+
+                // Admin manually tapped Approve — human-triggered, so notify
+                // immediately (no deferral queue, unlike the unattended
+                // auto-publish path in parse-mosque-website/index.ts).
+                if (!iqamaTimesEqual(current?.iqama_times ?? null, data.iqama_times)) {
+                  supabase.functions.invoke('notify-mosque-followers', {
+                    body: { mosqueId: row.mosque_id, mosqueName: row.mosques?.name },
+                  }).then(() => {}).catch(() => {});
+                }
               }
 
               // Insert events that aren't already present

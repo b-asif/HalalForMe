@@ -102,6 +102,108 @@ function icsLocalToUTC(isoLocal: string, tzId: string): string {
   }
 }
 
+// ── Mosque iqama-change notification queue ──────────────────────────────────
+// Every mosque onboarded so far is in the same region, so this hardcodes
+// 'America/Los_Angeles' rather than adding per-mosque timezone config —
+// same simplification already used for recurring mosque events (052).
+const NOTIFY_TZ = 'America/Los_Angeles';
+
+function iqamaTimesEqual(a: IqamaTimes | null, b: IqamaTimes | null): boolean {
+  for (const key of ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const) {
+    if ((a?.[key] ?? null) !== (b?.[key] ?? null)) return false;
+  }
+  return true;
+}
+
+function jummahSessionsEqual(
+  a: Array<{ time: string; khateeb: string | null; hall: string | null }> | null,
+  b: Array<{ time: string; khateeb: string | null; hall: string | null }>,
+): boolean {
+  const norm = (arr: typeof b) => JSON.stringify(
+    arr.map(s => ({ time: s.time, khateeb: s.khateeb ?? null, hall: s.hall ?? null }))
+       .sort((x, y) => x.time.localeCompare(y.time))
+  );
+  return norm(a ?? []) === norm(b);
+}
+
+// "H:MM AM/PM" (the iqama_times string format) → 24h { h, m }.
+function parseAmPmTime(t: string): { h: number; m: number } | null {
+  const m = t.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mins = parseInt(m[2], 10);
+  const period = m[3].toUpperCase();
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  return { h, m: mins };
+}
+
+function todayDateStrInTz(tz: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+function currentHourInTz(tz: string): number {
+  const h = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false }).format(new Date());
+  const n = parseInt(h === '24' ? '0' : h, 10);
+  return isNaN(n) ? 0 : n;
+}
+
+// Computes when a queued "iqama times changed" notification should actually
+// be delivered. A flat daytime window (e.g. "wait until 8 AM") is wrong on
+// its own — deferring a Fajr-time change detected at 1 AM until 8 AM means it
+// arrives after that day's Fajr already happened. So: defer for quietness,
+// but never past 60 minutes before the earliest changed prayer that still
+// has an upcoming occurrence today.
+function computeNotificationSendAfter(oldTimes: IqamaTimes | null, newTimes: IqamaTimes): string {
+  const now = new Date();
+  const hour = currentHourInTz(NOTIFY_TZ);
+
+  const normalWindowCandidate: Date = (hour >= 8 && hour < 21)
+    ? now
+    : (() => {
+        // Next ~9 AM Pacific. Slight DST drift (up to ~1hr) is acceptable —
+        // this is a courtesy-notification window, not prayer-time math.
+        const target = new Date(now);
+        target.setUTCHours(17, 0, 0, 0);
+        if (target <= now) target.setUTCDate(target.getUTCDate() + 1);
+        return target;
+      })();
+
+  const changedKeys = (['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const)
+    .filter(key => (oldTimes?.[key] ?? null) !== (newTimes[key] ?? null));
+
+  let earliestUrgencyDeadline: Date | null = null;
+  const todayStr = todayDateStrInTz(NOTIFY_TZ);
+  for (const key of changedKeys) {
+    const raw = newTimes[key];
+    if (!raw) continue;
+    const parsed = parseAmPmTime(raw);
+    if (!parsed) continue;
+    const localIso = `${todayStr}T${String(parsed.h).padStart(2, '0')}:${String(parsed.m).padStart(2, '0')}:00`;
+    let occursAt: Date;
+    try {
+      occursAt = new Date(icsLocalToUTC(localIso, NOTIFY_TZ));
+    } catch {
+      continue;
+    }
+    if (occursAt <= now) continue; // already passed today — no urgency
+    const deadline = new Date(occursAt.getTime() - 60 * 60_000);
+    if (!earliestUrgencyDeadline || deadline < earliestUrgencyDeadline) {
+      earliestUrgencyDeadline = deadline;
+    }
+  }
+
+  const candidate = (earliestUrgencyDeadline && earliestUrgencyDeadline < normalWindowCandidate)
+    ? earliestUrgencyDeadline
+    : normalWindowCandidate;
+
+  return (candidate < now ? now : candidate).toISOString();
+}
+
 // ── ICS / iCal parser (no external library) ───────────────────────────────────
 // calendarTz: IANA timezone from X-WR-TIMEZONE (calendar-level). Used to convert
 // floating DTSTART values (no TZID, no Z) that some plugins (e.g. All-in-One Event
@@ -2277,7 +2379,7 @@ Deno.serve(async (req) => {
   // ── 3. Auth check: caller must own this mosque, be admin, or be batch call ─
   const { data: mosque } = await supabase
     .from('mosques')
-    .select('id, owner_id, name, website_location, lat, lng, events_url, masjidi_id')
+    .select('id, owner_id, name, website_location, lat, lng, events_url, masjidi_id, iqama_times, jummah_sessions, osm_id')
     .eq('id', mosqueId)
     .maybeSingle();
 
@@ -2823,9 +2925,14 @@ Deno.serve(async (req) => {
   // ── Write to mosque_sync_cache ────────────────────────────────────────────
   if (contentHash) {
     const finalConfidence = evaluateConfidence(result);
+    // Only deterministic extractions (not LLM-guessed) with all 5 iqama slots
+    // filled get published straight to the live mosques row. Anything less
+    // certain (medium/low confidence, or LLM fallback) sits in
+    // mosque_sync_cache for admin review instead — see app/(admin)/mosque-sync.tsx's
+    // "Pending Review" tab, which already has an Approve/Reject flow wired up.
+    const iqamaAutoPublishable = extractionMethod === 'deterministic' && finalConfidence === 'high';
     const needsReview =
-      finalConfidence === 'low' ||
-      extractionMethod === 'llm_fallback' ||
+      !iqamaAutoPublishable ||
       result.events.some(e => e.needs_review);
 
     try {
@@ -2852,22 +2959,112 @@ Deno.serve(async (req) => {
           { onConflict: 'mosque_id' },
         );
 
-      // Write parsed times back to the mosques table so the app can read them
+      // Write parsed times back to the mosques table so the app can read them —
+      // but only when the extraction is deterministic and high-confidence
+      // (iqamaAutoPublishable above). Lower-confidence results are left for
+      // an admin to approve via the Pending Review queue instead of silently
+      // overwriting what's live on the mosque's public page.
       const mosqueUpdate: Record<string, any> = {
         last_website_sync_at: new Date().toISOString(),
       };
-      if (scope !== 'events' && result.iqama_times) {
-        mosqueUpdate.iqama_times = result.iqama_times;
+      if (iqamaAutoPublishable) {
+        if (scope !== 'events' && result.iqama_times) {
+          mosqueUpdate.iqama_times = result.iqama_times;
+        }
       }
-      // Only write jummah_sessions on Friday runs (scope='times').
-      // Daily non-Friday runs use scope='prayer' and skip jummah.
-      if (scope === 'times' && result.jummah_sessions?.length > 0) {
+      // Jummah: auto-publish independently of iqama confidence — a deterministic
+      // parse is sufficient. Jummah changes (time shifts, khateeb swaps) are
+      // lower-risk to auto-publish than full iqama rewrites.
+      const jummahChanged = scope === 'times' &&
+        extractionMethod === 'deterministic' &&
+        result.jummah_sessions?.length > 0 &&
+        !jummahSessionsEqual((mosque as any).jummah_sessions ?? null, result.jummah_sessions);
+      if (jummahChanged) {
         mosqueUpdate.jummah_sessions = result.jummah_sessions;
       }
+
       await supabase
         .from('mosques')
         .update(mosqueUpdate)
         .eq('id', mosqueId);
+
+      // Queue notifications for auto-published changes. This is the one write
+      // path that runs fully unattended (cron-driven batch sync), so delivery is
+      // deferred/urgency-capped via mosque_notification_queue (053/055) rather
+      // than notifying immediately like the two human-triggered write paths
+      // (owner's manual save, admin's manual approve) do.
+
+      // Iqama change notification
+      if (
+        iqamaAutoPublishable && scope !== 'events' && result.iqama_times &&
+        !iqamaTimesEqual((mosque as any).iqama_times ?? null, result.iqama_times)
+      ) {
+        const { data: existingQueued, error: existingQueuedError } = await supabase
+          .from('mosque_notification_queue')
+          .select('id')
+          .eq('mosque_id', mosqueId)
+          .eq('sent', false)
+          .is('notif_title', null) // only dedupe iqama-type rows
+          .limit(1)
+          .maybeSingle();
+
+        if (existingQueuedError) {
+          console.log('[parse-mosque-website] mosque_notification_queue lookup failed:', existingQueuedError.message);
+        }
+
+        if (!existingQueued) {
+          const sendAfter = computeNotificationSendAfter((mosque as any).iqama_times ?? null, result.iqama_times);
+          const { error: queueInsertError } = await supabase.from('mosque_notification_queue').insert({
+            mosque_id:     mosqueId,
+            mosque_name:   (mosque as any).name,
+            mosque_osm_id: (mosque as any).osm_id,
+            send_after:    sendAfter,
+          });
+          if (queueInsertError) {
+            console.log('[parse-mosque-website] mosque_notification_queue insert FAILED:', queueInsertError.message, JSON.stringify(queueInsertError));
+          } else {
+            console.log('[parse-mosque-website] queued iqama-change notification, send_after:', sendAfter);
+          }
+        }
+      }
+
+      // Jummah change notification
+      if (jummahChanged) {
+        const { data: existingJummahQueued } = await supabase
+          .from('mosque_notification_queue')
+          .select('id')
+          .eq('mosque_id', mosqueId)
+          .eq('sent', false)
+          .not('notif_title', 'is', null) // dedupe jummah-type rows
+          .limit(1)
+          .maybeSingle();
+
+        if (!existingJummahQueued) {
+          const hour = new Date().getUTCHours();
+          // Defer to ~9 AM Pacific (17:00 UTC) if outside reasonable hours
+          const sendAfterDate = (hour >= 15 && hour < 23)
+            ? new Date()
+            : (() => {
+                const t = new Date();
+                t.setUTCHours(17, 0, 0, 0);
+                if (t <= new Date()) t.setUTCDate(t.getUTCDate() + 1);
+                return t;
+              })();
+          const { error: jummahQueueError } = await supabase.from('mosque_notification_queue').insert({
+            mosque_id:     mosqueId,
+            mosque_name:   (mosque as any).name,
+            mosque_osm_id: (mosque as any).osm_id,
+            send_after:    sendAfterDate.toISOString(),
+            notif_title:   `Jummah schedule updated at ${(mosque as any).name}`,
+            notif_body:    'Tap to see the updated Jummah times.',
+          });
+          if (jummahQueueError) {
+            console.log('[parse-mosque-website] jummah notification queue insert FAILED:', jummahQueueError.message);
+          } else {
+            console.log('[parse-mosque-website] queued jummah-change notification for', (mosque as any).name);
+          }
+        }
+      }
 
       // Auto-publish events to mosque_posts when called from the batch sync.
       // Upsert on (mosque_id, title, event_start) so re-runs don't duplicate.

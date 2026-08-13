@@ -457,28 +457,57 @@ export default function GuideDetailScreen() {
               /* ── Campus hero header ── */
               <>
                 <View style={s.campusHero}>
+                  {/* Cover image + overlay */}
+                  {guide.cover_image_url ? (
+                    <>
+                      <Image
+                        source={{ uri: guide.cover_image_url }}
+                        style={StyleSheet.absoluteFillObject}
+                        contentFit="cover"
+                        contentPosition={{ top: -(guide.cover_focus_y ?? 0.5) * 80 }}
+                        transition={300}
+                      />
+                      <View style={s.campusHeroOverlay} />
+                    </>
+                  ) : null}
+
                   {/* Nav */}
                   <View style={s.campusNav}>
-                    <TouchableOpacity style={s.campusNavBtn} onPress={() => router.back()}>
-                      <Ionicons name="arrow-back" size={20} color={DEEP_GREEN} />
+                    <TouchableOpacity
+                      style={[s.campusNavBtn, guide.cover_image_url && s.campusNavBtnOnImage]}
+                      onPress={() => router.back()}
+                    >
+                      <Ionicons name="arrow-back" size={20} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
                     </TouchableOpacity>
                     <View style={s.campusNavRight}>
-                      <TouchableOpacity style={s.campusNavBtn} onPress={shareGuide}>
-                        <Ionicons name="share-social-outline" size={20} color={DEEP_GREEN} />
+                      <TouchableOpacity
+                        style={[s.campusNavBtn, guide.cover_image_url && s.campusNavBtnOnImage]}
+                        onPress={shareGuide}
+                      >
+                        <Ionicons name="share-social-outline" size={20} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
                       </TouchableOpacity>
-                      <TouchableOpacity style={s.campusNavBtn} onPress={toggleSave}>
-                        <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={DEEP_GREEN} />
+                      <TouchableOpacity
+                        style={[s.campusNavBtn, guide.cover_image_url && s.campusNavBtnOnImage]}
+                        onPress={toggleSave}
+                      >
+                        <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {/* Hero content */}
                   <View style={s.campusHeroLeft}>
-                    <Text style={s.campusGuideLabel}>Muslim Student Guide</Text>
-                    <Text style={s.campusHeroTitle}>
+                    <Text style={[s.campusGuideLabel, guide.cover_image_url && { color: 'rgba(255,255,255,0.8)' }]}>
+                      Muslim Student Guide
+                    </Text>
+                    <Text style={[s.campusHeroTitle, guide.cover_image_url && { color: '#fff' }]}>
                       {guide.title.replace(/^Muslim Student Guide(\s*[:\-–]\s*|\s+to\s+)/i, '').trim() || guide.title}
                     </Text>
-                    {guide.subtitle ? <Text style={s.campusHeroSubtitle}>{guide.subtitle}</Text> : null}
+                    {guide.subtitle ? (
+                      <Text style={[s.campusHeroSubtitle, guide.cover_image_url && { color: 'rgba(255,255,255,0.75)' }]}>
+                        {guide.subtitle}
+                      </Text>
+                    ) : null}
                   </View>
 
                   {/* Action buttons */}
@@ -493,13 +522,13 @@ export default function GuideDetailScreen() {
                       ) : null}
                       {hasPrayerRooms ? (
                         <TouchableOpacity
-                          style={s.campusPrayerBtn}
+                          style={[s.campusPrayerBtn, guide.cover_image_url && s.campusPrayerBtnOnImage]}
                           activeOpacity={0.75}
                           onPress={() => setActiveFilter('prayer_room')}
                         >
-                          <MaterialCommunityIcons name="hands-pray" size={13} color={DEEP_GREEN} />
-                          <Text style={s.campusPrayerText}>Campus Prayer Info</Text>
-                          <Ionicons name="chevron-forward" size={12} color={DEEP_GREEN} />
+                          <MaterialCommunityIcons name="hands-pray" size={13} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
+                          <Text style={[s.campusPrayerText, guide.cover_image_url && { color: '#fff' }]}>Campus Prayer Info</Text>
+                          <Ionicons name="chevron-forward" size={12} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -810,15 +839,29 @@ export default function GuideDetailScreen() {
                     </View>
                   </View>
 
-                  {selectedRoom.hours ? (
-                    <View style={s.modalRow}>
-                      <Ionicons name="time-outline" size={18} color={TEXT_MUTED} />
-                      <View>
-                        <Text style={s.modalRowLabel}>Hours</Text>
-                        <Text style={s.modalRowValue}>{selectedRoom.hours}</Text>
+                  {selectedRoom.hours ? (() => {
+                    let sections: { label: string; time: string }[] | null = null;
+                    try {
+                      const parsed = JSON.parse(selectedRoom.hours);
+                      if (Array.isArray(parsed)) sections = parsed;
+                    } catch {}
+                    return (
+                      <View style={s.modalRow}>
+                        <Ionicons name="time-outline" size={18} color={TEXT_MUTED} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.modalRowLabel}>Hours</Text>
+                          {sections ? sections.map((sec, i) => (
+                            <View key={i} style={{ flexDirection: 'row', gap: 6, marginTop: i === 0 ? 0 : 4 }}>
+                              {sec.label ? <Text style={[s.modalRowValue, { fontWeight: '600', minWidth: 70 }]}>{sec.label}</Text> : null}
+                              <Text style={s.modalRowValue}>{sec.time}</Text>
+                            </View>
+                          )) : (
+                            <Text style={s.modalRowValue}>{selectedRoom.hours}</Text>
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  ) : null}
+                    );
+                  })() : null}
 
                   {selectedRoom.lat != null && selectedRoom.lng != null ? (
                     <TouchableOpacity
@@ -951,9 +994,15 @@ const s = StyleSheet.create({
 
   // ── Campus hero header
   campusHero: {
-    backgroundColor: CREAM,
+    backgroundColor: DEEP_GREEN,
     borderBottomWidth: 1, borderBottomColor: HAIRLINE,
     overflow: 'hidden',
+    minHeight: 220,
+    justifyContent: 'space-between',
+  },
+  campusHeroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.42)',
   },
   campusNav: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -967,12 +1016,16 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  campusNavBtnOnImage: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    shadowOpacity: 0,
+  },
   campusHeroLeft: {
     paddingHorizontal: 20, paddingBottom: 8,
   },
   campusGuideLabel: {
-    fontSize: 15, fontWeight: '500', color: DEEP_GREEN,
-    marginBottom: 2,
+    fontSize: 13, fontWeight: '600', color: DEEP_GREEN,
+    marginBottom: 2, letterSpacing: 0.3,
   },
   campusHeroTitle: {
     fontSize: 34, fontWeight: '800', color: DEEP_GREEN,
@@ -983,7 +1036,7 @@ const s = StyleSheet.create({
   },
   campusActions: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 16,
-    paddingTop: 10, paddingBottom: 14, flexWrap: 'wrap',
+    paddingTop: 10, paddingBottom: 16, flexWrap: 'wrap',
   },
   campusInstaBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -997,6 +1050,10 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 20,
     borderWidth: 1.5, borderColor: HAIRLINE,
     paddingVertical: 7, paddingHorizontal: 12,
+  },
+  campusPrayerBtnOnImage: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   campusPrayerText: { fontSize: 13, fontWeight: '600', color: DEEP_GREEN },
   // ── Quick Picks

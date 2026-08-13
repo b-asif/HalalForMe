@@ -48,6 +48,16 @@ interface SyncPreview {
   notes: string | null;
 }
 
+function formatUpdatedAt(iso: string): string {
+  const d = new Date(iso);
+  const diffMins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 const SOURCE_LABEL: Record<string, string> = {
   mawaqit: 'Mawaqit', masjidal: 'Masjidal', masjidi: 'Masjidi',
   tockify: 'Tockify', vision: 'Vision (AI)', 'event-platform': 'Event Platform',
@@ -70,8 +80,10 @@ export default function PrayerTimesScreen() {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [iqamaUpdatedAt, setIqamaUpdatedAt] = useState<string | null>(null);
 
-  const originalIqamaRef = useRef<Record<string, string> | null>(null);
+  const originalIqamaRef  = useRef<Record<string, string> | null>(null);
+  const originalJummahRef = useRef<string | null>(null); // JSON snapshot for change detection
 
   // Sync
   const [syncing,       setSyncing]       = useState(false);
@@ -85,7 +97,7 @@ export default function PrayerTimesScreen() {
     setLoading(true);
     const { data: m } = await supabase
       .from('mosques')
-      .select('id, name, owner_id, website, iqama_times, jummah_sessions')
+      .select('id, name, owner_id, website, iqama_times, jummah_sessions, iqama_updated_at')
       .eq('id', mosqueId)
       .maybeSingle();
 
@@ -97,7 +109,9 @@ export default function PrayerTimesScreen() {
 
     setMosqueName(m.name ?? '');
     setWebsite(m.website ?? '');
-    originalIqamaRef.current = m.iqama_times ?? null;
+    setIqamaUpdatedAt((m as any).iqama_updated_at ?? null);
+    originalIqamaRef.current  = m.iqama_times ?? null;
+    originalJummahRef.current = JSON.stringify(m.jummah_sessions ?? []);
     setIqamaTimes(
       Object.fromEntries(
         IQAMA_FIELDS.map(f => [
@@ -134,24 +148,41 @@ export default function PrayerTimesScreen() {
           hall:    j.hall.trim() || null,
         }));
 
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('mosques')
         .update({
-          iqama_times:     Object.keys(iqamaPayload).length > 0 ? iqamaPayload : null,
-          jummah_sessions: jummahPayload.length > 0 ? jummahPayload : null,
+          iqama_times:      Object.keys(iqamaPayload).length > 0 ? iqamaPayload : null,
+          jummah_sessions:  jummahPayload.length > 0 ? jummahPayload : null,
+          iqama_updated_at: now,
         })
         .eq('id', mosqueId);
       if (error) throw new Error(error.message);
+      setIqamaUpdatedAt(now);
 
-      // Notify followers if iqama times changed
+      // Notify followers based on what changed
       const sortKeys = (obj: Record<string, string>) =>
         JSON.stringify(Object.fromEntries(Object.keys(obj).sort().map(k => [k, obj[k]])));
-      const prev = originalIqamaRef.current ?? {};
-      if (sortKeys(iqamaPayload) !== sortKeys(prev) && user) {
+      const prevIqama  = originalIqamaRef.current ?? {};
+      const iqamaChanged  = sortKeys(iqamaPayload) !== sortKeys(prevIqama);
+      const jummahChanged = JSON.stringify(jummahPayload) !== originalJummahRef.current;
+
+      if (iqamaChanged && user) {
         supabase.functions.invoke('notify-mosque-followers', {
           body: { mosqueId, mosqueName },
         }).then(() => {}).catch(() => {});
         originalIqamaRef.current = iqamaPayload;
+      }
+      if (jummahChanged && user) {
+        supabase.functions.invoke('notify-mosque-followers', {
+          body: {
+            mosqueId,
+            mosqueName,
+            notifTitle: `Jummah schedule updated at ${mosqueName}`,
+            notifBody:  'Tap to see the updated Jummah times.',
+          },
+        }).then(() => {}).catch(() => {});
+        originalJummahRef.current = JSON.stringify(jummahPayload);
       }
       Alert.alert('Saved', 'Prayer times updated.');
     } catch (e: any) {
@@ -193,6 +224,7 @@ export default function PrayerTimesScreen() {
       });
       if (Object.keys(mergedIqama).length > 0) {
         mosqueUpdate.iqama_times = mergedIqama;
+        mosqueUpdate.iqama_updated_at = new Date().toISOString();
         setIqamaTimes(
           Object.fromEntries(
             IQAMA_FIELDS.map(f => [
@@ -220,6 +252,7 @@ export default function PrayerTimesScreen() {
     if (Object.keys(mosqueUpdate).length > 0) {
       const { error } = await supabase.from('mosques').update(mosqueUpdate).eq('id', mosqueId);
       if (error) { Alert.alert('Save Error', error.message); return; }
+      if (mosqueUpdate.iqama_updated_at) setIqamaUpdatedAt(mosqueUpdate.iqama_updated_at);
     }
 
     supabase.from('mosques')
@@ -271,7 +304,12 @@ export default function PrayerTimesScreen() {
         {/* Iqama Times */}
         {showIqama && (
           <>
-            <Text style={s.sectionLabel}>IQAMA TIMES</Text>
+            <View style={s.sectionLabelRow}>
+              <Text style={[s.sectionLabel, { marginBottom: 0 }]}>IQAMA TIMES</Text>
+              {iqamaUpdatedAt && (
+                <Text style={s.sectionUpdated}>Updated {formatUpdatedAt(iqamaUpdatedAt)}</Text>
+              )}
+            </View>
             <View style={s.card}>
               <View style={s.iqamaGrid}>
                 {IQAMA_FIELDS.map(f => (
@@ -358,12 +396,17 @@ export default function PrayerTimesScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          <View style={s.syncNudge}>
+          <TouchableOpacity
+            style={s.syncNudge}
+            onPress={() => router.push(`/mosque/${mosqueId}/portal-settings` as any)}
+            activeOpacity={0.75}
+          >
             <Ionicons name="globe-outline" size={18} color={TEXT_MUTED} />
             <Text style={s.syncNudgeText}>
-              Add your mosque website in Page Settings to enable automatic time syncing.
+              Add your mosque website in Page Settings to enable automatic time syncing.{' '}
+              <Text style={{ color: DEEP_GREEN, fontWeight: '700' }}>Go to Settings →</Text>
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
@@ -584,6 +627,8 @@ const s = StyleSheet.create({
   content: { padding: 20 },
 
   sectionLabel: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.8, marginBottom: 10 },
+  sectionLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  sectionUpdated: { fontSize: 11, color: TEXT_MUTED },
   sectionHint: { fontSize: 13, color: TEXT_MUTED, marginBottom: 12, marginTop: -6 },
 
   card: {

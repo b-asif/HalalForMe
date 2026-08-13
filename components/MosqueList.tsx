@@ -119,7 +119,7 @@ export default function MosqueList({
   return (
     <FlatList
       data={displayData}
-      keyExtractor={item => item.id}
+      keyExtractor={(item, index) => `${index}-${item.id}`}
       contentContainerStyle={s.list}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
