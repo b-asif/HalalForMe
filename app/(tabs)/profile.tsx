@@ -44,6 +44,7 @@ export default function ProfileScreen() {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileLoading,   setProfileLoading]   = useState(true);
   const [submissionCount,  setSubmissionCount]  = useState<number | null>(null);
+  const [businessType,     setBusinessType]     = useState<string | null>(null);
 
   // Edit modal state
   const [editVisible, setEditVisible] = useState(false);
@@ -65,11 +66,12 @@ export default function ProfileScreen() {
   const loadProfile = useCallback(async () => {
     if (!user) return;
     setProfileLoading(true);
-    const { data } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).maybeSingle();
+    const { data } = await supabase.from('profiles').select('name, avatar_url, business_type').eq('id', user.id).maybeSingle();
 
     if (data) {
       setProfileName(data.name ?? user.user_metadata?.name ?? '');
       setProfileAvatarUrl(data.avatar_url ?? null);
+      setBusinessType((data as any).business_type ?? null);
     } else {
       setProfileName(user.user_metadata?.name ?? '');
     }
@@ -393,9 +395,14 @@ export default function ProfileScreen() {
 
   const menuItems: MenuItem[] = [
     { icon: 'heart-outline',            label: 'Saved Restaurants',         onPress: () => router.push('/saved') },
+    { icon: 'bookmark-outline',         label: 'Saved Guides',              onPress: () => router.push('/saved-guides') },
     { icon: 'storefront-outline',       label: 'My Submissions',            onPress: () => router.push('/my-submissions') },
-    { icon: 'add-circle-outline',       label: 'Add My Business',           onPress: () => router.push('/add-my-business') },
-    { icon: 'business-outline',         label: 'Manage a Mosque',           onPress: () => router.push('/redeem-mosque') },
+    ...(businessType === null || businessType === 'restaurant' || businessType === 'other'
+      ? [{ icon: 'add-circle-outline' as const,  label: 'Add My Business', onPress: () => router.push('/add-my-business') }]
+      : []),
+    ...(businessType === null || businessType === 'mosque'
+      ? [{ icon: 'business-outline' as const,    label: 'Manage a Mosque', onPress: () => router.push('/redeem-mosque') }]
+      : []),
     { icon: 'shield-checkmark-outline', label: 'Halal Certification Guide', onPress: () => router.push('/certification-guide') },
     { icon: 'notifications-outline',    label: 'Notifications',             onPress: () => router.push('/notifications') },
     { icon: 'play-circle-outline',      label: 'View App Tour',             onPress: () => router.push('/onboarding') },

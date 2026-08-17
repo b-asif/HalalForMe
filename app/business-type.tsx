@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Brand } from '../lib/theme';
 
 const GREEN      = Brand.green;
@@ -18,23 +20,34 @@ const TYPES = [
     label: 'Restaurant or Cafe',
     sub: 'Add your halal eatery to Rihdal',
     route: '/add-my-business' as const,
+    businessType: 'restaurant' as const,
   },
   {
     icon: 'moon-outline' as const,
     label: 'Masjid',
     sub: 'Register your masjid with the community',
     route: '/redeem-mosque' as const,
+    businessType: 'mosque' as const,
   },
   {
     icon: 'storefront-outline' as const,
     label: 'Other Halal Business',
     sub: 'Grocery, butcher, service, or other',
     route: '/add-my-business' as const,
+    businessType: 'other' as const,
   },
 ] as const;
 
 export default function BusinessTypeScreen() {
-  const router = useRouter();
+  const router  = useRouter();
+  const { user } = useAuth();
+
+  const handleSelect = async (route: string, businessType: 'restaurant' | 'mosque' | 'other') => {
+    if (user) {
+      await supabase.from('profiles').update({ business_type: businessType }).eq('id', user.id);
+    }
+    router.replace(route as any);
+  };
 
   return (
     <SafeAreaView style={s.flex}>
@@ -53,11 +66,11 @@ export default function BusinessTypeScreen() {
 
         {/* Type options */}
         <View style={s.options}>
-          {TYPES.map(({ icon, label, sub, route }) => (
+          {TYPES.map(({ icon, label, sub, route, businessType }) => (
             <TouchableOpacity
               key={label}
               style={s.option}
-              onPress={() => router.replace(route)}
+              onPress={() => handleSelect(route, businessType)}
               activeOpacity={0.75}
             >
               <View style={s.optionIcon}>

@@ -57,7 +57,7 @@ export default function SavedGuidesScreen() {
         <Header router={router} />
         <View style={s.centered}>
           <Ionicons name="bookmark-outline" size={52} color="#d0d0d0" />
-          <Text style={s.emptyTitle}>Sign in to save guides</Text>
+          <Text style={s.emptyTitle}>Sign in to follow guides</Text>
           <TouchableOpacity
             style={s.signInBtn}
             onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/login'); }}
@@ -87,14 +87,14 @@ export default function SavedGuidesScreen() {
         contentContainerStyle={s.list}
         ListHeaderComponent={
           rows.length > 0
-            ? <Text style={s.count}>{rows.length} saved {rows.length === 1 ? 'guide' : 'guides'}</Text>
+            ? <Text style={s.count}>Following {rows.length} {rows.length === 1 ? 'guide' : 'guides'}</Text>
             : null
         }
         ListEmptyComponent={
           <View style={s.centered}>
             <Ionicons name="bookmark-outline" size={52} color="#d0d0d0" />
-            <Text style={s.emptyTitle}>No saved guides yet</Text>
-            <Text style={s.emptySubText}>Bookmark guides to find them here.</Text>
+            <Text style={s.emptyTitle}>No guides followed yet</Text>
+            <Text style={s.emptySubText}>Follow guides to find them here.</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -140,7 +140,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={20} color={TEXT_DARK} />
       </TouchableOpacity>
-      <Text style={s.headerTitle}>Saved Guides</Text>
+      <Text style={s.headerTitle}>Following</Text>
       <View style={{ width: 36 }} />
     </View>
   );

@@ -482,7 +482,7 @@ export default function RestaurantDetailScreen() {
         <View style={s.infoSection}>
           <View style={s.nameRow}>
             <Text style={s.name}>{restaurant.name}</Text>
-            {restaurant.is_verified && (
+            {restaurant.is_verified && restaurant.primary_certifier !== 'unknown' && restaurant.primary_certifier !== 'uncertified' && (
               <View style={s.verifiedBadge}>
                 <Ionicons name="shield-checkmark" size={13} color={GREEN} />
                 <Text style={s.verifiedText}>Verified</Text>

@@ -136,6 +136,17 @@ function travelTimes(distMi: number) {
   return { walk: fmt(walk, 'walk'), bike: fmt(bike, 'bike'), drive: fmt(drive, 'drive') };
 }
 
+// Returns the fastest practical transport for a given distance
+function fastestTravel(distMi: number): { detail: string; detailIcon: 'walk' | 'bike' | 'car' } {
+  const walkMins  = Math.round(distMi * 20);
+  const bikeMins  = Math.round(distMi * 5);
+  const driveMins = Math.max(1, Math.round(distMi * 3));
+  const fmt = (m: number) => m < 1 ? '< 1 min' : `${m} min`;
+  if (walkMins <= 6)  return { detail: `${fmt(walkMins)} walk`,  detailIcon: 'walk' };
+  if (bikeMins <= 10) return { detail: `${fmt(bikeMins)} bike`,  detailIcon: 'bike' };
+  return             { detail: `${fmt(driveMins)} drive`, detailIcon: 'car'  };
+}
+
 function rowToCard(item: { restaurants: NonNullable<GuideItemRow['restaurants']> }): Restaurant & { lat: number | null; lng: number | null } {
   const r = item.restaurants;
   return {
@@ -309,7 +320,7 @@ export default function GuideDetailScreen() {
     if (!guide || guide.category !== 'universities') return [];
 
     type Pick = {
-      label: string; name: string; detail: string; detailIcon: 'walk' | 'pin';
+      label: string; name: string; detail: string; detailIcon: 'walk' | 'bike' | 'car' | 'pin';
       kind: UnifiedItem['kind']; targetId: string;
       color: string; iconBg: string; icon: string;
     };
@@ -330,22 +341,22 @@ export default function GuideDetailScreen() {
     const cafes       = allItems.filter(i => i.kind === 'restaurant' && toFilterKey(i.card.category ?? null) === 'cafe');
     const prayerRooms = allItems.filter((i): i is UnifiedItem & { kind: 'prayer_room' } => i.kind === 'prayer_room');
 
-    const walkFmt = (item: UnifiedItem) => {
+    const travelFmt = (item: UnifiedItem) => {
       if (item.kind !== 'restaurant') return null;
       if (guide.campus_lat == null || guide.campus_lng == null || item.card.lat == null || item.card.lng == null) return null;
-      return travelTimes(haversineMi(guide.campus_lat, guide.campus_lng, item.card.lat, item.card.lng)).walk;
+      return fastestTravel(haversineMi(guide.campus_lat, guide.campus_lng, item.card.lat, item.card.lng));
     };
 
     const closestFood = sorted(restaurants)[0];
     if (closestFood?.kind === 'restaurant') {
-      const w = walkFmt(closestFood);
-      picks.push({ label: 'Closest Halal Food', name: closestFood.card.name, detail: w ?? '', detailIcon: 'walk', kind: 'restaurant', targetId: closestFood.card.id, color: '#2d6a4f', iconBg: '#d8f3dc', icon: 'restaurant-outline' });
+      const t = travelFmt(closestFood);
+      picks.push({ label: 'Closest Halal Food', name: closestFood.card.name, detail: t?.detail ?? '', detailIcon: t?.detailIcon ?? 'walk', kind: 'restaurant', targetId: closestFood.card.id, color: '#2d6a4f', iconBg: '#d8f3dc', icon: 'restaurant-outline' });
     }
 
     const closestCafe = sorted(cafes)[0];
     if (closestCafe?.kind === 'restaurant') {
-      const w = walkFmt(closestCafe);
-      picks.push({ label: 'Best Study Café', name: closestCafe.card.name, detail: w ?? '', detailIcon: 'walk', kind: 'restaurant', targetId: closestCafe.card.id, color: '#92400e', iconBg: '#fef3c7', icon: 'cafe-outline' });
+      const t = travelFmt(closestCafe);
+      picks.push({ label: 'Best Study Café', name: closestCafe.card.name, detail: t?.detail ?? '', detailIcon: t?.detailIcon ?? 'walk', kind: 'restaurant', targetId: closestCafe.card.id, color: '#92400e', iconBg: '#fef3c7', icon: 'cafe-outline' });
     }
 
     const room = prayerRooms[0];
@@ -368,11 +379,11 @@ export default function GuideDetailScreen() {
     if (savingBookmark) return;
     setSavingBookmark(true);
     if (saved) {
-      await supabase.from('saved_guides').delete().eq('user_id', user.id).eq('guide_id', id);
-      setSaved(false);
+      const { error } = await supabase.from('saved_guides').delete().eq('user_id', user.id).eq('guide_id', id);
+      if (!error) setSaved(false);
     } else {
-      await supabase.from('saved_guides').insert({ user_id: user.id, guide_id: id });
-      setSaved(true);
+      const { error } = await supabase.from('saved_guides').insert({ user_id: user.id, guide_id: id });
+      if (!error) setSaved(true);
     }
     setSavingBookmark(false);
   };
@@ -397,6 +408,15 @@ export default function GuideDetailScreen() {
         ),
       )
       .catch(() => Linking.openURL(`https://www.instagram.com/${handle}`));
+  };
+
+  const handleSuggest = () => {
+    if (!user) {
+      setGuestLoginIntent(true);
+      router.push('/(auth)/login');
+      return;
+    }
+    router.push(`/guide/suggest?guideId=${id}&guideTitle=${encodeURIComponent(guide!.title)}`);
   };
 
   // ── Loading / error states ────────────────────────────────────────────────
@@ -511,28 +531,34 @@ export default function GuideDetailScreen() {
                   </View>
 
                   {/* Action buttons */}
-                  {(guide.instagram_handle || hasPrayerRooms) ? (
-                    <View style={s.campusActions}>
-                      {guide.instagram_handle ? (
-                        <TouchableOpacity style={s.campusInstaBtn} activeOpacity={0.75} onPress={handleInstagram}>
-                          <Ionicons name="logo-instagram" size={13} color="#C13584" />
-                          <Text style={s.campusInstaText}>@{guide.instagram_handle.replace(/^@/, '')}</Text>
-                          <Ionicons name="open-outline" size={11} color="#C13584" />
-                        </TouchableOpacity>
-                      ) : null}
-                      {hasPrayerRooms ? (
-                        <TouchableOpacity
-                          style={[s.campusPrayerBtn, guide.cover_image_url && s.campusPrayerBtnOnImage]}
-                          activeOpacity={0.75}
-                          onPress={() => setActiveFilter('prayer_room')}
-                        >
-                          <MaterialCommunityIcons name="hands-pray" size={13} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
-                          <Text style={[s.campusPrayerText, guide.cover_image_url && { color: '#fff' }]}>Campus Prayer Info</Text>
-                          <Ionicons name="chevron-forward" size={12} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  ) : null}
+                  <View style={s.campusActions}>
+                    {guide.instagram_handle ? (
+                      <TouchableOpacity style={s.campusInstaBtn} activeOpacity={0.75} onPress={handleInstagram}>
+                        <Ionicons name="logo-instagram" size={13} color="#C13584" />
+                        <Text style={s.campusInstaText}>@{guide.instagram_handle.replace(/^@/, '')}</Text>
+                        <Ionicons name="open-outline" size={11} color="#C13584" />
+                      </TouchableOpacity>
+                    ) : null}
+                    {hasPrayerRooms ? (
+                      <TouchableOpacity
+                        style={[s.campusPrayerBtn, guide.cover_image_url && s.campusPrayerBtnOnImage]}
+                        activeOpacity={0.75}
+                        onPress={() => setActiveFilter('prayer_room')}
+                      >
+                        <MaterialCommunityIcons name="hands-pray" size={13} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
+                        <Text style={[s.campusPrayerText, guide.cover_image_url && { color: '#fff' }]}>Campus Prayer Info</Text>
+                        <Ionicons name="chevron-forward" size={12} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity
+                      style={[s.campusPrayerBtn, guide.cover_image_url && s.campusPrayerBtnOnImage]}
+                      activeOpacity={0.75}
+                      onPress={handleSuggest}
+                    >
+                      <Ionicons name="add-circle-outline" size={13} color={guide.cover_image_url ? '#fff' : DEEP_GREEN} />
+                      <Text style={[s.campusPrayerText, guide.cover_image_url && { color: '#fff' }]}>Suggest a place</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Quick Picks */}
@@ -566,10 +592,10 @@ export default function GuideDetailScreen() {
                           <Text style={s.quickName} numberOfLines={2}>{pick.name}</Text>
                           {pick.detail ? (
                             <View style={s.quickDetail}>
-                              {pick.detailIcon === 'walk'
-                                ? <Ionicons name="walk-outline" size={11} color={TEXT_MUTED} />
-                                : <Ionicons name="location-outline" size={11} color={TEXT_MUTED} />
-                              }
+                              {pick.detailIcon === 'walk' ? <Ionicons name="walk-outline"     size={11} color={TEXT_MUTED} />
+                               : pick.detailIcon === 'bike' ? <Ionicons name="bicycle-outline"  size={11} color={TEXT_MUTED} />
+                               : pick.detailIcon === 'car'  ? <Ionicons name="car-outline"      size={11} color={TEXT_MUTED} />
+                               : <Ionicons name="location-outline" size={11} color={TEXT_MUTED} />}
                               <Text style={s.quickDetailText} numberOfLines={1}>{pick.detail}</Text>
                             </View>
                           ) : null}
@@ -653,6 +679,11 @@ export default function GuideDetailScreen() {
                       <Ionicons name="open-outline" size={13} color={TEXT_MUTED} />
                     </TouchableOpacity>
                   ) : null}
+
+                  <TouchableOpacity style={s.suggestLink} onPress={handleSuggest} activeOpacity={0.75}>
+                    <Ionicons name="add-circle-outline" size={14} color={GREEN} />
+                    <Text style={s.suggestLinkText}>Suggest a place for this guide</Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -943,6 +974,12 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
   },
   instaHandle: { fontSize: 13, fontWeight: '700', color: '#C13584' },
+
+  suggestLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start', paddingVertical: 4,
+  },
+  suggestLinkText: { fontSize: 13, fontWeight: '600', color: GREEN },
 
   // ── Open Now toggle
   openNowChip: {

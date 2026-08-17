@@ -3028,8 +3028,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Jummah change notification
-      if (jummahChanged) {
+      // Jummah change notification — Thursday only (day before Jummah)
+      const isThursday = new Date().getUTCDay() === 4;
+      if (jummahChanged && isThursday) {
         const { data: existingJummahQueued } = await supabase
           .from('mosque_notification_queue')
           .select('id')

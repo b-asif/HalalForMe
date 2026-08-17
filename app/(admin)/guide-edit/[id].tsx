@@ -40,7 +40,7 @@ const PRESET_TAGS = [
   'Mosques', 'Community', 'Groceries', 'Family-Friendly',
 ];
 
-type SearchTab = 'restaurant' | 'butcher' | 'mosque' | 'prayer_room';
+type SearchTab = 'restaurant' | 'butcher' | 'mosque' | 'prayer_room' | 'suggestions';
 
 type GuideItem =
   | { type: 'restaurant';  restaurant_id: string;  name: string; address: string; category?: string }
@@ -60,6 +60,16 @@ interface MosqueResult {
   osm_id: string;
   name: string;
   address: string | null;
+}
+
+interface GuideSuggestion {
+  id: string;
+  restaurant_id: string | null;
+  name: string | null;
+  address: string | null;
+  note: string | null;
+  created_at: string;
+  restaurants: { name: string; address: string } | null;
 }
 
 export default function AdminGuideEditScreen() {
@@ -111,6 +121,11 @@ export default function AdminGuideEditScreen() {
   const searchTimer        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mosqueSearchTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const butcherSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Suggestions
+  const [suggestions,        setSuggestions]        = useState<GuideSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionCount,    setSuggestionCount]    = useState(0);
 
   // ── Prayer room form (inline create)
   const [prBuildingName,  setPrBuildingName]  = useState('');
@@ -332,6 +347,73 @@ export default function AdminGuideEditScreen() {
     }]);
     setPrBuildingName(''); setPrRoomNumber(''); setPrWudu(false);
     setPrHourSections([{ label: '', time: '' }]); setPrLat(''); setPrLng('');
+  };
+
+  // ── Suggestions
+  const loadSuggestions = async () => {
+    if (isNew) return;
+    setLoadingSuggestions(true);
+    const { data } = await supabase
+      .from('guide_suggestions')
+      .select('id, restaurant_id, name, address, note, created_at, restaurants(name, address)')
+      .eq('guide_id', id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+    const rows = (data as unknown as GuideSuggestion[]) ?? [];
+    setSuggestions(rows);
+    setSuggestionCount(rows.length);
+    setLoadingSuggestions(false);
+  };
+
+  const approveSuggestion = async (suggestion: GuideSuggestion) => {
+    if (!suggestion.restaurant_id) {
+      Alert.alert('Cannot auto-approve', 'This is a new-place suggestion. Review manually and add via restaurant search once it is in the database.');
+      return;
+    }
+    // Add to guide items
+    const nextPosition = items.length;
+    const { error: itemError } = await supabase.from('guide_items').insert({
+      guide_id:      id,
+      restaurant_id: suggestion.restaurant_id,
+      mosque_id:     null,
+      prayer_room_id: null,
+      position:      nextPosition,
+    });
+    if (itemError) { Alert.alert('Error', itemError.message); return; }
+
+    // Update suggestion status
+    await supabase.from('guide_suggestions').update({ status: 'approved' }).eq('id', suggestion.id);
+
+    // Update local state
+    const r = suggestion.restaurants;
+    if (r) {
+      setItems(prev => [...prev, {
+        type: 'restaurant',
+        restaurant_id: suggestion.restaurant_id!,
+        name: r.name,
+        address: r.address,
+      }]);
+    }
+    setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+    setSuggestionCount(prev => Math.max(0, prev - 1));
+    Alert.alert('Added', `"${r?.name ?? 'Place'}" has been added to the guide.`);
+  };
+
+  const rejectSuggestion = (suggestion: GuideSuggestion) => {
+    const displayName = suggestion.restaurant_id
+      ? (suggestion.restaurants?.name ?? 'this place')
+      : (suggestion.name ?? 'this place');
+    Alert.alert('Reject suggestion', `Reject "${displayName}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject', style: 'destructive',
+        onPress: async () => {
+          await supabase.from('guide_suggestions').update({ status: 'rejected' }).eq('id', suggestion.id);
+          setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
+          setSuggestionCount(prev => Math.max(0, prev - 1));
+        },
+      },
+    ]);
   };
 
   const removeItem = (item: GuideItem) => {
@@ -794,18 +876,37 @@ export default function AdminGuideEditScreen() {
 
         {/* ── Search tab switcher ── */}
         <View style={s.searchTabs}>
-          {(['restaurant', 'butcher', 'mosque', ...(category === 'universities' ? ['prayer_room'] as const : [])] as SearchTab[]).map(tab => (
+          {([
+            'restaurant', 'butcher', 'mosque',
+            ...(category === 'universities' ? ['prayer_room'] as const : []),
+            ...(!isNew ? ['suggestions'] as const : []),
+          ] as SearchTab[]).map(tab => (
             <TouchableOpacity
               key={tab}
               style={[s.searchTab, activeSearchTab === tab && s.searchTabActive]}
-              onPress={() => setActiveSearchTab(tab)}
+              onPress={() => {
+                setActiveSearchTab(tab);
+                if (tab === 'suggestions' && suggestions.length === 0 && !loadingSuggestions) {
+                  loadSuggestions();
+                }
+              }}
             >
-              <Text style={[s.searchTabText, activeSearchTab === tab && s.searchTabTextActive]}>
-                {tab === 'restaurant' ? 'Restaurant'
-                 : tab === 'butcher'  ? 'Butcher/Grocery'
-                 : tab === 'mosque'   ? 'Mosque'
-                 : 'Prayer Room'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[s.searchTabText, activeSearchTab === tab && s.searchTabTextActive]}>
+                  {tab === 'restaurant'  ? 'Restaurant'
+                   : tab === 'butcher'   ? 'Butcher/Grocery'
+                   : tab === 'mosque'    ? 'Mosque'
+                   : tab === 'prayer_room' ? 'Prayer Room'
+                   : 'Suggestions'}
+                </Text>
+                {tab === 'suggestions' && suggestionCount > 0 && (
+                  <View style={[s.suggestionBadge, activeSearchTab === tab && s.suggestionBadgeActive]}>
+                    <Text style={[s.suggestionBadgeText, activeSearchTab === tab && s.suggestionBadgeTextActive]}>
+                      {suggestionCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -1044,6 +1145,71 @@ export default function AdminGuideEditScreen() {
                 : <Text style={s.addPrayerBtnText}>Add Prayer Room</Text>
               }
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Suggestions ── */}
+        {activeSearchTab === 'suggestions' && !isNew && (
+          <View style={s.suggestionsWrap}>
+            {loadingSuggestions ? (
+              <View style={s.suggestionLoading}>
+                <ActivityIndicator size="small" color={GREEN} />
+              </View>
+            ) : suggestions.length === 0 ? (
+              <View style={s.emptyItems}>
+                <Ionicons name="checkmark-circle-outline" size={28} color="#ccc" />
+                <Text style={s.emptyItemsText}>No pending suggestions</Text>
+                <Text style={s.emptyItemsSub}>Students can suggest places from the guide page.</Text>
+              </View>
+            ) : (
+              suggestions.map((suggestion, idx) => {
+                const isExisting = !!suggestion.restaurant_id;
+                const displayName = isExisting
+                  ? (suggestion.restaurants?.name ?? 'Unknown restaurant')
+                  : (suggestion.name ?? 'New place');
+                const displayAddr = isExisting
+                  ? (suggestion.restaurants?.address ?? '')
+                  : (suggestion.address ?? '');
+                return (
+                  <View key={suggestion.id} style={[s.suggestionCard, idx > 0 && { marginTop: 10 }]}>
+                    <View style={s.suggestionTopRow}>
+                      <View style={[s.itemBadge, !isExisting && s.itemBadgeAmber]}>
+                        <Text style={[s.itemBadgeText, !isExisting && s.itemBadgeTextAmber]}>
+                          {isExisting ? 'Existing' : 'New place'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={s.suggestionName}>{displayName}</Text>
+                    {displayAddr ? (
+                      <Text style={s.suggestionAddr} numberOfLines={1}>{displayAddr}</Text>
+                    ) : null}
+                    {suggestion.note ? (
+                      <View style={s.suggestionNoteRow}>
+                        <Ionicons name="chatbubble-outline" size={12} color={GREEN} />
+                        <Text style={s.suggestionNote}>{suggestion.note}</Text>
+                      </View>
+                    ) : null}
+                    <View style={s.suggestionActions}>
+                      <TouchableOpacity
+                        style={s.approveBtn}
+                        onPress={() => approveSuggestion(suggestion)}
+                      >
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                        <Text style={s.approveBtnText}>
+                          {isExisting ? 'Add to Guide' : 'Mark Noted'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={s.rejectBtn}
+                        onPress={() => rejectSuggestion(suggestion)}
+                      >
+                        <Text style={s.rejectBtnText}>Reject</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
         )}
 
@@ -1399,6 +1565,44 @@ const s = StyleSheet.create({
     fontSize: 13, color: TEXT_DARK, fontWeight: '600',
     textAlign: 'center', paddingTop: 12,
   },
+
+  // ── Suggestions tab
+  suggestionBadge: {
+    backgroundColor: RED, borderRadius: 8,
+    paddingHorizontal: 5, paddingVertical: 1, minWidth: 16, alignItems: 'center',
+  },
+  suggestionBadgeActive:    { backgroundColor: 'rgba(255,255,255,0.3)' },
+  suggestionBadgeText:      { fontSize: 9, fontWeight: '800', color: '#fff' },
+  suggestionBadgeTextActive: { color: '#fff' },
+
+  suggestionsWrap: { gap: 0, marginBottom: 10 },
+  suggestionLoading: { paddingVertical: 24, alignItems: 'center' },
+
+  suggestionCard: {
+    backgroundColor: '#fff', borderRadius: 14,
+    borderWidth: 1.5, borderColor: HAIRLINE,
+    padding: 14, gap: 4,
+  },
+  suggestionTopRow: { flexDirection: 'row', marginBottom: 4 },
+  suggestionName:  { fontSize: 15, fontWeight: '700', color: TEXT_DARK },
+  suggestionAddr:  { fontSize: 12, color: TEXT_MUTED },
+  suggestionNoteRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: '#f0f9f3', borderRadius: 8, padding: 8, marginTop: 4,
+  },
+  suggestionNote:  { flex: 1, fontSize: 12, color: GREEN, lineHeight: 16 },
+
+  suggestionActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  approveBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: DEEP_GREEN, borderRadius: 10, paddingVertical: 10,
+  },
+  approveBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  rejectBtn: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1.5, borderColor: RED, alignItems: 'center', justifyContent: 'center',
+  },
+  rejectBtnText: { fontSize: 13, fontWeight: '600', color: RED },
 
   // ── Delete
   deleteBtn: {

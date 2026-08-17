@@ -142,7 +142,11 @@ export default function RestaurantCard({ restaurant, onPress, onSave, isSaved, t
             { backgroundColor: restaurant.primaryCertifier === 'self_certified' ? '#FEF9EE' : '#EFF6F1' }
           ]}>
             <Ionicons
-              name={restaurant.primaryCertifier === 'self_certified' ? 'ribbon-outline' : 'checkmark-circle'}
+              name={
+                restaurant.primaryCertifier === 'self_certified' ? 'ribbon-outline' :
+                restaurant.primaryCertifier === 'muslim_owned'   ? 'person-outline' :
+                'checkmark-circle'
+              }
               size={11}
               color={inlineCert.color}
             />

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  FlatList, ActivityIndicator, RefreshControl, ScrollView,
+  FlatList, ActivityIndicator, RefreshControl, ScrollView, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +45,7 @@ export default function AdminListingsScreen() {
   const [listings,   setListings]   = useState<Listing[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search,     setSearch]     = useState('');
 
   const loadAll = useCallback(async () => {
     const { data } = await supabase
@@ -61,13 +62,20 @@ export default function AdminListingsScreen() {
 
   const onRefresh = () => { setRefreshing(true); loadAll(); };
 
-  const rows = tab === 'all'
+  const q = search.trim().toLowerCase();
+
+  const rows = (tab === 'all'
     ? listings
     : tab === 'grocery'
       ? listings.filter(l => l.category === 'grocery' || l.category === 'butcher')
       : tab === 'cafe'
         ? listings.filter(l => l.category === 'cafe')
-        : listings.filter(l => (l.category ?? 'restaurant') === tab);
+        : listings.filter(l => (l.category ?? 'restaurant') === tab)
+  ).filter(l =>
+    !q ||
+    l.name.toLowerCase().includes(q) ||
+    l.address.toLowerCase().includes(q)
+  );
 
   if (loading) {
     return (
@@ -96,6 +104,21 @@ export default function AdminListingsScreen() {
         ))}
       </ScrollView>
 
+      <View style={s.searchOuter}>
+        <View style={s.searchWrap}>
+          <Ionicons name="search-outline" size={15} color={TEXT_MUTED} />
+          <TextInput
+            style={s.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by name or address..."
+            placeholderTextColor="#bbb"
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+        </View>
+      </View>
+
       <FlatList
         data={rows}
         keyExtractor={item => item.id}
@@ -103,8 +126,8 @@ export default function AdminListingsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GREEN} />}
         ListEmptyComponent={
           <View style={s.emptyBox}>
-            <Ionicons name="storefront-outline" size={48} color="#d0d0d0" />
-            <Text style={s.emptyText}>No listings yet</Text>
+            <Ionicons name={q ? 'search-outline' : 'storefront-outline'} size={48} color="#d0d0d0" />
+            <Text style={s.emptyText}>{q ? 'No listings match your search' : 'No listings yet'}</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -171,6 +194,19 @@ const s = StyleSheet.create({
   tabActive:     { borderBottomWidth: 2, borderBottomColor: GREEN },
   tabText:       { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
   tabTextActive: { color: GREEN },
+
+  searchOuter: {
+    backgroundColor: CREAM,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12,
+    borderWidth: 1.5, borderColor: HAIRLINE,
+    paddingHorizontal: 12, paddingVertical: 9,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: TEXT_DARK },
 
   listContent: { padding: 16, paddingBottom: 40 },
 
