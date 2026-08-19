@@ -242,6 +242,15 @@ export default function AdminDashboardScreen() {
                 badgeColor={DEEP_GREEN}
                 onPress={() => router.push('/(admin)/guides')}
               />
+              <Shortcut
+                icon="school-outline"
+                label="MSA Requests"
+                color="#0891b2"
+                bg="#ecfeff"
+                badge={0}
+                badgeColor="#0891b2"
+                onPress={() => router.push('/(admin)/msa-requests')}
+              />
             </View>
 
             {/* ── Submissions header ── */}

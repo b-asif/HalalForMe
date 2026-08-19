@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSA Admin Portal — Rihdal</title>
+  <link rel="icon" href="../../icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green:          #1F3D2B;
+      --green-mid:      #245737;
+      --cream:          #F7F2E7;
+      --cream-dim:      #EDE8DC;
+      --gold:           #B08D57;
+      --gold-accent:    #C5A059;
+      --gold-accent-bg: #FDF6E8;
+      --sage:           #E8F0EC;
+      --sage-border:    #C8DDD0;
+      --text:           #20241F;
+      --muted:          #8C8776;
+      --line:           #EAE3D3;
+      --red:            #C0392B;
+      --sidebar-w:      220px;
+      --font-display:   'Outfit', sans-serif;
+      --font-ui:        'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--cream);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Animations ─── */
+    @keyframes dropIn {
+      from { transform: translateY(-56px); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
+    }
+    @keyframes fadeUp {
+      from { transform: translateY(22px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* ─── Login screen ─── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--green);
+      padding: 24px;
+      gap: 28px;
+    }
+    /* Hero — matches mobile logoSection */
+    .login-hero {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 0;
+      animation: dropIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.05s both;
+    }
+    .login-wordmark {
+      font-family: var(--font-display);
+      font-size: 36px; font-weight: 800; letter-spacing: 0.3em;
+      text-transform: uppercase; color: var(--cream); text-align: center;
+      padding-left: 0.3em;
+    }
+    .login-tagline {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.25em;
+      text-transform: uppercase; color: var(--gold);
+      text-align: center; margin-top: 9px;
+    }
+    .login-divider {
+      width: 40px; height: 2px; background: var(--gold);
+      border-radius: 1px; margin: 11px auto 0;
+    }
+    /* Card — matches mobile card style */
+    .login-box {
+      background: #fff; border-radius: 20px;
+      padding: 28px 28px 24px; width: 100%; max-width: 380px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.25);
+      animation: dropIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.08s both;
+    }
+    .login-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 20px; }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--muted); margin-bottom: 7px;
+    }
+    .field input {
+      width: 100%; padding: 13px 14px;
+      font-family: inherit; font-size: 15px; color: var(--text);
+      background: var(--cream);
+      border: 1.5px solid var(--line); border-radius: 14px;
+      outline: none; transition: border-color 0.2s, background 0.2s;
+    }
+    .field input:focus { border-color: var(--green-mid); background: #fff; }
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--green); color: #fff;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      border: none; border-radius: 14px; cursor: pointer;
+      transition: opacity 0.2s; margin-top: 6px;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    #login-error {
+      font-size: 13px; color: var(--red);
+      margin-top: 10px; text-align: center; min-height: 18px;
+    }
+    .login-back {
+      display: block; text-align: center; margin-top: 16px;
+      font-size: 13px; color: rgba(247,242,231,0.5); text-decoration: none;
+      animation: dropIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.12s both;
+    }
+    .login-back:hover { color: var(--cream); }
+    .login-request {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px; padding: 16px 20px; width: 100%; max-width: 380px;
+      text-align: center;
+      animation: dropIn 0.9s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+    }
+    .login-request-label {
+      font-size: 12px; color: rgba(247,242,231,0.45); margin-bottom: 8px;
+    }
+    .login-request-link {
+      display: inline-block; font-size: 13px; font-weight: 700;
+      color: var(--green); background: var(--gold);
+      padding: 9px 20px; border-radius: 50px; text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .login-request-link:hover { opacity: 0.85; }
+
+    /* ─── App shell ─── */
+    #app { display: none; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--green);
+      display: flex; flex-direction: column;
+      padding: 28px 0 20px;
+      z-index: 50;
+    }
+    .sidebar-brand {
+      padding: 0 20px 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .sidebar-wordmark { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(247,242,231,0.5); }
+    .sidebar-msa { font-size: 14px; font-weight: 700; color: var(--cream); margin-top: 4px; line-height: 1.3; }
+    .sidebar-uni { font-size: 11px; color: rgba(247,242,231,0.45); margin-top: 2px; }
+    .sidebar-role {
+      display: inline-block; margin-top: 8px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #5c3c0d; background: var(--gold-accent);
+      padding: 3px 8px; border-radius: 50px;
+    }
+    .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+      color: rgba(247,242,231,0.5);
+      transition: color 0.15s, background 0.15s;
+      border-left: 3px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { color: rgba(247,242,231,0.85); background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: var(--cream); border-left-color: var(--gold-accent); background: rgba(247,242,231,0.10); }
+    .nav-item .nav-icon {
+      width: 16px; height: 16px; flex-shrink: 0;
+      stroke-width: 1.75; display: block;
+    }
+    .section-icon {
+      width: 14px; height: 14px; vertical-align: -2px;
+      stroke-width: 2; margin-right: 5px; display: inline-block;
+    }
+    .sidebar-footer { padding: 16px 20px 0; border-top: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-view-link {
+      display: block; font-size: 12px; font-weight: 600;
+      color: rgba(247,242,231,0.4); text-decoration: none;
+      padding: 8px 0; transition: color 0.2s;
+    }
+    .sidebar-view-link:hover { color: rgba(247,242,231,0.8); }
+    .signout-btn {
+      display: block; width: 100%; margin-top: 8px;
+      padding: 8px; font-family: inherit; font-size: 12px; font-weight: 600;
+      color: rgba(247,242,231,0.4); background: none; border: none;
+      cursor: pointer; text-align: left; transition: color 0.2s;
+    }
+    .signout-btn:hover { color: rgba(247,242,231,0.8); }
+
+    /* Main content */
+    .main {
+      margin-left: var(--sidebar-w);
+      height: 100vh; overflow-y: auto;
+      padding: 32px 36px 60px;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+    .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+    /* Cards */
+    .card {
+      background: #fff; border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 24px; margin-bottom: 20px;
+    }
+    .card-title { font-family: var(--font-display); font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 16px; }
+
+    /* Form */
+    .form-field { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 10px 12px;
+      font-family: inherit; font-size: 14px;
+      border: 1.5px solid var(--line); border-radius: 8px;
+      outline: none; transition: border-color 0.2s; background: #fff; color: var(--text);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--green-mid); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .form-check input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--green); }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 18px; font-family: inherit; font-size: 13px; font-weight: 700;
+      border-radius: 8px; border: none; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover:not(:disabled) { opacity: 0.85; }
+    .btn-outline { background: #fff; color: var(--text); border: 1.5px solid var(--line); }
+    .btn-outline:hover:not(:disabled) { border-color: var(--muted); }
+    .btn-danger { background: #fff; color: var(--red); border: 1.5px solid #f0c0bb; }
+    .btn-danger:hover:not(:disabled) { background: #fdf0ee; }
+    .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+
+    /* List items */
+    .list-item {
+      background: #fff; border: 1px solid var(--line); border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 8px;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .list-item-body { flex: 1; min-width: 0; }
+    .list-item-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .list-item-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .list-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* Badge */
+    .badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 2px 7px; border-radius: 50px;
+    }
+    .badge-green { background: #d4edda; color: #1a5c2e; }
+    .badge-muted { background: var(--cream-dim); color: var(--muted); }
+    .badge-gold  { background: #f5e8cc; color: #7a5c1e; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: var(--green); color: #fff;
+      font-size: 13px; font-weight: 600;
+      padding: 12px 24px; border-radius: 50px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      opacity: 0; transition: opacity 0.25s;
+      pointer-events: none; z-index: 999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+    #toast.error { background: var(--red); }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 24px; color: var(--muted); font-size: 14px; }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+
+    /* ─── Dashboard Command Center ─── */
+    .dash-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
+    }
+    .dash-greeting-eyebrow {
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+    }
+    .dash-greeting-name {
+      font-family: var(--font-display);
+      font-size: 26px; font-weight: 800; color: var(--text); line-height: 1.15; margin: 0;
+    }
+    .dash-greeting-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .dash-quick-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding-top: 4px; }
+
+    /* Stats row — compact horizontal strip */
+    .stats-row { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; }
+    .stat-card {
+      background: #fff; border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 18px; flex: 1; min-width: 110px; text-align: center;
+    }
+    .stat-num { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--green); }
+    .stat-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+
+    /* Two-column grid */
+    .dash-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
+
+    /* Section card */
+    .dash-section {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px 20px; margin-bottom: 16px;
+    }
+    .dash-section-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px;
+    }
+    .dash-section-link {
+      font-size: 12px; font-weight: 600; color: var(--green-mid);
+      background: none; border: none; cursor: pointer; padding: 0;
+    }
+    .dash-section-link:hover { opacity: 0.7; }
+
+    /* Event/announcement rows */
+    .dash-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--line);
+    }
+    .dash-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .dash-row-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--gold-accent); flex-shrink: 0; margin-top: 5px;
+    }
+    .dash-row-body { flex: 1; min-width: 0; }
+    .dash-row-title { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dash-row-meta  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Prayer schedule */
+    .dash-prayers .prayer-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px;
+    }
+    .dash-prayers .prayer-row:last-child { border-bottom: none; }
+    .dash-prayers .prayer-name { font-weight: 600; color: var(--text); }
+    .dash-prayers .prayer-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .dash-prayers .prayer-row.next .prayer-name { color: var(--green); }
+    .dash-prayers .prayer-row.next .prayer-time {
+      color: var(--green); font-weight: 700;
+      background: var(--sage); padding: 2px 8px; border-radius: 50px;
+    }
+
+    /* Preview card */
+    .dash-preview-card .dash-preview-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+    .dash-preview-link { display: block; text-align: center; text-decoration: none; font-size: 13px; }
+
+    /* Members table */
+    .members-table { width: 100%; border-collapse: collapse; }
+    .members-table th { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+    .members-table td { font-size: 13px; padding: 12px 12px; border-bottom: 1px solid var(--cream-dim); vertical-align: middle; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 200;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 16px;
+      width: 100%; max-width: 540px;
+      max-height: 90vh; overflow-y: auto;
+      padding: 28px;
+    }
+    .modal-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ─── Clock Picker ─── */
+    .cp-wrap { position: relative; display: inline-block; width: 100%; }
+    .cp-display {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px;
+      cursor: pointer; background: #fff; width: 100%;
+      font-size: 15px; font-weight: 700; color: var(--text);
+      transition: border-color 0.2s; user-select: none;
+    }
+    .cp-display:hover, .cp-wrap.open .cp-display { border-color: var(--green-mid); }
+    .cp-placeholder { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .cp-popup {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 300;
+      background: #fff; border-radius: 16px; padding: 14px 14px 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.16); border: 1px solid var(--line);
+      width: 228px;
+    }
+    .cp-wrap.open .cp-popup { display: block; }
+    .cp-head {
+      display: flex; align-items: center; gap: 2px;
+      justify-content: center; margin-bottom: 10px;
+    }
+    .cp-seg {
+      font-family: var(--font-display); font-size: 26px; font-weight: 800;
+      color: var(--muted); line-height: 1; padding: 4px 9px; border-radius: 8px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .cp-seg.active { color: var(--green); background: var(--sage); }
+    .cp-colon { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--text); margin: 0 1px; }
+    .cp-ampm { display: flex; flex-direction: column; gap: 3px; margin-left: 10px; }
+    .cp-ampm button {
+      font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+      padding: 3px 8px; border-radius: 6px; border: 1.5px solid var(--line);
+      cursor: pointer; background: #fff; color: var(--muted); transition: all 0.15s;
+    }
+    .cp-ampm button.active { background: var(--green); color: #fff; border-color: var(--green); }
+    .cp-face { display: block; margin: 0 auto; cursor: pointer; }
+    .cp-face .cp-num { cursor: pointer; }
+    .cp-face .cp-num circle { transition: fill 0.1s; }
+    .cp-face .cp-num:hover circle { fill: var(--sage-border) !important; }
+    .cp-face .cp-num.active:hover circle { fill: var(--green-mid) !important; }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 60px; }
+      .sidebar-brand, .nav-item span, .sidebar-footer .sidebar-view-link, .signout-btn { display: none; }
+      .nav-item { justify-content: center; padding: 14px; }
+      .main { margin-left: 60px; padding: 20px 16px 60px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ LOGIN SCREEN ═══════════════════════════ -->
+<div id="login-screen">
+  <!-- Hero branding -->
+  <div class="login-hero">
+    <div class="login-wordmark">Rihdal</div>
+    <div class="login-tagline">Campus Hub</div>
+    <div class="login-divider"></div>
+  </div>
+
+  <!-- Form card -->
+  <div class="login-box">
+    <h1 class="login-title">Sign in to manage your MSA</h1>
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@university.edu" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="login-btn">Sign In</button>
+    <p id="login-error"></p>
+  </div>
+
+  <div class="login-request">
+    <p class="login-request-label">No account yet? School not listed?</p>
+    <a href="apply.html" class="login-request-link">Request MSA Access →</a>
+  </div>
+
+  <a href="../" class="login-back">← Back to Campus Hub</a>
+</div>
+
+<!-- ═══════════════════════════ APP SHELL ═══════════════════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-wordmark">Rihdal</div>
+      <div class="sidebar-msa" id="sb-msa-name">—</div>
+      <div class="sidebar-uni" id="sb-uni-name"></div>
+      <span class="sidebar-role" id="sb-role"></span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard"><i data-lucide="layout-dashboard" class="nav-icon"></i><span>Dashboard</span></div>
+      <div class="nav-item" data-page="profile"><i data-lucide="pencil" class="nav-icon"></i><span>MSA Profile</span></div>
+      <div class="nav-item" data-page="prayer-times"><i data-lucide="clock" class="nav-icon"></i><span>Prayer Times</span></div>
+      <div class="nav-item" data-page="jummah"><i data-lucide="sun" class="nav-icon"></i><span>Jummah</span></div>
+      <div class="nav-item" data-page="spaces"><i data-lucide="map-pin" class="nav-icon"></i><span>Prayer Spaces</span></div>
+      <div class="nav-item" data-page="events"><i data-lucide="calendar-days" class="nav-icon"></i><span>Events</span></div>
+      <div class="nav-item" data-page="announcements"><i data-lucide="megaphone" class="nav-icon"></i><span>Announcements</span></div>
+      <div class="nav-item" data-page="resources"><i data-lucide="bookmark" class="nav-icon"></i><span>Resources</span></div>
+      <div class="nav-item admin-only" data-page="members" style="display:none"><i data-lucide="users" class="nav-icon"></i><span>Members</span></div>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="sidebar-view-link" id="sb-public-link" href="#" target="_blank">↗ View public page</a>
+      <button class="signout-btn" id="signout-btn">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <!-- Greeting header -->
+      <div class="dash-header">
+        <div class="dash-greeting">
+          <div class="dash-greeting-eyebrow">Assalamu Alaikum 🌙</div>
+          <h1 class="dash-greeting-name" id="dash-msa-title">—</h1>
+          <div class="dash-greeting-meta" id="dash-meta"></div>
+        </div>
+        <div class="dash-quick-btns">
+          <button class="btn btn-green" onclick="goPage('events')">+ New Event</button>
+          <button class="btn btn-outline" onclick="goPage('announcements')">+ Announcement</button>
+          <button class="btn btn-outline" onclick="goPage('prayer-times')">Update Times</button>
+        </div>
+      </div>
+
+      <!-- Two-column grid -->
+      <div class="dash-grid">
+        <!-- Left column -->
+        <div class="dash-col-main">
+          <div class="stats-row" id="dash-stats"></div>
+
+          <div class="dash-section">
+            <div class="dash-section-hd">
+              <span><i data-lucide="calendar-days" class="section-icon"></i>Upcoming Events</span>
+              <button class="dash-section-link" onclick="goPage('events')">Manage →</button>
+            </div>
+            <div id="dash-events"></div>
+          </div>
+
+          <div class="dash-section">
+            <div class="dash-section-hd">
+              <span><i data-lucide="megaphone" class="section-icon"></i>Active Announcements</span>
+              <button class="dash-section-link" onclick="goPage('announcements')">Manage →</button>
+            </div>
+            <div id="dash-announcements"></div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="dash-col-side">
+          <div class="dash-section dash-prayers">
+            <div class="dash-section-hd"><span><i data-lucide="alarm-clock" class="section-icon"></i>Today's Iqama Schedule</span></div>
+            <div id="dash-prayers"></div>
+          </div>
+
+          <div class="dash-section dash-preview-card">
+            <div class="dash-section-hd"><span><i data-lucide="eye" class="section-icon"></i>Student View</span></div>
+            <p class="dash-preview-desc">How students see your campus page right now.</p>
+            <a class="btn btn-outline dash-preview-link" id="dash-public-link" href="#" target="_blank">View Public Page ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MSA Profile -->
+    <div class="page" id="page-profile">
+      <h1 class="page-title">MSA Profile</h1>
+      <p class="page-sub">This information appears on your public campus page.</p>
+      <div class="card">
+        <div class="card-title">Basic Info</div>
+        <div class="form-field"><label class="form-label">MSA Name</label><input class="form-input" id="prof-name" /></div>
+        <div class="form-field"><label class="form-label">Description</label><textarea class="form-textarea" id="prof-desc" placeholder="Brief description of your MSA…"></textarea></div>
+        <div class="form-row">
+          <div class="form-field"><label class="form-label">Email</label><input class="form-input" type="email" id="prof-email" /></div>
+          <div class="form-field"><label class="form-label">Website</label><input class="form-input" type="url" id="prof-website" placeholder="https://…" /></div>
+        </div>
+        <div class="form-field"><label class="form-label">Instagram Handle</label><input class="form-input" id="prof-instagram" placeholder="@msaatuniversity" /></div>
+        <div class="btn-row">
+          <button class="btn btn-green" id="prof-save-btn">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prayer Times -->
+    <div class="page" id="page-prayer-times">
+      <h1 class="page-title">Prayer Times</h1>
+      <p class="page-sub">Set the iqama/congregational prayer times at your MSA.</p>
+      <div class="card" id="pt-card">
+        <div class="card-title">Iqama Times</div>
+        <div id="pt-form"></div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-green" id="pt-save-btn">Save All Prayer Times</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jummah -->
+    <div class="page" id="page-jummah">
+      <h1 class="page-title">Jummah</h1>
+      <p class="page-sub">Add one or more Jummah prayer times.</p>
+      <div id="jummah-list"></div>
+      <button class="btn btn-outline" id="jummah-add-btn">+ Add Jummah</button>
+    </div>
+
+    <!-- Prayer Spaces -->
+    <div class="page" id="page-spaces">
+      <h1 class="page-title">Prayer Spaces</h1>
+      <p class="page-sub">List the prayer rooms and spaces available on campus.</p>
+      <div id="spaces-list"></div>
+      <button class="btn btn-outline" id="spaces-add-btn">+ Add Space</button>
+    </div>
+
+    <!-- Events -->
+    <div class="page" id="page-events">
+      <h1 class="page-title">Events</h1>
+      <p class="page-sub">Manage upcoming MSA events.</p>
+      <button class="btn btn-green" id="events-add-btn" style="margin-bottom:16px;">+ New Event</button>
+      <div id="events-list"></div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="page" id="page-announcements">
+      <h1 class="page-title">Announcements</h1>
+      <p class="page-sub">Post updates to your campus community.</p>
+      <button class="btn btn-green" id="ann-add-btn" style="margin-bottom:16px;">+ New Announcement</button>
+      <div id="ann-list"></div>
+    </div>
+
+    <!-- Resources -->
+    <div class="page" id="page-resources">
+      <h1 class="page-title">Resources</h1>
+      <p class="page-sub">Helpful links and locations for students — halal food, prayer spots, etc.</p>
+      <button class="btn btn-outline" id="res-add-btn" style="margin-bottom:16px;">+ Add Resource</button>
+      <div id="res-list"></div>
+    </div>
+
+    <!-- Members (admin only) -->
+    <div class="page" id="page-members">
+      <h1 class="page-title">Members</h1>
+      <p class="page-sub">Manage who can edit this MSA's page.</p>
+      <div class="card">
+        <table class="members-table" id="members-table">
+          <thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+          <tbody id="members-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════ MODAL ═══════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Edit</div>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modal-cancel">Cancel</button>
+      <button class="btn btn-green" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════ SCRIPT ═══════════════════════════ -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const sb = createClient(
+  'https://alalaxezygrhxalssxfi.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsYWxheGV6eWdyaHhhbHNzeGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzYxMzcsImV4cCI6MjA5MjU1MjEzN30.HFRc9ez6JjNUvCtl9oc99X4f00pbdtjoOoSJ2IwJ21g'
+);
+
+// Initialise Lucide icons on all static elements immediately
+if (window.lucide) window.lucide.createIcons();
+
+// ── State ──
+let user = null, msaId = null, msaData = null, uniData = null, userRole = 'editor';
+
+// ── Helpers ──
+function esc(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+function confirm_delete(name, cb) {
+  if (window.confirm(`Delete "${name}"? This cannot be undone.`)) cb();
+}
+
+// ── Navigation ──
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
+  loadPage(name);
+}
+window.goPage = goPage;
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => goPage(item.dataset.page));
+});
+
+// ── Modal ──
+let modalSaveFn = null;
+function openModal(title, bodyHtml, saveFn) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  modalSaveFn = saveFn;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('modal-save').addEventListener('click', async () => {
+  if (modalSaveFn) {
+    document.getElementById('modal-save').disabled = true;
+    await modalSaveFn();
+    document.getElementById('modal-save').disabled = false;
+  }
+});
+
+// ── Auth ──
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim();
+  const pw    = document.getElementById('password').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if (error) { err.textContent = error.message; }
+});
+
+['email','password'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
+});
+
+document.getElementById('signout-btn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+});
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    user = session.user;
+    await initApp();
+  } else {
+    user = null; msaId = null;
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-error').textContent = '';
+  }
+});
+
+// ── Init app after auth ──
+async function initApp() {
+  // Fetch membership
+  const { data: membership } = await sb
+    .from('msa_members')
+    .select('msa_id, role, status, msas(id, name, university_id, universities(name, slug))')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .order('requested_at')
+    .limit(1)
+    .maybeSingle();
+
+  // Check global admin
+  const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+  const isGlobalAdmin = profile?.is_admin === true;
+
+  if (!membership && !isGlobalAdmin) {
+    document.getElementById('login-error').textContent = 'Your account has no active MSA membership. Contact a Rihdal admin.';
+    await sb.auth.signOut();
+    return;
+  }
+
+  msaId    = membership?.msa_id ?? null;
+  msaData  = membership?.msas  ?? null;
+  uniData  = msaData?.universities ?? null;
+  userRole = isGlobalAdmin && !membership ? 'admin' : (membership?.role ?? 'editor');
+
+  // Sidebar
+  document.getElementById('sb-msa-name').textContent = msaData?.name ?? 'Global Admin';
+  document.getElementById('sb-uni-name').textContent = uniData?.name ?? '';
+  document.getElementById('sb-role').textContent = userRole;
+  if (uniData?.slug) {
+    document.getElementById('sb-public-link').href = `../../campus/detail.html?slug=${uniData.slug}`;
+  }
+
+  // Show members link for admins only
+  if (userRole === 'admin' || isGlobalAdmin) {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+  }
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  if (window.lucide) window.lucide.createIcons();
+  goPage('dashboard');
+}
+
+// ── Page loaders ──
+async function loadPage(name) {
+  if (!msaId) return;
+  if (name === 'dashboard')     await loadDashboard();
+  if (name === 'profile')       await loadProfile();
+  if (name === 'prayer-times')  await loadPrayerTimes();
+  if (name === 'jummah')        await loadJummah();
+  if (name === 'spaces')        await loadSpaces();
+  if (name === 'events')        await loadEvents();
+  if (name === 'announcements') await loadAnnouncements();
+  if (name === 'resources')     await loadResources();
+  if (name === 'members')       await loadMembers();
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  // Populate greeting
+  document.getElementById('dash-msa-title').textContent = msaData?.name ?? 'Your MSA';
+  document.getElementById('dash-meta').textContent =
+    uniData?.name ? `${uniData.name} · ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}` : '';
+
+  // Set public page link
+  if (uniData?.slug) {
+    document.getElementById('dash-public-link').href = `../../campus/detail.html?slug=${uniData.slug}`;
+  }
+
+  // Parallel data fetch
+  const now = new Date().toISOString();
+  const [evAll, evUpcoming, annActive, spaces, jummah, prayers] = await Promise.all([
+    sb.from('campus_events').select('id', { count: 'exact', head: true }).eq('msa_id', msaId).eq('is_published', true),
+    sb.from('campus_events').select('id, title, event_start, category').eq('msa_id', msaId).eq('is_published', true).gte('event_start', now).order('event_start').limit(3),
+    sb.from('campus_announcements').select('id, title, created_at').eq('msa_id', msaId).eq('is_published', true).order('created_at', { ascending: false }).limit(3),
+    sb.from('campus_prayer_spaces').select('id', { count: 'exact', head: true }).eq('msa_id', msaId).eq('is_active', true),
+    sb.from('campus_jummah').select('id', { count: 'exact', head: true }).eq('msa_id', msaId).eq('is_active', true),
+    sb.from('campus_prayer_times').select('prayer, time, location').eq('msa_id', msaId),
+  ]);
+
+  // Stats row
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${evAll.count ?? 0}</div><div class="stat-label">Events</div></div>
+    <div class="stat-card"><div class="stat-num">${annActive.data?.length ?? 0}</div><div class="stat-label">Announcements</div></div>
+    <div class="stat-card"><div class="stat-num">${spaces.count ?? 0}</div><div class="stat-label">Prayer Spaces</div></div>
+    <div class="stat-card"><div class="stat-num">${jummah.count ?? 0}</div><div class="stat-label">Jummah Times</div></div>`;
+
+  // Upcoming events
+  const evRows = evUpcoming.data ?? [];
+  document.getElementById('dash-events').innerHTML = evRows.length ? evRows.map(e => {
+    const d = new Date(e.event_start);
+    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `<div class="dash-row"><div class="dash-row-dot"></div><div class="dash-row-body"><div class="dash-row-title">${esc(e.title)}</div><div class="dash-row-meta">${label}</div></div></div>`;
+  }).join('') : `<div class="empty" style="padding:20px 0"><div class="empty-icon">📅</div>No upcoming events</div>`;
+
+  // Active announcements
+  const annRows = annActive.data ?? [];
+  document.getElementById('dash-announcements').innerHTML = annRows.length ? annRows.map(a => {
+    const d = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `<div class="dash-row"><div class="dash-row-dot" style="background:var(--green-mid)"></div><div class="dash-row-body"><div class="dash-row-title">${esc(a.title)}</div><div class="dash-row-meta">Posted ${d}</div></div></div>`;
+  }).join('') : `<div class="empty" style="padding:20px 0"><div class="empty-icon">📢</div>No announcements yet</div>`;
+
+  // Prayer schedule with "next prayer" highlight
+  const PRAYER_ORDER = ['fajr','dhuhr','asr','maghrib','isha'];
+  const PRAYER_LABELS = { fajr:'Fajr', dhuhr:'Dhuhr', asr:'Asr', maghrib:'Maghrib', isha:'Isha' };
+  const prayerMap = {};
+  (prayers.data ?? []).forEach(r => prayerMap[r.prayer] = r);
+
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  function parseMins(t) {
+    if (!t) return null;
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!m) return null;
+    let h = parseInt(m[1]); const min = parseInt(m[2]); const ampm = m[3].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + min;
+  }
+  let nextFound = false;
+  const prayerRows = PRAYER_ORDER.map(p => {
+    const row = prayerMap[p];
+    const mins = parseMins(row?.time);
+    const isNext = !nextFound && mins !== null && mins > nowMins;
+    if (isNext) nextFound = true;
+    return `<div class="prayer-row${isNext ? ' next' : ''}">
+      <span class="prayer-name">${PRAYER_LABELS[p]}</span>
+      <span class="prayer-time">${row?.time ?? '—'}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('dash-prayers').innerHTML = prayerRows ||
+    `<div class="empty" style="padding:12px 0">No prayer times set yet</div>`;
+}
+
+// ── MSA Profile ──
+async function loadProfile() {
+  const { data } = await sb.from('msas').select('*').eq('id', msaId).maybeSingle();
+  if (!data) return;
+  document.getElementById('prof-name').value      = data.name ?? '';
+  document.getElementById('prof-desc').value      = data.description ?? '';
+  document.getElementById('prof-email').value     = data.email ?? '';
+  document.getElementById('prof-website').value   = data.website ?? '';
+  document.getElementById('prof-instagram').value = data.instagram_handle ?? '';
+}
+
+document.getElementById('prof-save-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('prof-save-btn');
+  btn.disabled = true;
+  const { error } = await sb.from('msas').update({
+    name:             document.getElementById('prof-name').value.trim(),
+    description:      document.getElementById('prof-desc').value.trim() || null,
+    email:            document.getElementById('prof-email').value.trim() || null,
+    website:          document.getElementById('prof-website').value.trim() || null,
+    instagram_handle: document.getElementById('prof-instagram').value.trim().replace(/^@/,'') || null,
+    updated_at:       new Date().toISOString(),
+  }).eq('id', msaId);
+  btn.disabled = false;
+  if (error) toast(error.message, true);
+  else { toast('Profile saved'); document.getElementById('sb-msa-name').textContent = document.getElementById('prof-name').value.trim(); }
+});
+
+// ── Prayer Times ──
+const PRAYERS = ['fajr','dhuhr','asr','maghrib','isha'];
+const PRAYER_LABELS = { fajr:'Fajr', dhuhr:'Dhuhr', asr:'Asr', maghrib:'Maghrib', isha:'Isha' };
+
+// ── Clock Picker ──
+const _clocks = {};
+
+// Global handlers called from SVG/inline onclick attributes
+window.cpSelect   = (id, v) => _clocks[id]?.select(v);
+window.cpMode     = (id, m) => _clocks[id]?.switchMode(m);
+window.cpAmPm     = (id, a) => _clocks[id]?.setAmPm(a);
+window.cpToggle   = (id)    => { const w = document.getElementById(id); w?.classList.toggle('open'); };
+
+// Close any open picker when clicking outside
+document.addEventListener('click', e => {
+  document.querySelectorAll('.cp-wrap.open').forEach(w => {
+    if (!w.contains(e.target)) w.classList.remove('open');
+  });
+});
+
+class ClockPicker {
+  constructor(containerId, hiddenId, initial) {
+    this.id        = containerId;
+    this.container = document.getElementById(containerId);
+    this.hidden    = document.getElementById(hiddenId);
+    this.mode      = 'hour';
+    this.h = 12; this.m = 0; this.ampm = 'AM';
+    this.hasValue  = false;
+
+    if (initial) {
+      const mt = initial.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (mt) {
+        this.h = parseInt(mt[1]);
+        this.m = parseInt(mt[2]);
+        this.ampm = mt[3].toUpperCase();
+        this.hasValue = true;
+      }
+    }
+    _clocks[containerId] = this;
+    this._render();
+  }
+
+  _fmt() { return `${this.h}:${String(this.m).padStart(2, '0')} ${this.ampm}`; }
+
+  _writeHidden() {
+    if (this.hidden) this.hidden.value = this.hasValue ? this._fmt() : '';
+  }
+
+  select(val) {
+    if (this.mode === 'hour') {
+      this.h = val;
+      this.mode = 'minute';
+      this._renderHead();
+      this._renderFace();
+    } else {
+      this.m = val;
+      this.hasValue = true;
+      this._writeHidden();
+      // Update the display button text
+      const t = this.container.querySelector('.cp-time');
+      if (t) { t.textContent = this._fmt(); t.style.display = ''; }
+      const ph = this.container.querySelector('.cp-placeholder');
+      if (ph) ph.style.display = 'none';
+      // Auto-close
+      this.container.classList.remove('open');
+      this._renderHead();
+      this._renderFace();
+    }
+  }
+
+  switchMode(mode) { this.mode = mode; this._renderHead(); this._renderFace(); }
+
+  setAmPm(ampm) {
+    this.ampm = ampm;
+    if (this.hasValue) this._writeHidden();
+    // Refresh AM/PM button states only
+    this.container.querySelectorAll('.cp-ampm button').forEach(b => {
+      b.classList.toggle('active', b.textContent === ampm);
+    });
+    // Also refresh display
+    const t = this.container.querySelector('.cp-time');
+    if (t && this.hasValue) t.textContent = this._fmt();
+  }
+
+  _render() {
+    this.container.innerHTML = `
+      <div class="cp-display" onclick="cpToggle('${this.id}')">
+        <span class="cp-time" style="${this.hasValue ? '' : 'display:none'}">${this.hasValue ? this._fmt() : ''}</span>
+        <span class="cp-placeholder" style="${this.hasValue ? 'display:none' : ''}">Set time</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--muted)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="cp-popup">
+        <div class="cp-head" id="${this.id}-head"></div>
+        <svg class="cp-face" id="${this.id}-face" width="200" height="200" viewBox="0 0 200 200"></svg>
+      </div>`;
+    this._renderHead();
+    this._renderFace();
+  }
+
+  _renderHead() {
+    const el = document.getElementById(`${this.id}-head`);
+    if (!el) return;
+    el.innerHTML = `
+      <span class="cp-seg${this.mode === 'hour' ? ' active' : ''}" onclick="cpMode('${this.id}','hour')">${String(this.h).padStart(2, '0')}</span>
+      <span class="cp-colon">:</span>
+      <span class="cp-seg${this.mode === 'minute' ? ' active' : ''}" onclick="cpMode('${this.id}','minute')">${String(this.m).padStart(2, '0')}</span>
+      <div class="cp-ampm">
+        <button class="${this.ampm === 'AM' ? 'active' : ''}" onclick="cpAmPm('${this.id}','AM')">AM</button>
+        <button class="${this.ampm === 'PM' ? 'active' : ''}" onclick="cpAmPm('${this.id}','PM')">PM</button>
+      </div>`;
+  }
+
+  _renderFace() {
+    const svg = document.getElementById(`${this.id}-face`);
+    if (!svg) return;
+    const cx = 100, cy = 100, nr = 70;
+    const items = this.mode === 'hour'
+      ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+    const selected = this.mode === 'hour' ? this.h : this.m;
+    const selIdx = items.indexOf(selected);
+    const handA = selIdx >= 0 ? (selIdx / 12) * Math.PI * 2 - Math.PI / 2 : -Math.PI / 2;
+    const hx = (cx + nr * Math.cos(handA)).toFixed(1);
+    const hy = (cy + nr * Math.sin(handA)).toFixed(1);
+
+    const ticks = items.map((n, i) => {
+      const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      const x = (cx + nr * Math.cos(a)).toFixed(1);
+      const y = (cy + nr * Math.sin(a)).toFixed(1);
+      const active = n === selected;
+      const label = this.mode === 'hour' ? n : String(n).padStart(2, '0');
+      return `<g class="cp-num${active ? ' active' : ''}" onclick="cpSelect('${this.id}',${n})">
+        <circle cx="${x}" cy="${y}" r="17" fill="${active ? 'var(--green)' : 'transparent'}" stroke="none"/>
+        <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central"
+          font-family="inherit" font-size="12" font-weight="${active ? '700' : '500'}"
+          fill="${active ? '#fff' : 'var(--text)'}" style="pointer-events:none">${label}</text>
+      </g>`;
+    }).join('');
+
+    svg.innerHTML = `
+      <circle cx="${cx}" cy="${cy}" r="85" fill="var(--cream)" stroke="var(--line)" stroke-width="1.5"/>
+      ${selIdx >= 0 ? `<line x1="${cx}" y1="${cy}" x2="${hx}" y2="${hy}" stroke="var(--green)" stroke-width="2" stroke-linecap="round"/>` : ''}
+      <circle cx="${cx}" cy="${cy}" r="4" fill="var(--green)"/>
+      ${ticks}`;
+  }
+}
+
+async function loadPrayerTimes() {
+  const { data } = await sb.from('campus_prayer_times').select('*').eq('msa_id', msaId);
+  const existing = {};
+  (data || []).forEach(r => existing[r.prayer] = r);
+  document.getElementById('pt-form').innerHTML = PRAYERS.map(p => `
+    <div class="form-row" style="margin-bottom:16px;align-items:end;">
+      <div class="form-field" style="margin:0;">
+        <label class="form-label">${PRAYER_LABELS[p]}</label>
+        <div class="cp-wrap" id="cp-${p}"></div>
+        <input type="hidden" id="pt-${p}-time" value="${esc(existing[p]?.time ?? '')}" />
+      </div>
+      <div class="form-field" style="margin:0;">
+        <label class="form-label">Location</label>
+        <input class="form-input" id="pt-${p}-loc" placeholder="Room, building…" value="${esc(existing[p]?.location ?? '')}" />
+      </div>
+    </div>`).join('');
+
+  // Mount a clock picker for each prayer
+  PRAYERS.forEach(p => new ClockPicker(`cp-${p}`, `pt-${p}-time`, existing[p]?.time ?? ''));
+}
+
+document.getElementById('pt-save-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('pt-save-btn');
+  btn.disabled = true;
+  const upserts = PRAYERS
+    .map(p => ({
+      msa_id:   msaId,
+      prayer:   p,
+      time:     document.getElementById(`pt-${p}-time`)?.value.trim(),
+      location: document.getElementById(`pt-${p}-loc`)?.value.trim() || null,
+      updated_at: new Date().toISOString(),
+    }))
+    .filter(r => r.time);
+  const { error } = await sb.from('campus_prayer_times').upsert(upserts, { onConflict: 'msa_id,prayer' });
+  btn.disabled = false;
+  if (error) toast(error.message, true); else toast('Prayer times saved');
+});
+
+// ── Jummah ──
+async function loadJummah() {
+  const { data } = await sb.from('campus_jummah').select('*').eq('msa_id', msaId).order('position');
+  const el = document.getElementById('jummah-list');
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon">🕌</div><div class="empty-title">No Jummah times yet</div><p>Click "+ Add Jummah" to add one.</p></div>`
+    : data.map(j => `
+        <div class="list-item">
+          <div class="list-item-body">
+            <div class="list-item-title">${esc(j.time)}${j.location ? ' · ' + esc(j.location) : ''}</div>
+            <div class="list-item-sub">${[j.khateeb ? 'Khateeb: '+j.khateeb : '', j.building, j.language !== 'English' ? j.language : ''].filter(Boolean).join(' · ') || ''}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-outline" onclick="editJummah('${j.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteJummah('${j.id}','${esc(j.time)}')">Delete</button>
+          </div>
+        </div>`).join('');
+}
+
+function jummahForm(j={}) {
+  return `
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Time *</label><input class="form-input" id="jm-time" placeholder="1:30 PM" value="${esc(j.time??'')}" /></div>
+      <div class="form-field"><label class="form-label">Location</label><input class="form-input" id="jm-loc" placeholder="Main Quad…" value="${esc(j.location??'')}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Building</label><input class="form-input" id="jm-building" value="${esc(j.building??'')}" /></div>
+      <div class="form-field"><label class="form-label">Khateeb</label><input class="form-input" id="jm-khateeb" value="${esc(j.khateeb??'')}" /></div>
+    </div>
+    <div class="form-field"><label class="form-label">Language</label><input class="form-input" id="jm-language" value="${esc(j.language??'English')}" /></div>
+    <div class="form-field"><label class="form-label">Notes</label><textarea class="form-textarea" id="jm-notes" style="min-height:60px;">${esc(j.notes??'')}</textarea></div>`;
+}
+
+document.getElementById('jummah-add-btn').addEventListener('click', () => {
+  openModal('Add Jummah', jummahForm(), async () => {
+    const time = document.getElementById('jm-time').value.trim();
+    if (!time) { toast('Time is required', true); return; }
+    const { error } = await sb.from('campus_jummah').insert({
+      msa_id: msaId, time,
+      location: document.getElementById('jm-loc').value.trim()||null,
+      building: document.getElementById('jm-building').value.trim()||null,
+      khateeb:  document.getElementById('jm-khateeb').value.trim()||null,
+      language: document.getElementById('jm-language').value.trim()||'English',
+      notes:    document.getElementById('jm-notes').value.trim()||null,
+    });
+    if (error) { toast(error.message, true); return; }
+    toast('Jummah added'); closeModal(); loadJummah();
+  });
+});
+
+window.editJummah = async (id) => {
+  const { data: j } = await sb.from('campus_jummah').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Jummah', jummahForm(j), async () => {
+    const time = document.getElementById('jm-time').value.trim();
+    if (!time) { toast('Time is required', true); return; }
+    const { error } = await sb.from('campus_jummah').update({
+      time, location: document.getElementById('jm-loc').value.trim()||null,
+      building: document.getElementById('jm-building').value.trim()||null,
+      khateeb:  document.getElementById('jm-khateeb').value.trim()||null,
+      language: document.getElementById('jm-language').value.trim()||'English',
+      notes:    document.getElementById('jm-notes').value.trim()||null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    toast('Jummah updated'); closeModal(); loadJummah();
+  });
+};
+
+window.deleteJummah = async (id, label) => {
+  confirm_delete(label, async () => {
+    await sb.from('campus_jummah').delete().eq('id', id);
+    toast('Deleted'); loadJummah();
+  });
+};
+
+// ── Prayer Spaces ──
+async function loadSpaces() {
+  const { data } = await sb.from('campus_prayer_spaces').select('*').eq('msa_id', msaId).order('name');
+  const el = document.getElementById('spaces-list');
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="empty-title">No prayer spaces yet</div></div>`
+    : data.map(s => `
+        <div class="list-item">
+          <div class="list-item-body">
+            <div class="list-item-title">${esc(s.name)} ${!s.is_active ? '<span class="badge badge-muted">Hidden</span>' : ''}</div>
+            <div class="list-item-sub">${[s.building, s.room_number ? 'Rm '+s.room_number : '', s.hours_text].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-outline" onclick="editSpace('${s.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteSpace('${s.id}','${esc(s.name)}')">Delete</button>
+          </div>
+        </div>`).join('');
+}
+
+function spaceForm(s={}) {
+  return `
+    <div class="form-field"><label class="form-label">Name *</label><input class="form-input" id="sp-name" value="${esc(s.name??'')}" placeholder="MSA Prayer Room" /></div>
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Building</label><input class="form-input" id="sp-building" value="${esc(s.building??'')}" /></div>
+      <div class="form-field"><label class="form-label">Room #</label><input class="form-input" id="sp-room" value="${esc(s.room_number??'')}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Floor</label><input class="form-input" id="sp-floor" value="${esc(s.floor??'')}" /></div>
+      <div class="form-field"><label class="form-label">Capacity</label><input class="form-input" type="number" id="sp-capacity" value="${s.capacity??''}" /></div>
+    </div>
+    <div class="form-field"><label class="form-label">Hours</label><input class="form-input" id="sp-hours" placeholder="Mon–Fri 8am–10pm" value="${esc(s.hours_text??'')}" /></div>
+    <div class="form-field"><label class="form-label">Notes</label><textarea class="form-textarea" id="sp-notes" style="min-height:60px;">${esc(s.notes??'')}</textarea></div>
+    <div style="display:flex;gap:20px;margin-top:8px;">
+      <label class="form-check"><input type="checkbox" id="sp-wudu" ${s.wudu_available?'checked':''}> Wudu available</label>
+      <label class="form-check"><input type="checkbox" id="sp-sisters" ${s.sisters_space?'checked':''}> Sisters' space</label>
+      <label class="form-check"><input type="checkbox" id="sp-active" ${s.is_active!==false?'checked':''}> Active / visible</label>
+    </div>`;
+}
+
+document.getElementById('spaces-add-btn').addEventListener('click', () => {
+  openModal('Add Prayer Space', spaceForm(), async () => {
+    const name = document.getElementById('sp-name').value.trim();
+    if (!name) { toast('Name is required', true); return; }
+    const { error } = await sb.from('campus_prayer_spaces').insert({
+      msa_id: msaId, name,
+      building:       document.getElementById('sp-building').value.trim()||null,
+      room_number:    document.getElementById('sp-room').value.trim()||null,
+      floor:          document.getElementById('sp-floor').value.trim()||null,
+      capacity:       parseInt(document.getElementById('sp-capacity').value)||null,
+      hours_text:     document.getElementById('sp-hours').value.trim()||null,
+      notes:          document.getElementById('sp-notes').value.trim()||null,
+      wudu_available: document.getElementById('sp-wudu').checked,
+      sisters_space:  document.getElementById('sp-sisters').checked,
+      is_active:      document.getElementById('sp-active').checked,
+    });
+    if (error) { toast(error.message, true); return; }
+    toast('Space added'); closeModal(); loadSpaces();
+  });
+});
+
+window.editSpace = async (id) => {
+  const { data: s } = await sb.from('campus_prayer_spaces').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Prayer Space', spaceForm(s), async () => {
+    const name = document.getElementById('sp-name').value.trim();
+    if (!name) { toast('Name is required', true); return; }
+    const { error } = await sb.from('campus_prayer_spaces').update({
+      name, building: document.getElementById('sp-building').value.trim()||null,
+      room_number: document.getElementById('sp-room').value.trim()||null,
+      floor: document.getElementById('sp-floor').value.trim()||null,
+      capacity: parseInt(document.getElementById('sp-capacity').value)||null,
+      hours_text: document.getElementById('sp-hours').value.trim()||null,
+      notes: document.getElementById('sp-notes').value.trim()||null,
+      wudu_available: document.getElementById('sp-wudu').checked,
+      sisters_space: document.getElementById('sp-sisters').checked,
+      is_active: document.getElementById('sp-active').checked,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    toast('Space updated'); closeModal(); loadSpaces();
+  });
+};
+
+window.deleteSpace = async (id, name) => {
+  confirm_delete(name, async () => {
+    await sb.from('campus_prayer_spaces').delete().eq('id', id);
+    toast('Deleted'); loadSpaces();
+  });
+};
+
+// ── Events ──
+async function loadEvents() {
+  const { data } = await sb.from('campus_events').select('*').eq('msa_id', msaId).order('event_start', { ascending: false }).limit(30);
+  const el = document.getElementById('events-list');
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No events yet</div></div>`
+    : data.map(e => {
+        const d = e.event_start ? new Date(e.event_start).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '';
+        return `
+          <div class="list-item">
+            <div class="list-item-body">
+              <div class="list-item-title">${esc(e.title)} ${e.is_published ? '<span class="badge badge-green">Published</span>' : '<span class="badge badge-muted">Draft</span>'}</div>
+              <div class="list-item-sub">${[d, e.location].filter(Boolean).join(' · ')}</div>
+            </div>
+            <div class="list-item-actions">
+              <button class="btn btn-outline" onclick="editEvent('${e.id}')">Edit</button>
+              <button class="btn btn-danger" onclick="deleteEvent('${e.id}','${esc(e.title)}')">Delete</button>
+            </div>
+          </div>`;
+      }).join('');
+}
+
+function eventForm(e={}) {
+  const start = e.event_start ? new Date(e.event_start).toISOString().slice(0,16) : '';
+  const end   = e.event_end   ? new Date(e.event_end).toISOString().slice(0,16) : '';
+  return `
+    <div class="form-field"><label class="form-label">Title *</label><input class="form-input" id="ev-title" value="${esc(e.title??'')}" /></div>
+    <div class="form-field"><label class="form-label">Description</label><textarea class="form-textarea" id="ev-body">${esc(e.body??'')}</textarea></div>
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Start</label><input class="form-input" type="datetime-local" id="ev-start" value="${start}" /></div>
+      <div class="form-field"><label class="form-label">End</label><input class="form-input" type="datetime-local" id="ev-end" value="${end}" /></div>
+    </div>
+    <div class="form-field"><label class="form-label">Location</label><input class="form-input" id="ev-loc" value="${esc(e.location??'')}" /></div>
+    <div class="form-field"><label class="form-label">Category</label>
+      <select class="form-select" id="ev-cat">
+        ${['lecture','sisters','quran','youth','community','social','other'].map(c => `<option value="${c}" ${e.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">RSVP Link</label><input class="form-input" type="url" id="ev-rsvp" value="${esc(e.rsvp_url??'')}" placeholder="https://forms.gle/… (optional)" /></div>
+    <div style="display:flex;gap:20px;margin-top:8px;flex-wrap:wrap;">
+      <label class="form-check"><input type="checkbox" id="ev-published" ${e.is_published?'checked':''}> Published</label>
+      <label class="form-check"><input type="checkbox" id="ev-notify" ${e.notify_followers?'checked':''}> Notify followers</label>
+    </div>`;
+}
+
+document.getElementById('events-add-btn').addEventListener('click', () => {
+  openModal('New Event', eventForm(), async () => {
+    const title = document.getElementById('ev-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const isPublished = document.getElementById('ev-published').checked;
+    const notifyFollowers = document.getElementById('ev-notify').checked;
+    const { error } = await sb.from('campus_events').insert({
+      msa_id: msaId, created_by: user.id, title,
+      body:             document.getElementById('ev-body').value.trim()||null,
+      event_start:      document.getElementById('ev-start').value||null,
+      event_end:        document.getElementById('ev-end').value||null,
+      location:         document.getElementById('ev-loc').value.trim()||null,
+      category:         document.getElementById('ev-cat').value,
+      rsvp_url:         document.getElementById('ev-rsvp').value.trim()||null,
+      is_published:     isPublished,
+      notify_followers: notifyFollowers,
+    });
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notifyFollowers) await notifyCampusFollowers('events', title, document.getElementById('ev-body').value.trim()||'New event posted.');
+    toast('Event created'); closeModal(); loadEvents();
+  });
+});
+
+window.editEvent = async (id) => {
+  const { data: e } = await sb.from('campus_events').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Event', eventForm(e), async () => {
+    const title = document.getElementById('ev-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const isPublished = document.getElementById('ev-published').checked;
+    const notifyFollowers = document.getElementById('ev-notify').checked;
+    const { error } = await sb.from('campus_events').update({
+      title, body: document.getElementById('ev-body').value.trim()||null,
+      event_start:      document.getElementById('ev-start').value||null,
+      event_end:        document.getElementById('ev-end').value||null,
+      location:         document.getElementById('ev-loc').value.trim()||null,
+      category:         document.getElementById('ev-cat').value,
+      rsvp_url:         document.getElementById('ev-rsvp').value.trim()||null,
+      is_published:     isPublished,
+      notify_followers: notifyFollowers,
+      updated_at:       new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notifyFollowers) await notifyCampusFollowers('events', title, document.getElementById('ev-body').value.trim()||'Event updated.');
+    toast('Event updated'); closeModal(); loadEvents();
+  });
+};
+
+window.deleteEvent = async (id, title) => {
+  confirm_delete(title, async () => {
+    await sb.from('campus_events').delete().eq('id', id);
+    toast('Deleted'); loadEvents();
+  });
+};
+
+// ── Announcements ──
+async function loadAnnouncements() {
+  const { data } = await sb.from('campus_announcements').select('*').eq('msa_id', msaId).order('created_at', { ascending: false }).limit(20);
+  const el = document.getElementById('ann-list');
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">No announcements yet</div></div>`
+    : data.map(a => `
+        <div class="list-item">
+          <div class="list-item-body">
+            <div class="list-item-title">${esc(a.title)} ${a.is_published ? '<span class="badge badge-green">Published</span>' : '<span class="badge badge-muted">Draft</span>'}</div>
+            <div class="list-item-sub">${a.body ? esc(a.body).substring(0,80)+'…' : ''}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-outline" onclick="editAnn('${a.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteAnn('${a.id}','${esc(a.title)}')">Delete</button>
+          </div>
+        </div>`).join('');
+}
+
+function annForm(a={}) {
+  return `
+    <div class="form-field"><label class="form-label">Title *</label><input class="form-input" id="ann-title" value="${esc(a.title??'')}" /></div>
+    <div class="form-field"><label class="form-label">Body</label><textarea class="form-textarea" id="ann-body">${esc(a.body??'')}</textarea></div>
+    <div style="display:flex;gap:20px;margin-top:8px;flex-wrap:wrap;">
+      <label class="form-check"><input type="checkbox" id="ann-published" ${a.is_published?'checked':''}> Published</label>
+      <label class="form-check"><input type="checkbox" id="ann-notify"> Notify followers</label>
+    </div>`;
+}
+
+document.getElementById('ann-add-btn').addEventListener('click', () => {
+  openModal('New Announcement', annForm(), async () => {
+    const title = document.getElementById('ann-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const isPublished = document.getElementById('ann-published').checked;
+    const notifyFollowers = document.getElementById('ann-notify').checked;
+    const annBody = document.getElementById('ann-body').value.trim()||null;
+    const { error } = await sb.from('campus_announcements').insert({
+      msa_id: msaId, created_by: user.id, title,
+      body:             annBody,
+      is_published:     isPublished,
+      notify_followers: notifyFollowers,
+    });
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notifyFollowers) await notifyCampusFollowers('announcements', title, annBody||'New announcement posted.');
+    toast('Announcement created'); closeModal(); loadAnnouncements();
+  });
+});
+
+window.editAnn = async (id) => {
+  const { data: a } = await sb.from('campus_announcements').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Announcement', annForm(a), async () => {
+    const title = document.getElementById('ann-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const isPublished = document.getElementById('ann-published').checked;
+    const notifyFollowers = document.getElementById('ann-notify').checked;
+    const annBody = document.getElementById('ann-body').value.trim()||null;
+    const { error } = await sb.from('campus_announcements').update({
+      title, body: annBody,
+      is_published:     isPublished,
+      notify_followers: notifyFollowers,
+      updated_at:       new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notifyFollowers) await notifyCampusFollowers('announcements', title, annBody||'Announcement updated.');
+    toast('Updated'); closeModal(); loadAnnouncements();
+  });
+};
+
+window.deleteAnn = async (id, title) => {
+  confirm_delete(title, async () => {
+    await sb.from('campus_announcements').delete().eq('id', id);
+    toast('Deleted'); loadAnnouncements();
+  });
+};
+
+// ── Resources ──
+async function loadResources() {
+  const { data } = await sb.from('campus_resources').select('*').eq('msa_id', msaId).order('position');
+  const el = document.getElementById('res-list');
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon">📌</div><div class="empty-title">No resources yet</div></div>`
+    : data.map(r => `
+        <div class="list-item">
+          <div class="list-item-body">
+            <div class="list-item-title">${esc(r.title)} ${!r.is_active ? '<span class="badge badge-muted">Hidden</span>' : ''}</div>
+            <div class="list-item-sub">${[r.category, r.address].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-outline" onclick="editRes('${r.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteRes('${r.id}','${esc(r.title)}')">Delete</button>
+          </div>
+        </div>`).join('');
+}
+
+function resForm(r={}) {
+  return `
+    <div class="form-field"><label class="form-label">Title *</label><input class="form-input" id="res-title" value="${esc(r.title??'')}" /></div>
+    <div class="form-field"><label class="form-label">Description</label><textarea class="form-textarea" id="res-desc" style="min-height:60px;">${esc(r.description??'')}</textarea></div>
+    <div class="form-field"><label class="form-label">Category</label>
+      <select class="form-select" id="res-cat">
+        ${['halal_food','prayer','spiritual','social','academic','other'].map(c => `<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ').replace(/\b\w/g,l=>l.toUpperCase())}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">URL</label><input class="form-input" type="url" id="res-url" value="${esc(r.url??'')}" placeholder="https://…" /></div>
+    <div class="form-field"><label class="form-label">Address</label><input class="form-input" id="res-address" value="${esc(r.address??'')}" /></div>
+    <div style="margin-top:8px;">
+      <label class="form-check"><input type="checkbox" id="res-active" ${r.is_active!==false?'checked':''}> Active / visible</label>
+    </div>`;
+}
+
+document.getElementById('res-add-btn').addEventListener('click', () => {
+  openModal('Add Resource', resForm(), async () => {
+    const title = document.getElementById('res-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const { error } = await sb.from('campus_resources').insert({
+      msa_id: msaId, title,
+      description: document.getElementById('res-desc').value.trim()||null,
+      category:    document.getElementById('res-cat').value,
+      url:         document.getElementById('res-url').value.trim()||null,
+      address:     document.getElementById('res-address').value.trim()||null,
+      is_active:   document.getElementById('res-active').checked,
+    });
+    if (error) { toast(error.message, true); return; }
+    toast('Resource added'); closeModal(); loadResources();
+  });
+});
+
+window.editRes = async (id) => {
+  const { data: r } = await sb.from('campus_resources').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Resource', resForm(r), async () => {
+    const title = document.getElementById('res-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const { error } = await sb.from('campus_resources').update({
+      title, description: document.getElementById('res-desc').value.trim()||null,
+      category: document.getElementById('res-cat').value,
+      url:      document.getElementById('res-url').value.trim()||null,
+      address:  document.getElementById('res-address').value.trim()||null,
+      is_active: document.getElementById('res-active').checked,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    toast('Updated'); closeModal(); loadResources();
+  });
+};
+
+window.deleteRes = async (id, title) => {
+  confirm_delete(title, async () => {
+    await sb.from('campus_resources').delete().eq('id', id);
+    toast('Deleted'); loadResources();
+  });
+};
+
+// ── Members (admin only) ──
+async function loadMembers() {
+  const { data } = await sb.rpc('get_msa_members', { p_msa_id: msaId });
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = (!data || !data.length)
+    ? `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No members.</td></tr>`
+    : data.map(m => {
+        const display = esc(m.full_name || m.email);
+        const statusBadge = m.status === 'active' ? '<span class="badge badge-green">Active</span>'
+          : m.status === 'pending' ? '<span class="badge badge-gold">Pending</span>'
+          : '<span class="badge badge-muted">Rejected</span>';
+        return `<tr>
+          <td>${display}</td>
+          <td>${esc(m.role)}</td>
+          <td>${statusBadge}</td>
+          <td>
+            ${m.status === 'pending' ? `<button class="btn btn-outline" style="font-size:11px;padding:5px 10px;" onclick="approveMember('${m.id}')">Approve</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+}
+
+window.approveMember = async (memberId) => {
+  const { error } = await sb.rpc('approve_msa_member', { p_member_id: memberId });
+  if (error) toast(error.message, true); else { toast('Member approved'); loadMembers(); }
+};
+
+// ── Push notifications ──
+async function notifyCampusFollowers(category, title, body) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const res = await fetch(
+      'https://alalaxezygrhxalssxfi.supabase.co/functions/v1/notify-campus-followers',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ msaId, category, title, body }),
+      }
+    );
+    const result = await res.json();
+    if (result.sent > 0) toast(`Notified ${result.sent} follower${result.sent !== 1 ? 's' : ''}`);
+  } catch (e) {
+    console.error('[notifyCampusFollowers]', e);
+  }
+}
+
+</script>
+</body>
+</html>

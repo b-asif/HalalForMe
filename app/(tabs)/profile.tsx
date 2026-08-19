@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMsa } from '../../contexts/MsaContext';
 import { isValidImageBytes } from '../../lib/validateImageBytes';
 import { formatError } from '../../lib/errors';
 import { APP_VERSION } from '../../lib/appVersion';
@@ -36,6 +37,7 @@ interface MenuItem {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut, isAdmin } = useAuth();
+  const { activeMembership } = useMsa();
   const [signingOut, setSigningOut] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -403,6 +405,9 @@ export default function ProfileScreen() {
     ...(businessType === null || businessType === 'mosque'
       ? [{ icon: 'business-outline' as const,    label: 'Manage a Mosque', onPress: () => router.push('/redeem-mosque') }]
       : []),
+    ...(activeMembership
+      ? [{ icon: 'school-outline' as const, label: 'My MSA Portal', onPress: () => router.push('/(msa)/dashboard') }]
+      : [{ icon: 'school-outline' as const, label: 'Manage Campus MSA', onPress: () => router.push('/campus') }]),
     { icon: 'shield-checkmark-outline', label: 'Halal Certification Guide', onPress: () => router.push('/certification-guide') },
     { icon: 'notifications-outline',    label: 'Notifications',             onPress: () => router.push('/notifications') },
     { icon: 'play-circle-outline',      label: 'View App Tour',             onPress: () => router.push('/onboarding') },

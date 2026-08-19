@@ -48,6 +48,8 @@ const CATEGORIES: CategoryItem[] = [
     bg: TILE_BG, iconName: 'basket-outline',   iconLib: 'ion', iconColor: DEEP_GREEN },
   { key: 'events',  label: 'Events',     route: '/events',
     bg: TILE_BG, iconName: 'calendar-outline', iconLib: 'ion', iconColor: DEEP_GREEN },
+  { key: 'campus',  label: 'Campus Hub', route: '/campus',
+    bg: TILE_BG, iconName: 'school-outline',   iconLib: 'ion', iconColor: DEEP_GREEN },
 ];
 
 // ─── hours helpers (for open/closed badge on food cards) ─────────────────────

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Image, Modal, StyleSheet, Text, View,
+  Animated, Image, Modal, Platform, StyleSheet, Text, View,
 } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { MsaProvider } from '../contexts/MsaContext';
 import UpdateBanner from '../components/UpdateBanner';
 import { Brand } from '../lib/theme';
 import { getGuestLoginIntent, setGuestLoginIntent, getGuestOnboardingSeen, getOnboardingSeenThisSession, getBusinessSignupIntent, setBusinessSignupIntent } from '../lib/guestLoginIntent';
@@ -150,6 +151,7 @@ function RootLayoutNav() {
   // Register push token whenever a user signs in so every signed-in device
   // receives server-side notifications (previously only happened on Notifications screen visit).
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const userId = session?.user?.id;
     if (userId) registerPushToken(userId).catch(() => {});
   }, [session?.user?.id]);
@@ -160,11 +162,23 @@ function RootLayoutNav() {
   // 2. Cold start (app killed): the tap launches the app; getLastNotificationResponseAsync()
   //    catches it once appReady is true and the router can actually navigate.
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const handleResponse = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as Record<string, any>;
       if (data?.type === 'iqama_update' && data?.mosqueOsmId) {
         const encoded = (data.mosqueOsmId as string).replace('/', ':');
         router.push(`/mosque/${encoded}` as any);
+      } else if (data?.type === 'campus_notification' && data?.universityId) {
+        // Navigate via slug if available, otherwise fall back to the hub
+        if (data?.slug) {
+          router.push(`/campus/${data.slug}` as any);
+        } else {
+          router.push('/campus' as any);
+        }
+      } else if (data?.type === 'msa_approved') {
+        router.push('/(msa)/dashboard' as any);
+      } else if (data?.type === 'msa_rejected') {
+        router.push('/campus' as any);
       }
     };
 
@@ -174,6 +188,7 @@ function RootLayoutNav() {
 
   // Cold-start: check if the app was opened by tapping a notification
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     if (!appReady) return;
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return;
@@ -181,6 +196,16 @@ function RootLayoutNav() {
       if (data?.type === 'iqama_update' && data?.mosqueOsmId) {
         const encoded = (data.mosqueOsmId as string).replace('/', ':');
         router.push(`/mosque/${encoded}` as any);
+      } else if (data?.type === 'campus_notification' && data?.universityId) {
+        if (data?.slug) {
+          router.push(`/campus/${data.slug}` as any);
+        } else {
+          router.push('/campus' as any);
+        }
+      } else if (data?.type === 'msa_approved') {
+        router.push('/(msa)/dashboard' as any);
+      } else if (data?.type === 'msa_rejected') {
+        router.push('/campus' as any);
       }
     });
   }, [appReady]);
@@ -290,7 +315,9 @@ function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <RootLayoutNav />
+        <MsaProvider>
+          <RootLayoutNav />
+        </MsaProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

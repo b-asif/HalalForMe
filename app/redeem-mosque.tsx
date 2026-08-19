@@ -40,11 +40,12 @@ export default function RedeemMosqueScreen() {
     (async () => {
       if (!user) { setCheckingOwnership(false); setOwnedMosques([]); return; }
       setCheckingOwnership(true);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('mosques')
         .select('id, name')
         .eq('owner_id', user.id);
       if (cancelled) return;
+      if (error) { setCheckingOwnership(false); return; }
 
       const rows = (data as OwnedMosque[]) ?? [];
       if (rows.length === 1) {

@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     return new Response('Admin access required', { status: 403 });
   }
 
-  const { userId, title, body } = await req.json();
+  const { userId, title, body, data: extraData } = await req.json();
 
   if (!userId || !title || !body) {
     return new Response('Missing userId, title, or body', { status: 400 });
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     sound: 'default',
     title,
     body,
-    data: { type: 'submission_update' },
+    data: extraData ?? { type: 'submission_update' },
   }));
 
   const response = await fetch('https://exp.host/--/api/v2/push/send', {

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus — Rihdal</title>
+  <meta name="description" content="Campus MSA resources on Rihdal." />
+  <link rel="icon" href="../icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:          #1F3D2B;
+      --green-mid:      #245737;
+      --cream:          #F7F2E7;
+      --cream-dim:      #EDE8DC;
+      --gold:           #B08D57;
+      --gold-accent:    #C5A059;
+      --gold-accent-bg: #FDF6E8;
+      --sage:           #E8F0EC;
+      --text:           #20241F;
+      --muted:          #8C8776;
+      --line:           #EAE3D3;
+      --font-display:   'Outfit', sans-serif;
+      --font-ui:        'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--cream);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 48px; background: var(--green);
+    }
+    .nav-word {
+      font-size: 13px; font-weight: 800;
+      letter-spacing: 0.25em; text-transform: uppercase;
+      color: rgba(247,242,231,0.9); text-decoration: none;
+    }
+    .nav-right { display: flex; align-items: center; gap: 32px; }
+    .nav-link {
+      font-size: 13px; font-weight: 500;
+      color: rgba(247,242,231,0.5); text-decoration: none; transition: color 0.2s;
+    }
+    .nav-link:hover { color: rgba(247,242,231,0.9); }
+    .nav-cta {
+      font-size: 13px; font-weight: 700; color: var(--green); background: var(--cream);
+      text-decoration: none; padding: 9px 20px; border-radius: 50px; transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Header ── */
+    .page-header {
+      background: var(--green); padding: 110px 24px 36px;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; color: rgba(247,242,231,0.5);
+      text-decoration: none; margin-bottom: 20px; transition: color 0.2s;
+    }
+    .back-link:hover { color: rgba(247,242,231,0.9); }
+    .uni-name {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 4vw, 36px); font-weight: 800;
+      color: var(--cream); letter-spacing: -0.02em; line-height: 1.15;
+    }
+    .uni-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-top: 8px; margin-bottom: 20px;
+    }
+    .uni-location { font-size: 13px; color: rgba(247,242,231,0.5); }
+    .verified-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; color: var(--gold-accent);
+    }
+
+    /* Prayer countdown widget */
+    .prayer-countdown {
+      display: none; align-items: center; gap: 14px; flex-wrap: wrap;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 14px 18px; margin-bottom: 16px;
+    }
+    .cd-icon { font-size: 22px; }
+    .cd-body { flex: 1; }
+    .cd-label { font-size: 11px; font-weight: 600; color: rgba(247,242,231,0.5); text-transform: uppercase; letter-spacing: 0.06em; }
+    .cd-prayer { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--cream); }
+    .cd-detail { font-size: 13px; color: rgba(247,242,231,0.65); margin-top: 2px; }
+
+    /* Community quick-links */
+    .quick-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
+    .quick-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 700; text-decoration: none;
+      color: var(--cream); background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 7px 14px; border-radius: 50px; transition: background 0.2s;
+    }
+    .quick-link:hover { background: rgba(255,255,255,0.20); }
+
+    /* ── Content ── */
+    .content { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+
+    /* MSA description (compact, no separate card — folded into header area) */
+    .msa-desc-bar {
+      background: #fff; border-radius: 14px; padding: 18px 20px;
+      border: 1px solid var(--line); margin-bottom: 24px;
+      font-size: 14px; color: var(--muted); line-height: 1.6;
+    }
+
+    /* Jummah banner */
+    .jummah-banner {
+      background: var(--green); border-radius: 16px; padding: 22px 24px;
+      margin-bottom: 24px; position: relative; overflow: hidden;
+    }
+    .jummah-banner::before {
+      content: ''; position: absolute; top: -40px; right: -40px;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+    .jummah-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold-accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .jummah-time { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--cream); line-height: 1.1; }
+    .jummah-location { font-size: 14px; color: rgba(247,242,231,0.7); margin-top: 4px; }
+    .jummah-khateeb { font-size: 13px; color: rgba(247,242,231,0.5); margin-top: 3px; }
+    .jummah-multi { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    .jummah-slot {
+      background: rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px;
+      flex: 1; min-width: 130px;
+    }
+    .jummah-slot-time { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--cream); }
+    .jummah-slot-loc { font-size: 12px; color: rgba(247,242,231,0.6); margin-top: 2px; }
+
+    /* 2-column grid */
+    .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    @media (max-width: 640px) { .content-grid { grid-template-columns: 1fr; } }
+    .col-full { grid-column: 1 / -1; }
+
+    /* Section card */
+    .section-card { background: #fff; border-radius: 14px; border: 1px solid var(--line); padding: 20px; margin-bottom: 20px; }
+    .section-hd {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+    }
+    .section-hd-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text); }
+
+    /* Prayer schedule — row layout */
+    .prayer-schedule { display: flex; flex-direction: column; gap: 2px; }
+    .prayer-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 10px; border-radius: 8px; font-size: 13px;
+    }
+    .prayer-row.next { background: var(--sage); }
+    .prayer-row-name { font-weight: 600; color: var(--text); }
+    .prayer-row.next .prayer-row-name { color: var(--green); }
+    .prayer-row-time { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; }
+    .prayer-row.next .prayer-row-time { color: var(--green); font-weight: 700; }
+    .prayer-row-loc { font-size: 11px; color: var(--muted); margin-top: 1px; text-align: right; }
+
+    /* Prayer spaces */
+    .space-card {
+      border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .space-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .space-location { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .space-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .tag {
+      font-size: 11px; font-weight: 600; color: var(--green-mid);
+      background: var(--sage); padding: 3px 8px; border-radius: 50px;
+    }
+    .btn-directions {
+      display: inline-block; margin-top: 10px;
+      font-size: 12px; font-weight: 700; color: var(--green);
+      background: var(--sage); border-radius: 50px;
+      padding: 5px 12px; text-decoration: none; transition: opacity 0.2s;
+    }
+    .btn-directions:hover { opacity: 0.75; }
+
+    /* Events */
+    .event-card {
+      display: flex; gap: 14px; align-items: flex-start;
+      border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .event-date-box {
+      flex-shrink: 0; width: 44px; text-align: center;
+      background: var(--cream); border-radius: 10px; padding: 8px 4px;
+    }
+    .event-month { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+    .event-day { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--green); line-height: 1.1; }
+    .event-body { flex: 1; min-width: 0; }
+    .event-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .event-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* Announcement row */
+    .ann-card {
+      border-left: 3px solid var(--gold-accent); border-radius: 0 10px 10px 0;
+      background: var(--gold-accent-bg); padding: 12px 14px; margin-bottom: 10px;
+    }
+    .ann-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .ann-body { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+    .ann-date { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    /* Resources */
+    .res-card {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; border: 1px solid var(--line); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px;
+    }
+    .res-body { flex: 1; min-width: 0; }
+    .res-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .res-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Fallback messages */
+    .empty-friendly {
+      font-size: 13px; color: var(--muted); line-height: 1.6; padding: 8px 0;
+    }
+    .empty-friendly a { color: var(--green-mid); font-weight: 600; }
+
+    /* Not found / no MSA */
+    .state-box { text-align: center; padding: 80px 24px; color: var(--muted); }
+    .state-icon { font-size: 48px; margin-bottom: 16px; }
+    .state-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .state-body { font-size: 15px; line-height: 1.6; }
+    .state-link {
+      display: inline-block; margin-top: 24px;
+      font-size: 14px; font-weight: 700; color: #fff;
+      background: var(--green); padding: 12px 28px; border-radius: 50px;
+      text-decoration: none; transition: opacity 0.2s;
+    }
+    .state-link:hover { opacity: 0.85; }
+
+    /* Footer */
+    footer { background: var(--green); padding: 48px; }
+    .footer-inner {
+      max-width: 960px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-word { font-size: 13px; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(247,242,231,0.4); }
+    .footer-links { display: flex; gap: 28px; }
+    .footer-link { font-size: 13px; color: rgba(247,242,231,0.35); text-decoration: none; transition: color 0.2s; }
+    .footer-link:hover { color: rgba(247,242,231,0.6); }
+    .footer-copy { font-size: 12px; color: rgba(247,242,231,0.25); }
+
+    @media (max-width: 640px) {
+      nav { padding: 18px 24px; }
+      .nav-link { display: none; }
+      footer { padding: 40px 24px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="../" class="nav-word">Rihdal</a>
+    <div class="nav-right">
+      <a href="../guides.html" class="nav-link">Guides</a>
+      <a href="../partners.html" class="nav-link">Partner with us</a>
+      <a href="../campus/" class="nav-link">Campus Hub</a>
+      <a href="../#download" class="nav-cta">Download App</a>
+    </div>
+  </nav>
+
+  <div class="page-header" id="page-header">
+    <div class="header-inner">
+      <a href="index.html" class="back-link">← All Campuses</a>
+      <div id="uni-info"><p style="color:rgba(247,242,231,0.4);font-size:15px;">Loading…</p></div>
+      <!-- Prayer countdown — shown once data loads -->
+      <div class="prayer-countdown" id="prayer-countdown">
+        <div class="cd-icon">🕐</div>
+        <div class="cd-body">
+          <div class="cd-label">Next prayer</div>
+          <div class="cd-prayer" id="cd-prayer">—</div>
+          <div class="cd-detail" id="cd-detail"></div>
+        </div>
+      </div>
+      <!-- Community quick-links -->
+      <div class="quick-links" id="quick-links"></div>
+    </div>
+  </div>
+
+  <div class="content" id="content">
+    <!-- Populated by JS -->
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-word">Rihdal</span>
+      <div class="footer-links">
+        <a href="../privacy.html" class="footer-link">Privacy Policy</a>
+        <a href="../terms.html" class="footer-link">Terms of Service</a>
+        <a href="mailto:support@rihdal.com" class="footer-link">Contact</a>
+      </div>
+      <span class="footer-copy">&copy; 2026 Rihdal</span>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const supabase = createClient(
+      'https://alalaxezygrhxalssxfi.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsYWxheGV6eWdyaHhhbHNzeGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzYxMzcsImV4cCI6MjA5MjU1MjEzN30.HFRc9ez6JjNUvCtl9oc99X4f00pbdtjoOoSJ2IwJ21g'
+    );
+
+    const slug    = new URLSearchParams(location.search).get('slug');
+    const uniInfo = document.getElementById('uni-info');
+    const content = document.getElementById('content');
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    if (!slug) {
+      uniInfo.innerHTML = '<p style="color:rgba(247,242,231,0.4);font-size:15px;">No campus specified.</p>';
+      content.innerHTML = `<div class="state-box"><div class="state-icon">🎓</div><p class="state-title">Campus not found</p><p class="state-body">No slug was provided.</p><a href="index.html" class="state-link">Browse campuses</a></div>`;
+    } else {
+      load();
+    }
+
+    // ── Prayer time helpers ──
+    const PRAYER_ORDER = ['fajr','dhuhr','asr','maghrib','isha'];
+    const PRAYER_LABELS = { fajr:'Fajr', dhuhr:'Dhuhr', asr:'Asr', maghrib:'Maghrib', isha:'Isha' };
+
+    function parseMins(t) {
+      if (!t) return null;
+      const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!m) return null;
+      let h = parseInt(m[1]); const min = parseInt(m[2]); const ampm = m[3].toUpperCase();
+      if (ampm === 'PM' && h !== 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return h * 60 + min;
+    }
+
+    let _countdownInterval = null;
+    function setupCountdown(ptData) {
+      const prayerMap = {};
+      ptData.forEach(r => prayerMap[r.prayer] = r);
+      const nowMins = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+      function nextPrayer() {
+        const nm = nowMins();
+        for (const p of PRAYER_ORDER) {
+          const mins = parseMins(prayerMap[p]?.time);
+          if (mins !== null && mins > nm) return { name: PRAYER_LABELS[p], mins, row: prayerMap[p] };
+        }
+        return null;
+      }
+      function tick() {
+        const np = nextPrayer();
+        const cdEl = document.getElementById('prayer-countdown');
+        if (!cdEl) return;
+        if (!np) { cdEl.style.display = 'none'; return; }
+        const diff = np.mins - nowMins();
+        cdEl.style.display = 'flex';
+        document.getElementById('cd-prayer').textContent = np.name;
+        const timeStr = diff <= 1 ? 'in 1 min' : `in ${diff} min  ·  ${np.row.time}`;
+        const locStr = np.row.location ? `  ·  ${np.row.location}` : '';
+        document.getElementById('cd-detail').textContent = timeStr + locStr;
+      }
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      tick();
+      _countdownInterval = setInterval(tick, 30000);
+    }
+
+    async function load() {
+      // 1. University
+      const { data: uni } = await supabase.from('universities').select('*').eq('slug', slug).maybeSingle();
+
+      if (!uni) {
+        uniInfo.innerHTML = '<p style="color:rgba(247,242,231,0.4);">Not found</p>';
+        content.innerHTML = `<div class="state-box"><div class="state-icon">🎓</div><p class="state-title">Campus not found</p><p class="state-body">We don't have a campus page for "<strong>${esc(slug)}</strong>" yet.</p><a href="index.html" class="state-link">Browse campuses</a></div>`;
+        document.title = 'Campus Not Found — Rihdal';
+        return;
+      }
+
+      document.title = `${uni.name} — Rihdal Campus Hub`;
+      const loc = [uni.city, uni.state].filter(Boolean).join(', ');
+      uniInfo.innerHTML = `
+        <h1 class="uni-name">${esc(uni.name)}</h1>
+        <div class="uni-meta">
+          ${loc ? `<span class="uni-location">${esc(loc)}</span>` : ''}
+          ${uni.is_verified ? `<span class="verified-badge">✓ Verified</span>` : ''}
+        </div>`;
+
+      // 2. MSA
+      const { data: msa } = await supabase.from('msas').select('*').eq('university_id', uni.id).maybeSingle();
+
+      if (!msa) {
+        content.innerHTML = `<div class="state-box"><div class="state-icon">🕌</div><p class="state-title">MSA not yet claimed</p><p class="state-body">This campus doesn't have an MSA page yet on Rihdal.<br>Are you an MSA officer? <a href="msa/apply.html?university=${encodeURIComponent(uni.slug)}" style="color:var(--green-mid);font-weight:600;">Request access →</a></p></div>`;
+        return;
+      }
+
+      // Community quick-links in header
+      const qlEl = document.getElementById('quick-links');
+      if (qlEl) {
+        const links = [];
+        if (msa.instagram_handle) links.push(`<a class="quick-link" href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener">📸 @${esc(msa.instagram_handle)}</a>`);
+        if (msa.website) links.push(`<a class="quick-link" href="${esc(msa.website)}" target="_blank" rel="noopener">🌐 Website</a>`);
+        if (msa.email) links.push(`<a class="quick-link" href="mailto:${esc(msa.email)}">✉️ Email MSA</a>`);
+        qlEl.innerHTML = links.join('');
+      }
+
+      // 3. Parallel data queries
+      const [prayerTimes, jummah, spaces, events, announcements, resources] = await Promise.all([
+        supabase.from('campus_prayer_times').select('*').eq('msa_id', msa.id),
+        supabase.from('campus_jummah').select('*').eq('msa_id', msa.id).eq('is_active', true).order('position'),
+        supabase.from('campus_prayer_spaces').select('*').eq('msa_id', msa.id).eq('is_active', true),
+        supabase.from('campus_events').select('*').eq('msa_id', msa.id).eq('is_published', true).gte('event_start', new Date().toISOString()).order('event_start').limit(6),
+        supabase.from('campus_announcements').select('*').eq('msa_id', msa.id).eq('is_published', true).order('created_at', { ascending: false }).limit(4),
+        supabase.from('campus_resources').select('*').eq('msa_id', msa.id).eq('is_active', true).order('position'),
+      ]);
+
+      // Start prayer countdown
+      if (prayerTimes.data?.length) setupCountdown(prayerTimes.data);
+
+      // ── Build page ──
+      let html = '';
+
+      // MSA description bar (if exists)
+      if (msa.description) {
+        html += `<div class="msa-desc-bar">${esc(msa.description)}</div>`;
+      }
+
+      // ── Jummah banner ──
+      const jm = jummah.data || [];
+      if (jm.length === 1) {
+        const j = jm[0];
+        html += `<div class="jummah-banner">
+          <div class="jummah-eyebrow">Every Friday · Jummah Prayer</div>
+          <div class="jummah-time">${esc(j.time)}${j.location ? `  ·  ${esc(j.location)}` : ''}</div>
+          ${j.building ? `<div class="jummah-location">${esc(j.building)}</div>` : ''}
+          ${j.khateeb ? `<div class="jummah-khateeb">Khateeb: ${esc(j.khateeb)}</div>` : ''}
+          ${j.notes ? `<div class="jummah-khateeb" style="margin-top:4px;">${esc(j.notes)}</div>` : ''}
+        </div>`;
+      } else if (jm.length > 1) {
+        const slots = jm.map(j => `
+          <div class="jummah-slot">
+            <div class="jummah-slot-time">${esc(j.time)}</div>
+            <div class="jummah-slot-loc">${[j.location, j.building].filter(Boolean).map(esc).join(' · ') || ''}</div>
+            ${j.khateeb ? `<div class="jummah-slot-loc">Khateeb: ${esc(j.khateeb)}</div>` : ''}
+          </div>`).join('');
+        html += `<div class="jummah-banner">
+          <div class="jummah-eyebrow">Every Friday · Jummah Prayer</div>
+          <div class="jummah-time" style="font-size:18px;margin-bottom:12px;">${jm.length} Jummah prayers</div>
+          <div class="jummah-multi">${slots}</div>
+        </div>`;
+      } else {
+        const fallbackEmail = msa.email ? ` <a href="mailto:${esc(msa.email)}" style="color:rgba(247,242,231,0.8);font-weight:700;">Contact the MSA</a> for this week's details.` : '';
+        html += `<div class="jummah-banner">
+          <div class="jummah-eyebrow">Every Friday · Jummah Prayer</div>
+          <div class="jummah-time" style="font-size:16px;font-weight:600;color:rgba(247,242,231,0.6);">Jummah details coming soon.${fallbackEmail}</div>
+        </div>`;
+      }
+
+      // ── 2-column grid: Prayer Schedule + Prayer Spaces ──
+      html += `<div class="content-grid">`;
+
+      // Prayer schedule
+      const pt = prayerTimes.data || [];
+      const ptOrdered = PRAYER_ORDER.map(p => pt.find(r => r.prayer === p)).filter(Boolean);
+      const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+      let nextFound = false;
+      const ptRows = ptOrdered.map(p => {
+        const mins = parseMins(p.time);
+        const isNext = !nextFound && mins !== null && mins > nowMins;
+        if (isNext) nextFound = true;
+        return `<div class="prayer-row${isNext ? ' next' : ''}">
+          <span class="prayer-row-name">${esc(PRAYER_LABELS[p.prayer] || p.prayer)}</span>
+          <div style="text-align:right;">
+            <div class="prayer-row-time">${esc(p.time)}</div>
+            ${p.location ? `<div class="prayer-row-loc">${esc(p.location)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      html += `<div class="section-card">
+        <div class="section-hd"><span class="section-hd-title">🕋 Prayer Schedule</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Iqama times</span></div>
+        ${ptRows || `<p class="empty-friendly">Prayer schedule is updating — check back soon or <a href="https://www.islamicfinder.org/world/united-states/" target="_blank" rel="noopener">look up standard times</a>.</p>`}
+      </div>`;
+
+      // Prayer spaces
+      const ps = spaces.data || [];
+      const psHtml = ps.length
+        ? ps.map(s => {
+            const tags = [];
+            if (s.wudu_available) tags.push('Wudu');
+            if (s.sisters_space) tags.push("Sisters' space");
+            if (s.capacity) tags.push(`${s.capacity} capacity`);
+            const locLine = [s.building, s.room_number ? `Rm ${s.room_number}` : null, s.floor ? `Floor ${s.floor}` : null].filter(Boolean).join(', ');
+            const mapsQ = encodeURIComponent([uni.name, s.building, s.room_number].filter(Boolean).join(' '));
+            return `<div class="space-card">
+              <div class="space-name">${esc(s.name)}</div>
+              ${locLine ? `<div class="space-location">${esc(locLine)}</div>` : ''}
+              ${s.hours_text ? `<div class="space-location">${esc(s.hours_text)}</div>` : ''}
+              ${tags.length ? `<div class="space-tags">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+              ${s.building ? `<a class="btn-directions" href="https://maps.google.com/?q=${mapsQ}" target="_blank" rel="noopener">Get Directions →</a>` : ''}
+            </div>`;
+          }).join('')
+        : `<p class="empty-friendly">Prayer spaces will be listed here once the MSA adds them.</p>`;
+
+      html += `<div class="section-card">
+        <div class="section-hd"><span class="section-hd-title">📍 Prayer Spaces</span></div>
+        ${psHtml}
+      </div>`;
+
+      html += `</div>`; // end content-grid
+
+      // ── Events (full width) ──
+      const ev = events.data || [];
+      const evHtml = ev.length
+        ? ev.map(e => {
+            const d = e.event_start ? new Date(e.event_start) : null;
+            const month = d ? d.toLocaleString('en-US', { month: 'short' }).toUpperCase() : '';
+            const day   = d ? d.getDate() : '';
+            const time  = d ? d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+            return `<div class="event-card">
+              ${d ? `<div class="event-date-box"><div class="event-month">${month}</div><div class="event-day">${day}</div></div>` : ''}
+              <div class="event-body">
+                <div class="event-title">${esc(e.title)}</div>
+                <div class="event-meta">${[time, e.location].filter(Boolean).map(esc).join(' · ')}</div>
+                ${e.body ? `<div style="font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5;">${esc(e.body)}</div>` : ''}
+                ${e.rsvp_url ? `<a href="${esc(e.rsvp_url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#fff;background:var(--green);padding:5px 14px;border-radius:50px;text-decoration:none;">RSVP →</a>` : ''}
+              </div>
+            </div>`;
+          }).join('')
+        : `<p class="empty-friendly">No events on the calendar right now.${msa.instagram_handle ? ` Follow <a href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener">@${esc(msa.instagram_handle)}</a> for spontaneous halaqahs & chai meetups.` : ' Check back closer to the semester!'}</p>`;
+
+      html += `<div class="section-card" style="margin-bottom:24px;">
+        <div class="section-hd"><span class="section-hd-title">📅 Upcoming Events</span></div>
+        ${evHtml}
+      </div>`;
+
+      // ── 2-column: Announcements + Resources ──
+      html += `<div class="content-grid">`;
+
+      // Announcements
+      const an = announcements.data || [];
+      const anHtml = an.length
+        ? an.map(a => `<div class="ann-card">
+            <div class="ann-title">${esc(a.title)}</div>
+            ${a.body ? `<div class="ann-body">${esc(a.body)}</div>` : ''}
+            <div class="ann-date">${new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          </div>`).join('')
+        : `<p class="empty-friendly">No announcements right now.</p>`;
+
+      html += `<div class="section-card">
+        <div class="section-hd"><span class="section-hd-title">📢 Announcements</span></div>
+        ${anHtml}
+      </div>`;
+
+      // Resources
+      const rs = resources.data || [];
+      const rsHtml = rs.length
+        ? rs.map(r => `<div class="res-card">
+            <div class="res-body">
+              <div class="res-title">${esc(r.title)}</div>
+              ${r.description ? `<div class="res-sub">${esc(r.description)}</div>` : ''}
+              ${r.address ? `<div class="res-sub">${esc(r.address)}</div>` : ''}
+            </div>
+            ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:var(--green-mid);white-space:nowrap;">Visit →</a>` : ''}
+          </div>`).join('')
+        : `<p class="empty-friendly">Resources coming soon.</p>`;
+
+      html += `<div class="section-card">
+        <div class="section-hd"><span class="section-hd-title">📌 Resources</span></div>
+        ${rsHtml}
+      </div>`;
+
+      html += `</div>`; // end content-grid
+
+      content.innerHTML = html;
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request MSA Access — Rihdal</title>
+  <meta name="description" content="Apply to manage your campus MSA page on Rihdal." />
+  <link rel="icon" href="../../icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:          #1F3D2B;
+      --green-mid:      #245737;
+      --cream:          #F7F2E7;
+      --cream-dim:      #EDE8DC;
+      --gold:           #B08D57;
+      --gold-accent:    #C5A059;
+      --gold-accent-bg: #FDF6E8;
+      --sage:           #E8F0EC;
+      --sage-border:    #C8DDD0;
+      --text:           #20241F;
+      --muted:          #8C8776;
+      --line:           #EAE3D3;
+      --red:            #C0392B;
+      --font-display:   'Outfit', sans-serif;
+      --font-ui:        'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--cream);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 48px; background: var(--green);
+    }
+    .nav-word {
+      font-size: 13px; font-weight: 800;
+      letter-spacing: 0.25em; text-transform: uppercase;
+      color: rgba(247,242,231,0.9); text-decoration: none;
+    }
+    .nav-right { display: flex; align-items: center; gap: 32px; }
+    .nav-link {
+      font-size: 13px; font-weight: 500;
+      color: rgba(247,242,231,0.5); text-decoration: none; transition: color 0.2s;
+    }
+    .nav-link:hover { color: rgba(247,242,231,0.9); }
+    .nav-cta {
+      font-size: 13px; font-weight: 700; color: var(--green); background: var(--cream);
+      text-decoration: none; padding: 9px 20px; border-radius: 50px; transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--green);
+      padding: 110px 24px 48px;
+      text-align: center;
+    }
+    .hero-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gold-accent); margin-bottom: 14px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 4vw, 40px); font-weight: 800;
+      color: var(--cream); line-height: 1.1; letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .hero-sub {
+      font-size: 15px; color: rgba(247,242,231,0.6);
+      max-width: 420px; margin: 0 auto; line-height: 1.6;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 560px; margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Steps indicator ── */
+    .steps {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 32px; justify-content: center;
+    }
+    .step-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--line); transition: background 0.25s;
+    }
+    .step-dot.active { background: var(--green); }
+    .step-dot.done   { background: var(--gold-accent); }
+
+    /* ── Card ── */
+    .card {
+      background: #fff; border-radius: 20px;
+      border: 1px solid var(--line); padding: 32px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+    }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 800; color: var(--text);
+      margin-bottom: 6px;
+    }
+    .card-sub {
+      font-size: 13px; color: var(--muted); line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* ── Form elements ── */
+    .form-field { margin-bottom: 18px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--text); text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 7px;
+    }
+    .form-label span { color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 12px 14px; font-family: var(--font-ui); font-size: 14px;
+      border: 1.5px solid var(--line); border-radius: 10px;
+      background: var(--cream); color: var(--text);
+      outline: none; transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--green);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+    .form-textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+    .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C8776' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; cursor: pointer; }
+
+    /* University search combo */
+    .uni-combo { position: relative; }
+    .uni-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+      background: #fff; border: 1.5px solid var(--line); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.10); max-height: 220px; overflow-y: auto;
+      display: none;
+    }
+    .uni-dropdown.open { display: block; }
+    .uni-opt {
+      padding: 10px 14px; font-size: 13px; font-weight: 500; cursor: pointer;
+      border-bottom: 1px solid var(--line); color: var(--text);
+    }
+    .uni-opt:last-child { border-bottom: none; }
+    .uni-opt:hover, .uni-opt.highlighted { background: var(--sage); }
+    .uni-opt.not-listed {
+      font-style: italic; color: var(--muted);
+    }
+
+    /* Role chips */
+    .role-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .role-chip {
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      padding: 7px 14px; border-radius: 50px;
+      border: 1.5px solid var(--line); color: var(--muted);
+      background: transparent; transition: all 0.15s; user-select: none;
+    }
+    .role-chip.selected {
+      border-color: var(--green); background: var(--sage); color: var(--green);
+    }
+
+    /* Divider */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0; font-size: 12px; color: var(--muted);
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: block; width: 100%;
+      padding: 14px; font-family: var(--font-ui); font-size: 14px; font-weight: 700;
+      border-radius: 12px; border: none; cursor: pointer; text-align: center;
+      transition: opacity 0.2s; text-decoration: none;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-outline {
+      background: transparent; color: var(--green);
+      border: 1.5px solid var(--line); margin-top: 10px;
+    }
+
+    /* ── Error / info banners ── */
+    .banner {
+      padding: 12px 14px; border-radius: 10px; font-size: 13px;
+      margin-bottom: 18px; line-height: 1.5; display: none;
+    }
+    .banner.show { display: block; }
+    .banner-error { background: #FEF2F2; border: 1px solid #FCA5A5; color: var(--red); }
+    .banner-info  { background: var(--gold-accent-bg); border: 1px solid #E5C98A; color: #7A5520; }
+    .banner-success { background: var(--sage); border: 1px solid var(--sage-border); color: var(--green); }
+
+    /* ── Magic link sent state ── */
+    .sent-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+
+    /* ── Success state ── */
+    .success-icon { font-size: 56px; text-align: center; margin-bottom: 16px; }
+    .success-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 8px; }
+    .success-body { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; }
+
+    /* ── What happens next ── */
+    .next-steps {
+      margin-top: 24px; padding: 18px 20px;
+      background: var(--cream); border-radius: 12px; border: 1px solid var(--line);
+    }
+    .next-steps-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+    .next-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; font-size: 13px; line-height: 1.5; }
+    .next-step:last-child { margin-bottom: 0; }
+    .next-step-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--green); color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+
+    /* Footer */
+    footer { background: var(--green); padding: 40px 48px; }
+    .footer-inner {
+      max-width: 960px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-word { font-size: 13px; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase; color: rgba(247,242,231,0.4); }
+    .footer-links { display: flex; gap: 28px; }
+    .footer-link { font-size: 13px; color: rgba(247,242,231,0.35); text-decoration: none; transition: color 0.2s; }
+    .footer-link:hover { color: rgba(247,242,231,0.6); }
+    .footer-copy { font-size: 12px; color: rgba(247,242,231,0.25); }
+
+    @media (max-width: 640px) {
+      nav { padding: 18px 24px; }
+      .nav-link { display: none; }
+      footer { padding: 40px 24px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+      .card { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="../../" class="nav-word">Rihdal</a>
+    <div class="nav-right">
+      <a href="../../guides.html" class="nav-link">Guides</a>
+      <a href="../" class="nav-link">Campus Hub</a>
+      <a href="../../#download" class="nav-cta">Download App</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <p class="hero-label">MSA Admin Portal</p>
+    <h1 class="hero-title">Request Access for Your MSA</h1>
+    <p class="hero-sub">Claim your campus page and start managing prayer times, events, and announcements.</p>
+  </div>
+
+  <main>
+    <!-- Step indicator -->
+    <div class="steps" id="steps">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+
+    <!-- ── Step 0: Email / magic link ── -->
+    <div id="step-email">
+      <div class="card">
+        <p class="card-title">Verify your email</p>
+        <p class="card-sub">We'll send a one-click sign-in link — no password needed. Use your university or MSA email for faster approval.</p>
+
+        <div class="banner banner-error" id="email-error"></div>
+
+        <div class="form-field">
+          <label class="form-label" for="input-email">Email address</label>
+          <input class="form-input" id="input-email" type="email" placeholder="you@university.edu" autocomplete="email" />
+        </div>
+
+        <button class="btn btn-green" id="btn-send-link">Send sign-in link</button>
+      </div>
+    </div>
+
+    <!-- ── Step 0b: Magic link sent ── -->
+    <div id="step-sent" style="display:none;">
+      <div class="card" style="text-align:center;">
+        <div class="sent-icon">📬</div>
+        <p class="card-title" style="text-align:center;">Check your inbox</p>
+        <p class="card-sub" style="text-align:center;max-width:340px;margin:0 auto 24px;">We sent a sign-in link to <strong id="sent-email-display"></strong>. Click it and you'll be brought right back here.</p>
+        <button class="btn btn-outline" id="btn-resend" style="width:auto;display:inline-block;padding:10px 24px;">Resend link</button>
+        <p style="font-size:12px;color:var(--muted);margin-top:16px;">Don't see it? Check your spam folder.</p>
+      </div>
+    </div>
+
+    <!-- ── Step 1: Application form ── -->
+    <div id="step-form" style="display:none;">
+      <div class="card">
+        <p class="card-title">Tell us about your MSA</p>
+        <p class="card-sub">Signed in as <strong id="form-email-display"></strong> · <a href="#" id="btn-signout" style="color:var(--muted);font-size:12px;">Sign out</a></p>
+
+        <div class="banner banner-error" id="form-error"></div>
+
+        <!-- Full name -->
+        <div class="form-field">
+          <label class="form-label" for="input-name">Your name</label>
+          <input class="form-input" id="input-name" type="text" placeholder="Fatima Al-Hassan" autocomplete="name" />
+        </div>
+
+        <!-- University -->
+        <div class="form-field">
+          <label class="form-label" for="input-uni">University</label>
+          <div class="uni-combo">
+            <input class="form-input" id="input-uni" type="text" placeholder="Search your university…" autocomplete="off" />
+            <div class="uni-dropdown" id="uni-dropdown"></div>
+            <input type="hidden" id="uni-id" />
+          </div>
+        </div>
+
+        <!-- MSA name -->
+        <div class="form-field">
+          <label class="form-label" for="input-msa-name">MSA name <span>(as it should appear on the page)</span></label>
+          <input class="form-input" id="input-msa-name" type="text" placeholder="e.g. Muslim Students Association at Michigan" />
+        </div>
+
+        <!-- Role -->
+        <div class="form-field">
+          <label class="form-label">Your role</label>
+          <div class="role-chips" id="role-chips">
+            <button type="button" class="role-chip" data-role="President">President</button>
+            <button type="button" class="role-chip" data-role="Vice President">Vice President</button>
+            <button type="button" class="role-chip" data-role="Secretary">Secretary</button>
+            <button type="button" class="role-chip" data-role="Officer">Officer</button>
+            <button type="button" class="role-chip" data-role="Advisor">Advisor</button>
+          </div>
+          <input class="form-input" id="input-role-other" type="text" placeholder="Or type your role…" style="margin-top:10px;" />
+        </div>
+
+        <div class="divider">Contact info</div>
+
+        <!-- Contact email -->
+        <div class="form-field">
+          <label class="form-label" for="input-contact-email">Contact email <span>(for us to reach you)</span></label>
+          <input class="form-input" id="input-contact-email" type="email" placeholder="msa@university.edu" />
+        </div>
+
+        <!-- Instagram -->
+        <div class="form-field">
+          <label class="form-label" for="input-instagram">MSA Instagram <span>(optional)</span></label>
+          <input class="form-input" id="input-instagram" type="text" placeholder="@umich.msa" />
+        </div>
+
+        <!-- Message -->
+        <div class="form-field">
+          <label class="form-label" for="input-message">Anything else? <span>(optional)</span></label>
+          <textarea class="form-textarea" id="input-message" placeholder="Tell us a bit about your MSA, upcoming events, or how students can get involved…"></textarea>
+        </div>
+
+        <button class="btn btn-green" id="btn-submit">Submit Request</button>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Success ── -->
+    <div id="step-success" style="display:none;">
+      <div class="card">
+        <div class="success-icon">🌙</div>
+        <p class="success-title">Request submitted!</p>
+        <p class="success-body">JazakAllah khayran. We'll review your request and reach out within 1–2 business days.</p>
+
+        <div class="next-steps" style="margin-top:28px;">
+          <div class="next-steps-title">What happens next</div>
+          <div class="next-step">
+            <div class="next-step-num">1</div>
+            <div>Our team reviews your request and verifies your MSA officer status.</div>
+          </div>
+          <div class="next-step">
+            <div class="next-step-num">2</div>
+            <div>We send you a claim code via email (or Instagram DM if you provided it).</div>
+          </div>
+          <div class="next-step">
+            <div class="next-step-num">3</div>
+            <div>Enter the code in the Rihdal app or MSA Admin Portal to activate your page.</div>
+          </div>
+        </div>
+
+        <a href="../" class="btn btn-outline" style="display:block;margin-top:20px;text-align:center;">← Back to Campus Hub</a>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-word">Rihdal</span>
+      <div class="footer-links">
+        <a href="../../privacy.html" class="footer-link">Privacy Policy</a>
+        <a href="../../terms.html" class="footer-link">Terms of Service</a>
+        <a href="mailto:support@rihdal.com" class="footer-link">Contact</a>
+      </div>
+      <span class="footer-copy">&copy; 2026 Rihdal</span>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const sb = createClient(
+      'https://alalaxezygrhxalssxfi.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsYWxheGV6eWdyaHhhbHNzeGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzYxMzcsImV4cCI6MjA5MjU1MjEzN30.HFRc9ez6JjNUvCtl9oc99X4f00pbdtjoOoSJ2IwJ21g'
+    );
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    let currentUser  = null;
+    let selectedRole = '';
+    let uniList      = [];
+    let selectedUniId   = null;
+    let selectedUniName = '';
+    let uniDebounce  = null;
+
+    // ── Elements ────────────────────────────────────────────────────────────────
+    const stepEmail   = document.getElementById('step-email');
+    const stepSent    = document.getElementById('step-sent');
+    const stepForm    = document.getElementById('step-form');
+    const stepSuccess = document.getElementById('step-success');
+
+    const dot0 = document.getElementById('dot-0');
+    const dot1 = document.getElementById('dot-1');
+    const dot2 = document.getElementById('dot-2');
+
+    // ── Utility ─────────────────────────────────────────────────────────────────
+    function esc(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showBanner(id, msg, type = 'error') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.className = `banner banner-${type} show`;
+    }
+    function hideBanner(id) {
+      const el = document.getElementById(id);
+      if (el) { el.className = 'banner'; el.textContent = ''; }
+    }
+
+    function setStep(step) {
+      stepEmail.style.display   = step === 'email'   ? '' : 'none';
+      stepSent.style.display    = step === 'sent'    ? '' : 'none';
+      stepForm.style.display    = step === 'form'    ? '' : 'none';
+      stepSuccess.style.display = step === 'success' ? '' : 'none';
+
+      dot0.className = 'step-dot' + (step === 'email' ? ' active' : ' done');
+      dot1.className = 'step-dot' + (step === 'sent' ? ' active' : step === 'form' || step === 'success' ? ' done' : '');
+      dot2.className = 'step-dot' + (step === 'form' ? ' active' : step === 'success' ? ' done' : '');
+
+      // Hide step indicator on success
+      document.getElementById('steps').style.display = step === 'success' ? 'none' : '';
+    }
+
+    // ── Auth state ──────────────────────────────────────────────────────────────
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        await showForm(session.user);
+      } else {
+        currentUser = null;
+        // Only go back to email step if not on success
+        if (stepSuccess.style.display === 'none') setStep('email');
+      }
+    });
+
+    // Check immediately (handles magic link hash on page load)
+    const { data: { session: initSession } } = await sb.auth.getSession();
+    if (initSession?.user) {
+      currentUser = initSession.user;
+      await showForm(initSession.user);
+    } else {
+      // Pre-fill university from ?university= param (set by detail.html link)
+      const params = new URLSearchParams(location.search);
+      const uniSlug = params.get('university');
+      if (uniSlug) {
+        const { data } = await sb.from('universities').select('id, name').eq('slug', uniSlug).maybeSingle();
+        if (data) {
+          document.getElementById('input-uni').value = data.name;
+          document.getElementById('uni-id').value = data.id;
+          selectedUniId = data.id;
+          selectedUniName = data.name;
+          // Pre-fill MSA name hint
+          document.getElementById('input-msa-name').placeholder = `e.g. MSA at ${data.name}`;
+        }
+      }
+      setStep('email');
+    }
+
+    async function showForm(user) {
+      document.getElementById('form-email-display').textContent = user.email;
+      document.getElementById('input-contact-email').value = user.email;
+      await loadUniversities();
+      setStep('form');
+    }
+
+    // ── Step 0: Send magic link ─────────────────────────────────────────────────
+    let lastEmail = '';
+
+    document.getElementById('btn-send-link').addEventListener('click', async () => {
+      const email = document.getElementById('input-email').value.trim();
+      if (!email || !email.includes('@')) {
+        showBanner('email-error', 'Please enter a valid email address.');
+        return;
+      }
+      hideBanner('email-error');
+      const btn = document.getElementById('btn-send-link');
+      btn.disabled = true; btn.textContent = 'Sending…';
+
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: location.href },
+      });
+
+      btn.disabled = false; btn.textContent = 'Send sign-in link';
+
+      if (error) {
+        showBanner('email-error', error.message);
+        return;
+      }
+
+      lastEmail = email;
+      document.getElementById('sent-email-display').textContent = email;
+      setStep('sent');
+    });
+
+    document.getElementById('input-email').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-send-link').click();
+    });
+
+    document.getElementById('btn-resend').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-resend');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      await sb.auth.signInWithOtp({
+        email: lastEmail,
+        options: { emailRedirectTo: location.href },
+      });
+      btn.disabled = false; btn.textContent = 'Sent!';
+      setTimeout(() => { btn.textContent = 'Resend link'; }, 3000);
+    });
+
+    // ── Sign out ────────────────────────────────────────────────────────────────
+    document.getElementById('btn-signout').addEventListener('click', async e => {
+      e.preventDefault();
+      await sb.auth.signOut();
+      setStep('email');
+    });
+
+    // ── University search ───────────────────────────────────────────────────────
+    async function loadUniversities() {
+      const { data } = await sb.from('universities').select('id, name, city, state').order('name').limit(300);
+      uniList = data ?? [];
+    }
+
+    const uniInput    = document.getElementById('input-uni');
+    const uniDropdown = document.getElementById('uni-dropdown');
+    const uniIdInput  = document.getElementById('uni-id');
+
+    uniInput.addEventListener('input', () => {
+      clearTimeout(uniDebounce);
+      uniIdInput.value = '';
+      selectedUniId = null;
+      selectedUniName = uniInput.value.trim();
+      uniDebounce = setTimeout(() => renderUniDropdown(uniInput.value.trim()), 150);
+    });
+
+    uniInput.addEventListener('focus', () => {
+      if (uniInput.value.trim()) renderUniDropdown(uniInput.value.trim());
+    });
+
+    document.addEventListener('click', e => {
+      if (!uniInput.contains(e.target) && !uniDropdown.contains(e.target)) {
+        uniDropdown.classList.remove('open');
+      }
+    });
+
+    function renderUniDropdown(q) {
+      const lower = q.toLowerCase();
+      const matches = q
+        ? uniList.filter(u => u.name.toLowerCase().includes(lower)).slice(0, 8)
+        : [];
+
+      if (!q) { uniDropdown.classList.remove('open'); return; }
+
+      const exactMatch = uniList.some(u => u.name.toLowerCase() === lower);
+
+      let html = matches.map(u => {
+        const loc = [u.city, u.state].filter(Boolean).join(', ');
+        return `<div class="uni-opt" data-id="${esc(u.id)}" data-name="${esc(u.name)}">
+          <div style="font-weight:600;">${esc(u.name)}</div>
+          ${loc ? `<div style="font-size:11px;color:var(--muted);">${esc(loc)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (!exactMatch) {
+        html += `<div class="uni-opt not-listed" data-id="" data-name="${esc(q)}">My university isn't listed — use "${esc(q)}"</div>`;
+      }
+
+      uniDropdown.innerHTML = html;
+      uniDropdown.classList.add('open');
+
+      uniDropdown.querySelectorAll('.uni-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          selectedUniId   = opt.dataset.id || null;
+          selectedUniName = opt.dataset.name;
+          uniInput.value  = selectedUniName;
+          uniIdInput.value = selectedUniId ?? '';
+          uniDropdown.classList.remove('open');
+          // Update MSA name placeholder
+          document.getElementById('input-msa-name').placeholder = `e.g. MSA at ${selectedUniName}`;
+        });
+      });
+    }
+
+    // ── Role chips ───────────────────────────────────────────────────────────────
+    document.getElementById('role-chips').addEventListener('click', e => {
+      const chip = e.target.closest('.role-chip');
+      if (!chip) return;
+      document.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      selectedRole = chip.dataset.role;
+      document.getElementById('input-role-other').value = '';
+    });
+
+    document.getElementById('input-role-other').addEventListener('input', () => {
+      document.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
+      selectedRole = document.getElementById('input-role-other').value.trim();
+    });
+
+    // ── Submit ───────────────────────────────────────────────────────────────────
+    document.getElementById('btn-submit').addEventListener('click', async () => {
+      hideBanner('form-error');
+
+      const name         = document.getElementById('input-name').value.trim();
+      const uniName      = selectedUniName || uniInput.value.trim();
+      const msaName      = document.getElementById('input-msa-name').value.trim();
+      const role         = selectedRole || document.getElementById('input-role-other').value.trim();
+      const contactEmail = document.getElementById('input-contact-email').value.trim();
+      const instagram    = document.getElementById('input-instagram').value.trim().replace(/^@/, '');
+      const message      = document.getElementById('input-message').value.trim();
+
+      // Validation
+      if (!name) { showBanner('form-error', 'Please enter your name.'); return; }
+      if (!uniName) { showBanner('form-error', 'Please enter your university name.'); return; }
+      if (!msaName) { showBanner('form-error', 'Please enter your MSA name.'); return; }
+      if (!role) { showBanner('form-error', 'Please select or enter your role in the MSA.'); return; }
+      if (!contactEmail || !contactEmail.includes('@')) { showBanner('form-error', 'Please enter a valid contact email.'); return; }
+
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true; btn.textContent = 'Submitting…';
+
+      // Build message with name + role prepended
+      const fullMessage = [`Name: ${name}`, `Role: ${role}`, message].filter(Boolean).join('\n\n');
+
+      // Optionally update profile name
+      if (name && currentUser) {
+        await sb.from('profiles').update({ name }).eq('id', currentUser.id).throwOnError().catch(() => {});
+      }
+
+      const payload = {
+        user_id:                  currentUser.id,
+        proposed_msa_name:        msaName,
+        contact_email:            contactEmail,
+        contact_instagram:        instagram || null,
+        message:                  fullMessage,
+        status:                   'pending',
+      };
+
+      if (selectedUniId) {
+        payload.university_id = selectedUniId;
+      } else {
+        payload.proposed_university_name = uniName;
+      }
+
+      const { error } = await sb.from('msa_onboarding_requests').insert(payload);
+
+      btn.disabled = false; btn.textContent = 'Submit Request';
+
+      if (error) {
+        // Duplicate request
+        if (error.code === '23505') {
+          showBanner('form-error', 'You already have a pending request. Our team will be in touch soon.');
+        } else {
+          showBanner('form-error', error.message);
+        }
+        return;
+      }
+
+      setStep('success');
+    });
+  </script>
+
+</body>
+</html>

@@ -69,6 +69,13 @@ export default function TabLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
+        name="campus"
+        options={{
+          title: 'Campus',
+          tabBarIcon: tabIcon('school', 'school-outline'),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
