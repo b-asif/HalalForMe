@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Image, Modal, Platform, StyleSheet, Text, View,
