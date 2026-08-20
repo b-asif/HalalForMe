@@ -99,13 +99,15 @@
     /* Community quick-links */
     .quick-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
     .quick-link {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 12px; font-weight: 700; text-decoration: none;
-      color: var(--cream); background: rgba(255,255,255,0.12);
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; text-decoration: none;
+      background: rgba(255,255,255,0.12);
       border: 1px solid rgba(255,255,255,0.15);
-      padding: 7px 14px; border-radius: 50px; transition: background 0.2s;
+      border-radius: 50%; transition: background 0.2s;
     }
-    .quick-link:hover { background: rgba(255,255,255,0.20); }
+    .quick-link:hover { background: rgba(255,255,255,0.22); }
+    .quick-link img { width: 18px; height: 18px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.85; }
+    .quick-link svg { width: 18px; height: 18px; }
 
     /* ── Content ── */
     .content { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
@@ -405,9 +407,9 @@
       const qlEl = document.getElementById('quick-links');
       if (qlEl) {
         const links = [];
-        if (msa.instagram_handle) links.push(`<a class="quick-link" href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener">📸 @${esc(msa.instagram_handle)}</a>`);
-        if (msa.website) links.push(`<a class="quick-link" href="${esc(msa.website)}" target="_blank" rel="noopener">🌐 Website</a>`);
-        if (msa.email) links.push(`<a class="quick-link" href="mailto:${esc(msa.email)}">✉️ Email MSA</a>`);
+        if (msa.instagram_handle) links.push(`<a class="quick-link" href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener" title="@${esc(msa.instagram_handle)}"><img src="../assets/instagram.png" alt="Instagram" /></a>`);
+        if (msa.website) links.push(`<a class="quick-link" href="${esc(msa.website)}" target="_blank" rel="noopener" title="Website"><svg viewBox="0 0 20 20" fill="none" stroke="rgba(247,242,231,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2a13 13 0 0 1 0 16M10 2a13 13 0 0 0 0 16"/></svg></a>`);
+        if (msa.email) links.push(`<a class="quick-link" href="mailto:${esc(msa.email)}" title="Email MSA"><svg viewBox="0 0 20 20" fill="none" stroke="rgba(247,242,231,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="13" rx="2"/><polyline points="2,4 10,12 18,4"/></svg></a>`);
         qlEl.innerHTML = links.join('');
       }
 
