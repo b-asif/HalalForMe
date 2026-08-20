@@ -524,6 +524,7 @@
       <div class="nav-item" data-page="spaces"><i data-lucide="map-pin" class="nav-icon"></i><span>Prayer Spaces</span></div>
       <div class="nav-item" data-page="events"><i data-lucide="calendar-days" class="nav-icon"></i><span>Events</span></div>
       <div class="nav-item" data-page="announcements"><i data-lucide="megaphone" class="nav-icon"></i><span>Announcements</span></div>
+      <div class="nav-item" data-page="dining"><i data-lucide="utensils" class="nav-icon"></i><span>Dining</span></div>
       <div class="nav-item" data-page="resources"><i data-lucide="bookmark" class="nav-icon"></i><span>Resources</span></div>
       <div class="nav-item admin-only" data-page="members" style="display:none"><i data-lucide="users" class="nav-icon"></i><span>Members</span></div>
     </nav>
@@ -674,6 +675,14 @@
       <p class="page-sub">Post updates to your campus community.</p>
       <button class="btn btn-green" id="ann-add-btn" style="margin-bottom:16px;">+ New Announcement</button>
       <div id="ann-list"></div>
+    </div>
+
+    <!-- Dining -->
+    <div class="page" id="page-dining">
+      <h1 class="page-title">Dining</h1>
+      <p class="page-sub">Post today's halal options for each dining hall. Only today's entries are shown to students.</p>
+      <button class="btn btn-green" id="din-add-btn" style="margin-bottom:16px;">+ New Dining Update</button>
+      <div id="din-list"></div>
     </div>
 
     <!-- Resources -->
@@ -966,6 +975,7 @@ async function loadPage(name) {
   if (name === 'spaces')        await loadSpaces();
   if (name === 'events')        await loadEvents();
   if (name === 'announcements') await loadAnnouncements();
+  if (name === 'dining')        await loadDining();
   if (name === 'resources')     await loadResources();
   if (name === 'members')       await loadMembers();
 }
@@ -1470,6 +1480,97 @@ window.deleteAnn = async (id, title) => {
   confirm_delete(title, async () => {
     await sb.from('campus_announcements').delete().eq('id', id);
     toast('Deleted'); loadAnnouncements();
+  });
+};
+
+// ── Dining ──
+async function loadDining() {
+  const { data } = await sb.from('campus_dining_updates').select('*').eq('msa_id', msaId).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(30);
+  const el = document.getElementById('din-list');
+  const todayISO = new Date().toISOString().slice(0, 10);
+  el.innerHTML = (!data || !data.length)
+    ? `<div class="empty"><div class="empty-icon">🍽️</div><div class="empty-title">No dining updates yet</div></div>`
+    : data.map(d => {
+        const isToday = d.date === todayISO;
+        const dateBadge = isToday
+          ? `<span class="badge badge-green">Today</span>`
+          : `<span class="badge badge-muted">${d.date}</span>`;
+        return `
+        <div class="list-item">
+          <div class="list-item-body">
+            <div class="list-item-title">${esc(d.dining_hall)} ${dateBadge} ${d.is_published ? '<span class="badge badge-green">Published</span>' : '<span class="badge badge-muted">Draft</span>'}</div>
+            <div class="list-item-sub">${esc(d.items).substring(0, 80)}${d.items.length > 80 ? '…' : ''}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-outline" onclick="editDining('${d.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteDining('${d.id}','${esc(d.dining_hall)}')">Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+}
+
+function diningForm(d = {}) {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  return `
+    <div class="form-field"><label class="form-label">Dining Hall *</label><input class="form-input" id="din-hall" value="${esc(d.dining_hall ?? '')}" placeholder="e.g. North Dining Hall" /></div>
+    <div class="form-field"><label class="form-label">Date *</label><input class="form-input" id="din-date" type="date" value="${esc(d.date ?? todayISO)}" /></div>
+    <div class="form-field"><label class="form-label">Halal Items *</label><textarea class="form-textarea" id="din-items" placeholder="• Grilled Chicken&#10;• Rice&#10;• Lentil Soup">${esc(d.items ?? '')}</textarea></div>
+    <div class="form-field"><label class="form-label">Notes (optional)</label><input class="form-input" id="din-notes" value="${esc(d.notes ?? '')}" placeholder="Hours, station, etc." /></div>
+    <div style="display:flex;gap:20px;margin-top:8px;flex-wrap:wrap;">
+      <label class="form-check"><input type="checkbox" id="din-published" ${d.is_published ? 'checked' : ''}> Published</label>
+      <label class="form-check"><input type="checkbox" id="din-notify"> Notify followers</label>
+    </div>`;
+}
+
+document.getElementById('din-add-btn').addEventListener('click', () => {
+  openModal('New Dining Update', diningForm(), async () => {
+    const hall  = document.getElementById('din-hall').value.trim();
+    const date  = document.getElementById('din-date').value;
+    const items = document.getElementById('din-items').value.trim();
+    if (!hall)  { toast('Dining hall is required', true); return; }
+    if (!date)  { toast('Date is required', true); return; }
+    if (!items) { toast('Halal items are required', true); return; }
+    const notes       = document.getElementById('din-notes').value.trim() || null;
+    const isPublished = document.getElementById('din-published').checked;
+    const notify      = document.getElementById('din-notify').checked;
+    const { error } = await sb.from('campus_dining_updates').insert({
+      msa_id: msaId, created_by: user.id,
+      dining_hall: hall, date, items, notes,
+      is_published: isPublished, notify_followers: notify,
+    });
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notify) await notifyCampusFollowers('dining', `${hall} — Halal Dining`, items.substring(0, 100));
+    toast('Dining update posted'); closeModal(); loadDining();
+  });
+});
+
+window.editDining = async (id) => {
+  const { data: d } = await sb.from('campus_dining_updates').select('*').eq('id', id).maybeSingle();
+  openModal('Edit Dining Update', diningForm(d), async () => {
+    const hall  = document.getElementById('din-hall').value.trim();
+    const date  = document.getElementById('din-date').value;
+    const items = document.getElementById('din-items').value.trim();
+    if (!hall)  { toast('Dining hall is required', true); return; }
+    if (!date)  { toast('Date is required', true); return; }
+    if (!items) { toast('Halal items are required', true); return; }
+    const notes       = document.getElementById('din-notes').value.trim() || null;
+    const isPublished = document.getElementById('din-published').checked;
+    const notify      = document.getElementById('din-notify').checked;
+    const { error } = await sb.from('campus_dining_updates').update({
+      dining_hall: hall, date, items, notes,
+      is_published: isPublished, notify_followers: notify,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, true); return; }
+    if (isPublished && notify) await notifyCampusFollowers('dining', `${hall} — Halal Dining`, items.substring(0, 100));
+    toast('Updated'); closeModal(); loadDining();
+  });
+};
+
+window.deleteDining = async (id, hall) => {
+  confirm_delete(hall, async () => {
+    await sb.from('campus_dining_updates').delete().eq('id', id);
+    toast('Deleted'); loadDining();
   });
 };
 

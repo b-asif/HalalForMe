@@ -29,6 +29,7 @@ const CREAM      = Brand.cream;
 const NOTIF_ROWS: { key: NotifCategory; label: string; sub: string }[] = [
   { key: 'events',        label: 'Events',        sub: 'Upcoming MSA events' },
   { key: 'announcements', label: 'Announcements', sub: 'News and updates' },
+  { key: 'dining',        label: 'Dining',        sub: "Today's halal options" },
   { key: 'jummah',        label: 'Jummah',        sub: 'Time and location changes' },
   { key: 'prayer',        label: 'Prayer Times',  sub: 'Iqama time updates' },
 ];

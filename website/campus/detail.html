@@ -222,6 +222,26 @@
     .res-title { font-size: 13px; font-weight: 700; color: var(--text); }
     .res-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
+    /* Dining update card */
+    .dining-card {
+      border: 1px solid #fed7aa; border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 10px;
+      background: #fff7ed;
+    }
+    .dining-card-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 6px; gap: 8px;
+    }
+    .dining-hall-name { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+    .dining-today-badge {
+      font-size: 11px; font-weight: 700; color: #ea580c;
+      background: #fff7ed; border: 1px solid #fed7aa;
+      border-radius: 6px; padding: 2px 7px; white-space: nowrap;
+    }
+    .dining-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .dining-items { font-size: 13px; color: var(--muted); line-height: 1.55; white-space: pre-line; }
+    .dining-notes { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+
     /* Fallback messages */
     .empty-friendly {
       font-size: 13px; color: var(--muted); line-height: 1.6; padding: 8px 0;
@@ -375,6 +395,7 @@
       <a href="../guides.html" class="nav-link">Guides</a>
       <a href="../campus/" class="nav-link active">Campus Hub</a>
       <a href="../partners.html" class="nav-link">Partner with us</a>
+      <a href="msa/" class="nav-link">MSA Admin</a>
       <a href="https://apps.apple.com/us/app/rihdal/id6767651676" target="_blank" rel="noopener noreferrer" class="nav-cta">Download</a>
       <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleMenu(this)">
         <span></span><span></span><span></span>
@@ -563,13 +584,15 @@
       }
 
       // 3. Parallel data queries
-      const [prayerTimes, jummah, spaces, events, announcements, resources] = await Promise.all([
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const [prayerTimes, jummah, spaces, events, announcements, resources, dining] = await Promise.all([
         supabase.from('campus_prayer_times').select('*').eq('msa_id', msa.id),
         supabase.from('campus_jummah').select('*').eq('msa_id', msa.id).eq('is_active', true).order('position'),
         supabase.from('campus_prayer_spaces').select('*').eq('msa_id', msa.id).eq('is_active', true),
         supabase.from('campus_events').select('*').eq('msa_id', msa.id).eq('is_published', true).gte('event_start', new Date().toISOString()).order('event_start').limit(6),
         supabase.from('campus_announcements').select('*').eq('msa_id', msa.id).eq('is_published', true).order('created_at', { ascending: false }).limit(4),
         supabase.from('campus_resources').select('*').eq('msa_id', msa.id).eq('is_active', true).order('position'),
+        supabase.from('campus_dining_updates').select('*').eq('msa_id', msa.id).eq('is_published', true).eq('date', todayISO).order('created_at', { ascending: false }),
       ]);
 
       // Start prayer countdown
@@ -691,6 +714,29 @@
         <div class="section-hd"><span class="section-hd-title">📅 Upcoming Events</span></div>
         ${evHtml}
       </div>`;
+
+      // ── Dining (full width) ──
+      const dn = dining.data || [];
+      if (dn.length > 0) {
+        const dnHtml = dn.map(d => {
+          const isToday = d.date === todayISO;
+          const displayDate = isToday
+            ? `<span class="dining-today-badge">Today</span>`
+            : `<span class="dining-date">${new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
+          return `<div class="dining-card">
+            <div class="dining-card-header">
+              <div class="dining-hall-name">${esc(d.dining_hall)}</div>
+              ${displayDate}
+            </div>
+            <div class="dining-items">${esc(d.items)}</div>
+            ${d.notes ? `<div class="dining-notes">${esc(d.notes)}</div>` : ''}
+          </div>`;
+        }).join('');
+        html += `<div class="section-card" style="margin-bottom:24px;">
+          <div class="section-hd"><span class="section-hd-title">🍽️ Halal Dining Today</span></div>
+          ${dnHtml}
+        </div>`;
+      }
 
       // ── 2-column: Announcements + Resources ──
       html += `<div class="content-grid">`;

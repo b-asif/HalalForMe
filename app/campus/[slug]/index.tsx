@@ -21,6 +21,7 @@ import {
 import type {
   CampusAnnouncement,
   CampusDetail,
+  CampusDiningUpdate,
   CampusEvent,
   CampusJummah,
   CampusNotifPrefs,
@@ -390,6 +391,45 @@ function AnnouncementsSection({ announcements }: { announcements: CampusAnnounce
   );
 }
 
+function DiningSection({ diningUpdates }: { diningUpdates: CampusDiningUpdate[] }) {
+  if (diningUpdates.length === 0) return null;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  return (
+    <View style={styles.section}>
+      <View style={sectionStyles.header}>
+        <Ionicons name="restaurant-outline" size={18} color={GREEN} />
+        <Text style={sectionStyles.title}>Halal Dining Today</Text>
+      </View>
+      {diningUpdates.map(d => {
+        const isToday = d.date === todayISO;
+        return (
+          <View key={d.id} style={styles.announcementCard}>
+            <View style={styles.announcementHeader}>
+              <Text style={styles.announcementTitle}>{d.dining_hall}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {isToday && (
+                  <View style={styles.diningTodayBadge}>
+                    <Text style={styles.diningTodayText}>Today</Text>
+                  </View>
+                )}
+                {!isToday && (
+                  <Text style={styles.announcementDate}>
+                    {new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Text style={styles.announcementBody}>{d.items}</Text>
+            {!!d.notes && (
+              <Text style={[styles.announcementBody, { marginTop: 4, fontStyle: 'italic' }]}>{d.notes}</Text>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function ResourcesSection({ resources }: { resources: CampusResource[] }) {
   if (resources.length === 0) return null;
   return (
@@ -439,7 +479,7 @@ export default function CampusDetailScreen() {
   const [notFound,  setNotFound]  = useState(false);
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [notifPrefs, setNotifPrefs] = useState<CampusNotifPrefs>({ events: true, announcements: true, jummah: true, prayer: true });
+  const [notifPrefs, setNotifPrefs] = useState<CampusNotifPrefs>({ events: true, announcements: true, jummah: true, prayer: true, dining: true });
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [isMsaAdmin, setIsMsaAdmin] = useState(false);
 
@@ -542,7 +582,7 @@ export default function CampusDetailScreen() {
     );
   }
 
-  const { university, msa, prayerSpaces, prayerTimes, jummah, events, announcements, resources } = campus;
+  const { university, msa, prayerSpaces, prayerTimes, jummah, events, announcements, resources, diningUpdates } = campus;
   const location = [university.city, university.state].filter(Boolean).join(', ');
   const hasContent = msa !== null;
 
@@ -794,6 +834,9 @@ export default function CampusDetailScreen() {
           )}
         </View>
 
+        {/* ── Dining ── */}
+        <DiningSection diningUpdates={diningUpdates} />
+
         {/* ── Announcements ── */}
         <AnnouncementsSection announcements={announcements} />
 
@@ -805,7 +848,8 @@ export default function CampusDetailScreen() {
         {/* ── All sections empty but MSA exists ── */}
         {hasContent && prayerTimes.length === 0 && jummah.length === 0 &&
          prayerSpaces.length === 0 && events.length === 0 &&
-         announcements.length === 0 && resources.length === 0 && !msa?.description && (
+         announcements.length === 0 && resources.length === 0 &&
+         diningUpdates.length === 0 && !msa?.description && (
           <View style={styles.emptyContent}>
             <Ionicons name="leaf-outline" size={28} color={TEXT_MUTED} />
             <Text style={styles.emptyContentText}>
@@ -853,6 +897,7 @@ export default function CampusDetailScreen() {
               [
                 { key: 'events',        label: 'Events',        sub: 'Upcoming MSA events' },
                 { key: 'announcements', label: 'Announcements', sub: 'News and updates' },
+                { key: 'dining',        label: 'Dining',        sub: "Today's halal options" },
                 { key: 'jummah',        label: 'Jummah',        sub: 'Time and location changes' },
                 { key: 'prayer',        label: 'Prayer Times',  sub: 'Iqama time updates' },
               ] as const
@@ -1220,6 +1265,12 @@ const styles = StyleSheet.create({
   announcementTitle:  { ...Type.label, color: TEXT_DARK, flex: 1, marginRight: Spacing.sm },
   announcementDate:   { ...Type.tiny, color: TEXT_MUTED },
   announcementBody:   { ...Type.bodySmall, color: TEXT_MUTED, lineHeight: 20 },
+  diningTodayBadge: {
+    backgroundColor: '#fff7ed', borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: '#fed7aa',
+  },
+  diningTodayText: { fontSize: 11, fontWeight: '700', color: '#ea580c' },
 
   // Resources
   resourceCard: {

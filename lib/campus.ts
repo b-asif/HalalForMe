@@ -123,6 +123,20 @@ export interface CampusResource {
   position: number;
 }
 
+export interface CampusDiningUpdate {
+  id: string;
+  msa_id: string;
+  created_by: string | null;
+  dining_hall: string;
+  date: string;       // ISO date string, e.g. "2026-08-20"
+  items: string;      // free-text list of halal items
+  notes: string | null;
+  is_published: boolean;
+  notify_followers: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Full campus page data — university + MSA + all related content */
 export interface CampusDetail {
   university: University;
@@ -133,6 +147,7 @@ export interface CampusDetail {
   events: CampusEvent[];
   announcements: CampusAnnouncement[];
   resources: CampusResource[];
+  diningUpdates: CampusDiningUpdate[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -307,6 +322,21 @@ export async function fetchCampusResources(msaId: string): Promise<CampusResourc
   return data as CampusResource[];
 }
 
+/** Fetch only today's published dining updates for an MSA. Stale (yesterday's) updates are never shown to students. */
+export async function fetchCampusDiningUpdates(msaId: string): Promise<CampusDiningUpdate[]> {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('campus_dining_updates')
+    .select('id, msa_id, created_by, dining_hall, date, items, notes, is_published, notify_followers, created_at, updated_at')
+    .eq('msa_id', msaId)
+    .eq('is_published', true)
+    .eq('date', todayISO)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return data as CampusDiningUpdate[];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Full campus page — single fetch aggregating all sections
 // ─────────────────────────────────────────────────────────────────────────────
@@ -333,10 +363,11 @@ export async function fetchCampusDetail(slug: string): Promise<CampusDetail | nu
       events: [],
       announcements: [],
       resources: [],
+      diningUpdates: [],
     };
   }
 
-  const [prayerSpaces, prayerTimes, jummah, events, announcements, resources] =
+  const [prayerSpaces, prayerTimes, jummah, events, announcements, resources, diningUpdates] =
     await Promise.all([
       fetchCampusPrayerSpaces(msa.id),
       fetchCampusPrayerTimes(msa.id),
@@ -344,9 +375,10 @@ export async function fetchCampusDetail(slug: string): Promise<CampusDetail | nu
       fetchCampusEvents(msa.id),
       fetchCampusAnnouncements(msa.id),
       fetchCampusResources(msa.id),
+      fetchCampusDiningUpdates(msa.id),
     ]);
 
-  return { university, msa, prayerSpaces, prayerTimes, jummah, events, announcements, resources };
+  return { university, msa, prayerSpaces, prayerTimes, jummah, events, announcements, resources, diningUpdates };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,7 +396,7 @@ export async function getCampusFollowStatus(universityId: string): Promise<boole
   return !!data;
 }
 
-const NOTIF_CATEGORIES = ['events', 'announcements', 'jummah', 'prayer'] as const;
+const NOTIF_CATEGORIES = ['events', 'announcements', 'jummah', 'prayer', 'dining'] as const;
 export type NotifCategory = typeof NOTIF_CATEGORIES[number];
 
 export interface CampusNotifPrefs {
@@ -372,6 +404,7 @@ export interface CampusNotifPrefs {
   announcements: boolean;
   jummah: boolean;
   prayer: boolean;
+  dining: boolean;
 }
 
 /** Follow a university and seed default notification preferences (all enabled). */
@@ -414,7 +447,7 @@ export async function unfollowCampus(universityId: string): Promise<{ error: str
 
 /** Fetch notification preferences for a followed university. */
 export async function getCampusNotifPrefs(universityId: string): Promise<CampusNotifPrefs> {
-  const defaults: CampusNotifPrefs = { events: true, announcements: true, jummah: true, prayer: true };
+  const defaults: CampusNotifPrefs = { events: true, announcements: true, jummah: true, prayer: true, dining: true };
 
   const { data } = await supabase
     .from('campus_notification_preferences')

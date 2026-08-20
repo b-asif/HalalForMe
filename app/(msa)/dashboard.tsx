@@ -2,15 +2,16 @@
  * MSA Admin Portal — Dashboard
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useMsa } from '../../contexts/MsaContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Brand, Radius, Spacing, Type } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 const GREEN      = Brand.green;
 const DEEP_GREEN = Brand.deepGreen;
@@ -35,6 +36,7 @@ const ACTIONS: QuickAction[] = [
   { icon: 'megaphone-outline',  label: 'New Announcement', description: 'Post an update',            route: '/(msa)/announcements?openNew=1', color: '#b45309',  bg: '#fef3c7' },
   { icon: 'location-outline',   label: 'Prayer Spaces',  description: 'Rooms & wudu areas',         route: '/(msa)/prayer-spaces',  color: '#059669',  bg: '#d1fae5' },
   { icon: 'bookmark-outline',   label: 'Resources',      description: 'Halal food, links & more',   route: '/(msa)/resources',      color: '#dc2626',  bg: '#fee2e2' },
+  { icon: 'restaurant-outline',  label: 'Dining',         description: "Today's halal options",      route: '/(msa)/dining',         color: '#ea580c',  bg: '#fff7ed' },
   { icon: 'person-add-outline', label: 'Members',        description: 'Manage team access',         route: '/(msa)/members',        color: '#6d28d9',  bg: '#ede9fe' },
   { icon: 'image-outline',      label: 'MSA Profile',    description: 'Photo, Instagram & info',    route: '/(msa)/profile',        color: '#0369a1',  bg: '#e0f2fe' },
 ];
@@ -45,10 +47,26 @@ export default function MsaDashboard() {
   const { user, isAdmin, signOut } = useAuth();
   const { activeMembership, setActiveMsaId } = useMsa();
 
+  const [diningPostedToday, setDiningPostedToday] = useState(true); // optimistic: no badge until checked
+
   // If we arrived from code redemption, steer to the newly created MSA
   useEffect(() => {
     if (paramMsaId) setActiveMsaId(paramMsaId);
   }, [paramMsaId]);
+
+  // Check on every focus whether today's dining has been posted
+  useFocusEffect(useCallback(() => {
+    const msaId = activeMembership?.msaId;
+    if (!msaId) return;
+    const todayISO = new Date().toISOString().slice(0, 10);
+    supabase
+      .from('campus_dining_updates')
+      .select('id', { count: 'exact', head: true })
+      .eq('msa_id', msaId)
+      .eq('date', todayISO)
+      .eq('is_published', true)
+      .then(({ count }) => setDiningPostedToday((count ?? 0) > 0));
+  }, [activeMembership?.msaId]));
 
   const msaName        = activeMembership?.msaName        ?? (isAdmin ? 'Rihdal Admin' : '');
   const universityName = activeMembership?.universityName ?? '';
@@ -75,20 +93,28 @@ export default function MsaDashboard() {
         {/* Quick actions grid */}
         <Text style={s.sectionLabel}>Manage</Text>
         <View style={s.grid}>
-          {ACTIONS.map(action => (
-            <TouchableOpacity
-              key={action.route}
-              style={s.card}
-              onPress={() => router.push(action.route as any)}
-              activeOpacity={0.8}
-            >
-              <View style={[s.cardIcon, { backgroundColor: action.bg }]}>
-                <Ionicons name={action.icon} size={22} color={action.color} />
-              </View>
-              <Text style={s.cardLabel}>{action.label}</Text>
-              <Text style={s.cardDesc} numberOfLines={1}>{action.description}</Text>
-            </TouchableOpacity>
-          ))}
+          {ACTIONS.map(action => {
+            const showDiningBadge = action.route === '/(msa)/dining' && !diningPostedToday;
+            return (
+              <TouchableOpacity
+                key={action.route}
+                style={s.card}
+                onPress={() => router.push(action.route as any)}
+                activeOpacity={0.8}
+              >
+                <View style={s.cardIconRow}>
+                  <View style={[s.cardIcon, { backgroundColor: action.bg }]}>
+                    <Ionicons name={action.icon} size={22} color={action.color} />
+                  </View>
+                  {showDiningBadge && <View style={s.badge} />}
+                </View>
+                <Text style={s.cardLabel}>{action.label}</Text>
+                <Text style={s.cardDesc} numberOfLines={1}>
+                  {showDiningBadge ? "Post today's menu" : action.description}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Bottom actions */}
@@ -161,7 +187,14 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  cardIconRow: { flexDirection: 'row', alignItems: 'flex-start' },
   cardIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badge: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#ef4444',
+    marginLeft: -6, marginTop: -2,
+    borderWidth: 1.5, borderColor: '#fff',
+  },
   cardLabel: { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
   cardDesc:  { fontSize: 12, color: TEXT_MUTED },
 
