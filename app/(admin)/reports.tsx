@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import { Brand } from '../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -147,7 +148,8 @@ export default function AdminReportsScreen() {
       .select('id');
 
     if (error || !updated?.length) {
-      Alert.alert('Error', error?.message ?? 'Could not update report.');
+      console.error('[admin/reports] update error:', error);
+      Alert.alert('Error', 'Could not update report.');
       setActing(null);
       return;
     }

@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import { Brand } from '../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -107,7 +108,8 @@ export default function AdminMosqueListingsScreen() {
           onPress: async () => {
             const { error } = await supabase.from('mosques').delete().eq('id', mosque.id);
             if (error) {
-              Alert.alert('Error', error.message);
+              console.error('[admin/mosque-listings] delete error:', error);
+              Alert.alert('Error', formatError(error));
             } else {
               setMosques(prev => prev.filter(m => m.id !== mosque.id));
             }

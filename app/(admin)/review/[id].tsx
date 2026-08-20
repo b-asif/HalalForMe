@@ -10,6 +10,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
+import { formatError } from '../../../lib/errors';
 import { isValidImageBytes } from '../../../lib/validateImageBytes';
 import { CERTIFIERS, Certifier } from '../../../lib/certifiers';
 import { Brand } from '../../../lib/theme';
@@ -106,7 +107,8 @@ export default function AdminReviewScreen() {
       .single();
 
     if (error || !data) {
-      Alert.alert('Error', error?.message ?? 'Submission not found');
+      console.error('[admin/review] load error:', error);
+      Alert.alert('Error', 'Submission not found');
       router.back();
       return;
     }
@@ -236,7 +238,7 @@ export default function AdminReviewScreen() {
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     const { data } = supabase.storage.from('gallery_photos').getPublicUrl(path);
     return data.publicUrl;
   };
@@ -315,7 +317,8 @@ export default function AdminReviewScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      console.error('[admin/review] approve error:', e);
+      Alert.alert('Error', formatError(e));
     } finally {
       setSaving(false);
     }
@@ -371,7 +374,8 @@ export default function AdminReviewScreen() {
     setSaving(false);
 
     if (error || !updated) {
-      setRejectError(error?.message ?? 'Update failed — admin may lack UPDATE permission on submissions.');
+      console.error('[admin/review] reject error:', error);
+      setRejectError('Update failed — admin may lack UPDATE permission on submissions.');
       return;
     }
 

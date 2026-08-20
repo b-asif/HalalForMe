@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
+import { formatError } from '../../../lib/errors';
 import { isValidImageBytes } from '../../../lib/validateImageBytes';
 import { Brand } from '../../../lib/theme';
 
@@ -334,7 +335,7 @@ export default function AdminGuideEditScreen() {
       .select('id, building_name, room_number, wudu_available, hours, lat, lng')
       .single();
     setSavingPrayer(false);
-    if (error || !data) { Alert.alert('Error', error?.message ?? 'Failed to create prayer room.'); return; }
+    if (error || !data) { console.error('[admin/guide-edit] prayer room error:', error); Alert.alert('Error', 'Failed to create prayer room.'); return; }
     setItems(prev => [...prev, {
       type: 'prayer_room',
       prayer_room_id: (data as any).id,
@@ -379,7 +380,7 @@ export default function AdminGuideEditScreen() {
       prayer_room_id: null,
       position:      nextPosition,
     });
-    if (itemError) { Alert.alert('Error', itemError.message); return; }
+    if (itemError) { console.error('[admin/guide-edit] item error:', itemError); Alert.alert('Error', formatError(itemError)); return; }
 
     // Update suggestion status
     await supabase.from('guide_suggestions').update({ status: 'approved' }).eq('id', suggestion.id);
@@ -449,7 +450,7 @@ export default function AdminGuideEditScreen() {
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: mimeType, upsert: true });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     const { data } = supabase.storage.from('gallery_photos').getPublicUrl(path);
     return data.publicUrl;
   };
@@ -466,7 +467,8 @@ export default function AdminGuideEditScreen() {
         finalCoverUrl = await uploadCoverImage(newCoverImage.base64, newCoverImage.uri);
         setUploadingCover(false);
       } catch (e: any) {
-        Alert.alert('Upload failed', e.message);
+        console.error('[admin/guide-edit] cover upload error:', e);
+        Alert.alert('Upload failed', formatError(e));
         setSaving(false);
         setUploadingCover(false);
         return;
@@ -494,14 +496,15 @@ export default function AdminGuideEditScreen() {
     if (isNew) {
       const { data, error } = await supabase.from('guides').insert(payload).select('id').single();
       if (error || !data) {
-        Alert.alert('Error', error?.message ?? 'Failed to create guide.');
+        console.error('[admin/guide-edit] create guide error:', error);
+        Alert.alert('Error', 'Failed to create guide.');
         setSaving(false);
         return;
       }
       guideId = data.id;
     } else {
       const { error } = await supabase.from('guides').update(payload).eq('id', id);
-      if (error) { Alert.alert('Error', error.message); setSaving(false); return; }
+      if (error) { console.error('[admin/guide-edit] update guide error:', error); Alert.alert('Error', formatError(error)); setSaving(false); return; }
     }
 
     // Replace all guide items

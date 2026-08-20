@@ -8,6 +8,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
+import { formatError } from '../../../lib/errors';
 
 const GREEN = '#245737';
 
@@ -66,14 +67,14 @@ export default function AdminClaimReviewScreen() {
                 .from('restaurants')
                 .update({ owner_id: claim!.user_id })
                 .eq('id', claim!.restaurant_id);
-              if (restErr) throw new Error(restErr.message);
+              if (restErr) throw restErr;
 
               // Update claim status
               const { error: claimErr } = await supabase
                 .from('restaurant_claims')
                 .update({ status: 'approved', reviewed_at: new Date().toISOString() })
                 .eq('id', id);
-              if (claimErr) throw new Error(claimErr.message);
+              if (claimErr) throw claimErr;
 
               // Notify user
               supabase.functions.invoke('notify-user', {
@@ -88,7 +89,8 @@ export default function AdminClaimReviewScreen() {
                 { text: 'OK', onPress: () => router.back() },
               ]);
             } catch (e: any) {
-              Alert.alert('Error', e.message);
+              console.error('[admin/claim] approve error:', e);
+              Alert.alert('Error', formatError(e));
             } finally {
               setWorking(false);
             }
@@ -112,7 +114,7 @@ export default function AdminClaimReviewScreen() {
         .from('restaurant_claims')
         .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
         .eq('id', id);
-      if (error) throw new Error(error.message);
+      if (error) throw error;
 
       const reason = rejectReason.trim();
       supabase.functions.invoke('notify-user', {
@@ -129,7 +131,8 @@ export default function AdminClaimReviewScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      console.error('[admin/claim] reject error:', e);
+      Alert.alert('Error', formatError(e));
     } finally {
       setWorking(false);
     }

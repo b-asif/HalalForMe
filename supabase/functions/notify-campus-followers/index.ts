@@ -27,7 +27,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const VALID_CATEGORIES = ['jummah', 'prayer', 'events', 'announcements'] as const;
+const VALID_CATEGORIES = ['jummah', 'prayer', 'events', 'announcements', 'dining'] as const;
 type Category = typeof VALID_CATEGORIES[number];
 
 Deno.serve(async (req) => {
@@ -75,6 +75,13 @@ Deno.serve(async (req) => {
     return new Response(`Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`, { status: 400, headers: CORS_HEADERS });
   }
 
+  if (typeof pushTitle !== 'string' || pushTitle.trim().length === 0 || pushTitle.length > 100) {
+    return new Response('title must be a non-empty string under 100 characters', { status: 400, headers: CORS_HEADERS });
+  }
+  if (typeof pushBody !== 'string' || pushBody.trim().length === 0 || pushBody.length > 500) {
+    return new Response('body must be a non-empty string under 500 characters', { status: 400, headers: CORS_HEADERS });
+  }
+
   // Verify caller is an active MSA member OR a global admin
   const { data: membership } = await supabase
     .from('msa_members')
@@ -90,8 +97,8 @@ Deno.serve(async (req) => {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!membership && profile?.is_admin !== true) {
-    return new Response('Forbidden — not an active MSA member', { status: 403, headers: CORS_HEADERS });
+  if ((!membership || membership.role !== 'admin') && profile?.is_admin !== true) {
+    return new Response('Forbidden — MSA admin role required', { status: 403, headers: CORS_HEADERS });
   }
 
   // Get the university_id for this MSA

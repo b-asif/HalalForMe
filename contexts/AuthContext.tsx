@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { AppState } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { unregisterPushToken } from '../lib/notifications';
 
 interface AuthContextValue {
   session: Session | null;
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id]);
 
   const signOut = async () => {
+    await unregisterPushToken();
     await supabase.auth.signOut();
   };
 

@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../../lib/supabase';
+import { formatError } from '../../../lib/errors';
 import { isValidImageBytes } from '../../../lib/validateImageBytes';
 import AddressAutocomplete from '../../../components/AddressAutocomplete';
 import { CERTIFIERS, Certifier } from '../../../lib/certifiers';
@@ -149,7 +150,8 @@ export default function AdminEditScreen() {
       .single();
 
     if (error || !data) {
-      Alert.alert('Error', error?.message ?? 'Restaurant not found');
+      console.error('[admin/edit] load error:', error);
+      Alert.alert('Error', 'Restaurant not found');
       router.back();
       return;
     }
@@ -297,7 +299,7 @@ export default function AdminEditScreen() {
     const { error } = await supabase.storage
       .from('gallery_photos')
       .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     const { data } = supabase.storage.from('gallery_photos').getPublicUrl(path);
     return data.publicUrl;
   };
@@ -420,7 +422,7 @@ export default function AdminEditScreen() {
             .select('id')
             .single();
 
-      if (error || !saved) throw new Error(error?.message ?? `${isNew ? 'Create' : 'Update'} failed — admin may lack the required permission on restaurants.`);
+      if (error || !saved) { console.error('[admin/edit] save error:', error); throw new Error(`${isNew ? 'Create' : 'Update'} failed — admin may lack the required permission on restaurants.`); }
 
       // Commit uploaded photos into local state so UI stays consistent
       setGalleryPhotos(finalCategorized);
@@ -430,7 +432,7 @@ export default function AdminEditScreen() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Error', formatError(e));
     } finally {
       setSaving(false);
     }
@@ -451,11 +453,12 @@ export default function AdminEditScreen() {
                 .from('restaurants')
                 .update({ owner_id: null })
                 .eq('id', id);
-              if (error) throw new Error(error.message);
+              if (error) throw error;
               setRestaurant(r => r ? { ...r, owner_id: null } : r);
               Alert.alert('Done', 'Owner has been removed.');
             } catch (e: any) {
-              Alert.alert('Error', e.message);
+              console.error('[admin/edit] remove owner error:', e);
+              Alert.alert('Error', formatError(e));
             } finally {
               setSaving(false);
             }
@@ -480,12 +483,13 @@ export default function AdminEditScreen() {
                 .from('restaurants')
                 .delete()
                 .eq('id', id);
-              if (error) throw new Error(error.message);
+              if (error) throw error;
               Alert.alert('Deleted', 'Listing has been removed.', [
                 { text: 'OK', onPress: () => router.back() },
               ]);
             } catch (e: any) {
-              Alert.alert('Error', e.message);
+              console.error('[admin/edit] delete error:', e);
+              Alert.alert('Error', formatError(e));
             } finally {
               setSaving(false);
             }

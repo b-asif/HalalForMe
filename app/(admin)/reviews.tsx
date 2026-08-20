@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import { Brand } from '../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -85,7 +86,8 @@ export default function AdminReviewsScreen() {
       .select('id');
 
     if (error || !updated?.length) {
-      Alert.alert('Error', error?.message ?? 'Could not update review. Check admin permissions.');
+      console.error('[admin/reviews] moderate error:', error);
+      Alert.alert('Error', 'Could not update review. Check admin permissions.');
       setActing(null);
       return;
     }

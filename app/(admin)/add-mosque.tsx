@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import AddressAutocomplete from '../../components/AddressAutocomplete';
 import { generateInviteCode, generateManualOsmId } from '../../lib/mosques/manual';
 import { Brand } from '../../lib/theme';
@@ -50,11 +51,12 @@ export default function AddMosqueScreen() {
         invite_code: generateInviteCode(),
         invite_code_expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
-      if (error) throw new Error(error.message);
+      if (error) throw error;
 
       router.replace(`/mosque/${osmId.replace('/', ':')}` as any);
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      console.error('[admin/add-mosque] submit error:', e);
+      Alert.alert('Error', formatError(e));
     } finally {
       setSubmitting(false);
     }

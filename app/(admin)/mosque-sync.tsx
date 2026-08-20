@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import { Brand } from '../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -305,7 +306,8 @@ export default function MosqueSyncScreen() {
 
               setPendingRows(prev => prev.filter(r => r.id !== row.id));
             } catch (e: any) {
-              Alert.alert('Error', e.message ?? 'Failed to approve sync');
+              console.error('[admin/mosque-sync] approve error:', e);
+              Alert.alert('Error', formatError(e) || 'Failed to approve sync');
             } finally {
               setActing(null);
             }
@@ -324,7 +326,8 @@ export default function MosqueSyncScreen() {
         .eq('id', row.id);
       setPendingRows(prev => prev.filter(r => r.id !== row.id));
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to reject');
+      console.error('[admin/mosque-sync] reject error:', e);
+      Alert.alert('Error', formatError(e) || 'Failed to reject');
     } finally {
       setActing(null);
     }
@@ -357,7 +360,8 @@ export default function MosqueSyncScreen() {
       loadReview();
       loadCost();
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Batch sync failed');
+      console.error('[admin/mosque-sync] batch sync error:', e);
+      Alert.alert('Error', formatError(e) || 'Batch sync failed');
     } finally {
       setBatchSyncing(false);
     }

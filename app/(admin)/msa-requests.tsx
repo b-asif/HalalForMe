@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { InstagramIcon } from '../../components/InstagramIcon';
 
 import { supabase } from '../../lib/supabase';
+import { formatError } from '../../lib/errors';
 import { Brand, Radius, Spacing, Type } from '../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -70,7 +71,7 @@ export default function MsaRequestsScreen() {
 
     if (error) {
       console.error('[msa-requests] load error:', JSON.stringify(error));
-      Alert.alert('Load failed', error.message);
+      Alert.alert('Load failed', formatError(error));
     }
     setRequests((data as any[]) ?? []);
     setLoading(false);
@@ -94,7 +95,8 @@ export default function MsaRequestsScreen() {
             const { error } = await supabase.rpc('approve_msa_request', { p_request_id: req.id });
             setActing(null);
             if (error) {
-              Alert.alert('Error', error.message);
+              console.error('[admin/msa-requests] approve error:', error);
+              Alert.alert('Error', formatError(error));
             } else {
               load();
               supabase.functions.invoke('notify-user', {
@@ -129,7 +131,8 @@ export default function MsaRequestsScreen() {
             });
             setActing(null);
             if (error) {
-              Alert.alert('Error', error.message);
+              console.error('[admin/msa-requests] generate code error:', error);
+              Alert.alert('Error', formatError(error));
             } else {
               const code = data as string;
               load();
@@ -168,7 +171,8 @@ export default function MsaRequestsScreen() {
             });
             setActing(null);
             if (error) {
-              Alert.alert('Error', error.message);
+              console.error('[admin/msa-requests] reject error:', error);
+              Alert.alert('Error', formatError(error));
             } else {
               load();
               supabase.functions.invoke('notify-user', {

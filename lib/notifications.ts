@@ -44,3 +44,16 @@ export async function registerPushToken(userId: string): Promise<void> {
     { onConflict: 'user_id,token' }
   );
 }
+
+export async function unregisterPushToken(): Promise<void> {
+  if (!Device.isDevice) return;
+
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: 'e5a2f979-21b3-48cf-a4a0-1097a9e3d2f9',
+    });
+    await supabase.from('push_tokens').delete().eq('token', tokenData.data);
+  } catch {
+    // Best-effort: if the token can't be read or deleted, sign-out still proceeds.
+  }
+}

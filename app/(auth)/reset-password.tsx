@@ -44,8 +44,8 @@ export default function ResetPasswordScreen() {
   const strengthColor = [HAIRLINE, RED, AMBER, '#3b82f6', GREEN][passwordStrength];
 
   const handleUpdate = async () => {
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < 8 || passwordStrength <= 1) {
+      setError('Password must be at least 8 characters and not weak.');
       return;
     }
     if (password !== confirmPassword) {
@@ -102,7 +102,7 @@ export default function ResetPasswordScreen() {
         <View style={[styles.passwordRow, focused === 'password' && styles.inputFocused]}>
           <TextInput
             style={styles.passwordInput}
-            placeholder="Min. 6 characters"
+            placeholder="Min. 8 characters"
             placeholderTextColor={TEXT_MUTED}
             value={password}
             onChangeText={v => { setPassword(v); setError(null); }}
