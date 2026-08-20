@@ -106,7 +106,7 @@ export default function FollowedCampusesScreen() {
         </View>
       ) : campuses.length === 0 ? (
         <View style={styles.center}>
-          <Ionicons name="school-outline" size={42} color={Colors.textGhost} />
+          <Ionicons name="school-outline" size={42} color={HAIRLINE} />
           <Text style={styles.emptyTitle}>No followed campuses</Text>
           <Text style={styles.emptyBody}>
             Follow a campus from the Campus Hub to manage notifications here.
