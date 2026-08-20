@@ -451,7 +451,7 @@ const s = StyleSheet.create({
   previewCtaText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   emptyOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center', justifyContent: 'center',
   },
   emptyBubble: {

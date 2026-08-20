@@ -1417,7 +1417,7 @@ const am = StyleSheet.create({
 
   // Event detail overlay (shown inside this modal, no nested modal needed)
   detailOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },

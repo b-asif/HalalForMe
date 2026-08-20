@@ -736,7 +736,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 32, justifyContent: 'flex-end',
   },
   heroBg:      { resizeMode: 'cover' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,38,24,0.62)' },
+  heroOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(14,38,24,0.62)' },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -835,7 +835,7 @@ const c = StyleSheet.create({
 
 const d = StyleSheet.create({
   overlay:  { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
 
   sheet: {
     backgroundColor: CREAM, borderTopLeftRadius: 24, borderTopRightRadius: 24,

@@ -167,7 +167,7 @@ const s = StyleSheet.create({
   map:       { flex: 1 },
 
   emptyOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     pointerEvents: 'none',

@@ -43,7 +43,7 @@ export default function UpdateBanner() {
   const handleUpdate = async () => {
     setApplying(true);
     try {
-      await Updates.downloadUpdateAsync();
+      await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
     } catch {
       // Download failed — hide the banner rather than leaving a broken state.

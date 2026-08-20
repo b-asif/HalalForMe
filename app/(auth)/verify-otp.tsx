@@ -4,7 +4,6 @@ import {
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { getGuestLoginIntent } from '../../lib/guestLoginIntent';
@@ -31,7 +30,6 @@ function getRemainingCooldown(email: string) {
 export default function VerifyOtpScreen() {
   const { email, type, redirect } = useLocalSearchParams<{ email: string; type: string; redirect?: string }>();
   const router     = useRouter();
-  const navigation = useNavigation();
 
   const [hasIntent, setHasIntent] = useState(() => getGuestLoginIntent());
 
@@ -39,7 +37,7 @@ export default function VerifyOtpScreen() {
     const intent = getGuestLoginIntent();
     setHasIntent(intent);
     if (!intent) {
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: '(tabs)' }] }));
+      router.replace('/(tabs)');
     }
   }, [navigation]));
 

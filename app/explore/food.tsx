@@ -704,7 +704,7 @@ export default function FoodScreen() {
       {filterSheetOpen && (
         <>
           <Animated.View style={[st.backdrop, { opacity: filterBackdropAnim, zIndex: 40 }]} pointerEvents="auto">
-            <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeFilterSheet} activeOpacity={1} />
+            <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeFilterSheet} activeOpacity={1} />
           </Animated.View>
 
           <Animated.View
@@ -949,7 +949,7 @@ const st = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
 
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 20 },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 20 },
 });
 
 const fs = StyleSheet.create({

@@ -417,7 +417,7 @@ export default function RestaurantDetailScreen() {
             {heroPhoto ? (
               <Image
                 source={heroPhoto}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 contentFit="cover"
                 placeholder={PLACEHOLDER_BLURHASH}
                 transition={300}

@@ -483,7 +483,7 @@ export default function GuideDetailScreen() {
                     <>
                       <Image
                         source={{ uri: guide.cover_image_url }}
-                        style={StyleSheet.absoluteFillObject}
+                        style={StyleSheet.absoluteFill}
                         contentFit="cover"
                         contentPosition={{ top: -(guide.cover_focus_y ?? 0.5) * 80 }}
                         transition={300}
@@ -613,7 +613,7 @@ export default function GuideDetailScreen() {
                   {guide.cover_image_url ? (
                     <Image
                       source={{ uri: guide.cover_image_url }}
-                      style={StyleSheet.absoluteFillObject}
+                      style={StyleSheet.absoluteFill}
                       contentFit="cover"
                       contentPosition={{ top: coverContentTop }}
                       transition={300}
@@ -627,7 +627,7 @@ export default function GuideDetailScreen() {
                       }}
                     />
                   ) : (
-                    <View style={[StyleSheet.absoluteFillObject, s.coverFallback]} />
+                    <View style={[StyleSheet.absoluteFill, s.coverFallback]} />
                   )}
                   <View style={s.coverOverlay} />
                   <View style={s.coverNav}>
@@ -939,7 +939,7 @@ const s = StyleSheet.create({
   // ── Cover
   coverWrap: { height: 260, overflow: 'hidden' },
   coverFallback: { backgroundColor: DEEP_GREEN },
-  coverOverlay:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,30,18,0.4)' },
+  coverOverlay:  { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10,30,18,0.4)' },
   coverNav: {
     position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1039,7 +1039,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   campusHeroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.42)',
   },
   campusNav: {

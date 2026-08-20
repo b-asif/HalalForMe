@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -73,7 +73,11 @@
       "expo-localization",
       "@react-native-community/datetimepicker",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-image",
+      "expo-sharing",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "extra": {
       "router": {},
@@ -86,8 +90,12 @@
     },
     "updates": {
       "url": "https://u.expo.dev/e5a2f979-21b3-48cf-a4a0-1097a9e3d2f9",
-      "enabled": false
+      "enabled": true
     },
-    "platforms": ["ios", "android", "web"]
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
   }
 }

@@ -1049,7 +1049,7 @@ export default function ScannerScreen() {
       <SafeAreaView style={s.flex} edges={['top', 'left', 'right']}>
         <View style={s.cameraContainer}>
           <CameraView
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             facing="back"
             barcodeScannerSettings={{
               barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'itf14'],
@@ -1236,7 +1236,7 @@ const s = StyleSheet.create({
   // camera
   cameraContainer: { flex: 1 },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },

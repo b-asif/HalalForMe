@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   mainRow: { flexDirection: 'row' },
 
   imageWrap: { width: 96, alignSelf: 'stretch', minHeight: 120, overflow: 'hidden' },
-  image: { ...StyleSheet.absoluteFillObject },
+  image: { ...StyleSheet.absoluteFill },
   imagePlaceholder: {
     width: 96,
     backgroundColor: '#f0faf6',

@@ -650,7 +650,7 @@ export default function AdminGuideEditScreen() {
           <View style={s.imagePicker}>
             <Image
               source={{ uri: newCoverImage?.uri ?? coverImageUrl! }}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               contentFit="cover"
               contentPosition={{ top: -(coverFocusY * Math.max(0,
                 coverNaturalSize
@@ -1265,7 +1265,7 @@ export default function AdminGuideEditScreen() {
               >
                 <Image
                   source={{ uri: newCoverImage?.uri ?? coverImageUrl! }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   contentPosition={{ top: -(coverFocusY * Math.max(0,
                     coverNaturalSize

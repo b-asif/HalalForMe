@@ -509,7 +509,7 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   heroBg:      { resizeMode: 'cover' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,38,24,0.62)' },
+  heroOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(14,38,24,0.62)' },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.18)',

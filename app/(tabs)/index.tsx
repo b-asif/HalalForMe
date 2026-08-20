@@ -637,7 +637,7 @@ export default function HomeScreen() {
         <View style={s.heroBg}>
           <Image
             source={require('../../assets/background.png')}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             // Pixel-measured (not eyeballed): the tallest minaret spire sits
             // at dead-center horizontally (~49.5% across) in this source
             // image, not left or right. "cover" (full-bleed, no letterbox)

@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { formatError } from '../../lib/errors';
@@ -22,7 +21,6 @@ const HAIRLINE   = Brand.hairline;
 
 export default function ForgotPasswordScreen() {
   const router     = useRouter();
-  const navigation = useNavigation();
 
   const [hasIntent, setHasIntent] = useState(() => getGuestLoginIntent());
 
@@ -30,9 +28,9 @@ export default function ForgotPasswordScreen() {
     const intent = getGuestLoginIntent();
     setHasIntent(intent);
     if (!intent) {
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: '(tabs)' }] }));
+      router.replace('/(tabs)');
     }
-  }, [navigation]));
+  }, [router]));
 
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);

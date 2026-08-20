@@ -477,7 +477,7 @@ const s = StyleSheet.create({
 
   // Calibration overlay
   calibrationOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center', justifyContent: 'center',
     zIndex: 100, padding: 24,

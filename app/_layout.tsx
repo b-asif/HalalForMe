@@ -100,7 +100,7 @@ function SplashOverlay({ show }: { show: boolean }) {
       animationType="none"
       statusBarTranslucent
     >
-      <Animated.View style={[StyleSheet.absoluteFillObject, sp.root, { opacity: fadeOut }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, sp.root, { opacity: fadeOut }]}>
         <View style={sp.topGlow} />
 
         <Animated.View

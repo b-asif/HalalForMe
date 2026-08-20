@@ -731,7 +731,7 @@ const s = StyleSheet.create({
   // hero
   hero:        {},  // height set dynamically (220 + insets.top)
   heroBg:      { resizeMode: 'cover' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(31,61,43,0.48)' },
+  heroOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(31,61,43,0.48)' },
   heroContent: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 32 },
   heroTitle:   { fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   heroSub:     { fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 4, lineHeight: 18 },

@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const GREEN = '#245737';
@@ -7,8 +8,8 @@ const GREEN = '#245737';
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 function tabIcon(name: IoniconName, outlineName: IoniconName) {
-  return ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? name : outlineName} size={size} color={color} />
+  return ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) => (
+    <Ionicons name={focused ? name : outlineName} size={size} color={color as string} />
   );
 }
 

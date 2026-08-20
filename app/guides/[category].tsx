@@ -181,12 +181,12 @@ export default function GuideCategoryScreen() {
               {featured.cover_image_url ? (
                 <Image
                   source={{ uri: featured.cover_image_url }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                   transition={300}
                 />
               ) : (
-                <View style={[StyleSheet.absoluteFillObject, s.featuredFallback]} />
+                <View style={[StyleSheet.absoluteFill, s.featuredFallback]} />
               )}
               <View style={s.featuredOverlay} />
               <View style={s.featuredContent}>
@@ -326,7 +326,7 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   featuredFallback: { backgroundColor: DEEP_GREEN },
-  featuredOverlay:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,40,25,0.58)' },
+  featuredOverlay:  { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15,40,25,0.58)' },
   featuredContent: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     padding: 20, gap: 6,
