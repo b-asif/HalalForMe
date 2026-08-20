@@ -103,7 +103,7 @@ function FeaturesSlide() {
 // ─── Slide 3: Campus Hub ──────────────────────────────────────────────────────
 
 const CAMPUS_ROWS = [
-  { icon: 'school-outline',     text: 'Follow your university's MSA for prayer times and jummah updates' },
+  { icon: 'school-outline',     text: "Follow your university's MSA for prayer times and jummah updates" },
   { icon: 'calendar-outline',   text: 'Stay up to date with campus events and announcements' },
   { icon: 'restaurant-outline', text: 'Discover halal dining options on your campus' },
 ] as const;
