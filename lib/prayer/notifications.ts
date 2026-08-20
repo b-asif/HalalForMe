@@ -24,14 +24,18 @@ export type { PlannedNotification } from './notificationPlan';
  * and shouldShowList are the current required fields (shouldShowAlert is
  * deprecated in this version of expo-notifications).
  */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch (e) {
+  console.warn('[notifications] setNotificationHandler failed:', e);
+}
 
 /**
  * DATE-type trigger on both platforms — CALENDAR was tried on iOS first to

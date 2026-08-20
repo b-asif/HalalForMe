@@ -36,7 +36,7 @@ async function resolveCoordsForBackgroundRefresh(settings: PrayerSettings): Prom
   return resolveGpsCoordinates();
 }
 
-TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
+try { TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
   try {
     const settings = await loadPrayerSettings();
     const coords = await resolveCoordsForBackgroundRefresh(settings);
@@ -52,7 +52,7 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     console.error('[prayer background refresh] task failed:', err);
     return BackgroundTaskResult.Failed;
   }
-});
+}); } catch (e) { console.warn('[backgroundRefresh] defineTask failed:', e); }
 
 /**
  * Registers the background refresh. Safe to call multiple times — re-
