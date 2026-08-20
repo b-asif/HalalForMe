@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { getCampusNotifPrefs, setCampusNotifPref } from '../lib/campus';
 import type { CampusNotifPrefs, NotifCategory } from '../lib/campus';
-import { Brand, Colors, Radius, Spacing, Type } from '../lib/theme';
+import { Brand, Radius, Spacing, Type } from '../lib/theme';
 
 const GREEN      = Brand.green;
 const DEEP_GREEN = Brand.deepGreen;
@@ -159,19 +159,22 @@ export default function FollowedCampusesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.bg },
+  safe: { flex: 1, backgroundColor: CREAM },
 
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.md, paddingTop: Spacing.sm,
     paddingBottom: Spacing.md, gap: Spacing.sm,
+    backgroundColor: CREAM,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: Radius.circle,
-    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: HAIRLINE,
   },
   headerText: { flex: 1 },
-  title:    { ...Type.screenTitle, color: DEEP_GREEN },
+  title:    { ...Type.screenTitle, color: TEXT_DARK },
   subtitle: { ...Type.caption, color: TEXT_MUTED, marginTop: 2 },
 
   center: {
@@ -190,12 +193,13 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: '#fff', borderRadius: Radius.card,
-    borderWidth: 1, borderColor: Colors.border, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3, overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center',
     padding: Spacing.md, gap: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
   },
   cardIconWrap: {
     width: 36, height: 36, borderRadius: Radius.chip,
@@ -208,7 +212,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: Spacing.sm,
-    borderTopWidth: 1, borderTopColor: Colors.border,
+    borderTopWidth: 1, borderTopColor: HAIRLINE,
   },
   toggleText: { flex: 1, marginRight: Spacing.md },
   toggleLabel: { ...Type.body, color: TEXT_DARK, fontWeight: '600' },

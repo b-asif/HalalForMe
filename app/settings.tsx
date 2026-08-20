@@ -46,9 +46,10 @@ export default function SettingsScreen() {
   const { isAdmin } = useAuth();
 
   const accountRows: SettingsRow[] = [
-    { icon: 'notifications-outline', label: 'Notifications',  onPress: () => router.push('/notifications') },
-    { icon: 'help-circle-outline',   label: 'Help & Support', onPress: () => router.push('/help') },
-    { icon: 'document-text-outline', label: 'Privacy Policy', onPress: () => router.push('/privacy-policy') },
+    { icon: 'notifications-outline', label: 'Notifications',    onPress: () => router.push('/notifications') },
+    { icon: 'school-outline',        label: 'Followed Campuses', onPress: () => router.push('/followed-campuses') },
+    { icon: 'help-circle-outline',   label: 'Help & Support',   onPress: () => router.push('/help') },
+    { icon: 'document-text-outline', label: 'Privacy Policy',   onPress: () => router.push('/privacy-policy') },
     { icon: 'reader-outline',        label: 'Terms of Service', onPress: () => router.push('/terms-of-service') },
   ];
 

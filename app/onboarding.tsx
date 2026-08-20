@@ -72,7 +72,7 @@ const FEATURES = [
   { icon: 'mosque',             iconLib: 'mc',  label: 'Mosques'        },
   { icon: 'restaurant-outline', iconLib: 'ion', label: 'Halal Food'     },
   { icon: 'barcode-outline',    iconLib: 'ion', label: 'Halal Scanner'  },
-  { icon: 'calendar-outline',   iconLib: 'ion', label: 'Events'         },
+  { icon: 'school-outline',     iconLib: 'ion', label: 'Campus Hub'     },
 ] as const;
 
 function FeaturesSlide() {
@@ -100,7 +100,40 @@ function FeaturesSlide() {
   );
 }
 
-// ─── Slide 3: Privacy & trust ─────────────────────────────────────────────────
+// ─── Slide 3: Campus Hub ──────────────────────────────────────────────────────
+
+const CAMPUS_ROWS = [
+  { icon: 'school-outline',     text: 'Follow your university's MSA for prayer times and jummah updates' },
+  { icon: 'calendar-outline',   text: 'Stay up to date with campus events and announcements' },
+  { icon: 'restaurant-outline', text: 'Discover halal dining options on your campus' },
+] as const;
+
+function CampusSlide() {
+  return (
+    <View style={styles.slideContent}>
+      <View style={styles.slideHeroIcon}>
+        <Ionicons name="school-outline" size={28} color={GOLD} />
+      </View>
+      <Text style={styles.slideHeading}>Campus Hub</Text>
+      <Text style={styles.slideSubheading}>
+        Built for Muslim students. Your MSA, your campus — all in one place.
+      </Text>
+
+      <View style={styles.commitments}>
+        {CAMPUS_ROWS.map(c => (
+          <View key={c.icon} style={styles.commitmentRow}>
+            <View style={styles.commitmentIcon}>
+              <Ionicons name={c.icon as any} size={18} color={GOLD} />
+            </View>
+            <Text style={styles.commitmentText}>{c.text}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Slide 4: Privacy & trust ─────────────────────────────────────────────────
 
 const COMMITMENTS = [
   { icon: 'phone-portrait-outline', text: 'Prayer times calculated on your device — never sent to a server' },
@@ -133,7 +166,7 @@ function PrivacySlide() {
   );
 }
 
-const SLIDE_COMPONENTS = [WelcomeSlide, FeaturesSlide, PrivacySlide];
+const SLIDE_COMPONENTS = [WelcomeSlide, FeaturesSlide, CampusSlide, PrivacySlide];
 const TOTAL = SLIDE_COMPONENTS.length;
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
