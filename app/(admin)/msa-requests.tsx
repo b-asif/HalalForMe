@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../components/InstagramIcon';
 
 import { supabase } from '../../lib/supabase';
 import { Brand, Radius, Spacing, Type } from '../../lib/theme';
@@ -282,7 +283,7 @@ export default function MsaRequestsScreen() {
                   ) : null}
                   {req.contact_instagram ? (
                     <View style={s.contactRow}>
-                      <Ionicons name="logo-instagram" size={13} color={TEXT_MUTED} />
+                      <InstagramIcon size={13} color={TEXT_MUTED} />
                       <Text style={s.contactText}>@{req.contact_instagram}</Text>
                     </View>
                   ) : null}

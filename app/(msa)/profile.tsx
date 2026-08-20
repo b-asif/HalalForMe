@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../components/InstagramIcon';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 import { useMsa } from '../../contexts/MsaContext';
@@ -242,7 +243,7 @@ export default function MsaProfileScreen() {
             <View style={s.card}>
               <View style={s.fieldRow}>
                 <View style={s.fieldIcon}>
-                  <Ionicons name="logo-instagram" size={18} color="#E1306C" />
+                  <InstagramIcon size={18} color="#E1306C" />
                 </View>
                 <View style={s.fieldBody}>
                   <Text style={s.fieldLabel}>Instagram</Text>

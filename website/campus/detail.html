@@ -259,6 +259,112 @@
       footer { padding: 40px 24px; }
       .footer-inner { flex-direction: column; align-items: flex-start; }
     }
+
+    /* ── Mobile hamburger & drawer ─────────────────────────────── */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 5px;
+      width: 36px;
+      height: 36px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .nav-hamburger span {
+      display: block;
+      height: 1.5px;
+      background: rgba(247,242,231,0.75);
+      border-radius: 2px;
+      transition: transform 0.28s ease, opacity 0.2s ease, width 0.2s ease;
+      transform-origin: right center;
+    }
+    .nav-hamburger span:nth-child(1) { width: 22px; }
+    .nav-hamburger span:nth-child(2) { width: 14px; }
+    .nav-hamburger span:nth-child(3) { width: 22px; }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(-45deg); width: 22px; }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(45deg); width: 22px; }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      background: var(--green);
+      overflow-y: auto;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      pointer-events: none;
+    }
+    .mobile-menu.open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .mobile-nav {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      padding: 100px 32px 52px;
+    }
+    .mobile-links { flex: 1; }
+    .mobile-link {
+      display: block;
+      font-size: 18px;
+      font-weight: 600;
+      color: rgba(247,242,231,0.4);
+      text-decoration: none;
+      padding: 17px 0;
+      border-bottom: 1px solid rgba(247,242,231,0.07);
+      letter-spacing: -0.01em;
+      transition: color 0.15s ease, padding-left 0.15s ease;
+    }
+    .mobile-link:first-child { border-top: 1px solid rgba(247,242,231,0.07); }
+    .mobile-link:hover, .mobile-link:active {
+      color: rgba(247,242,231,0.9);
+      padding-left: 6px;
+    }
+    .mobile-bottom {
+      margin-top: 44px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .mobile-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      opacity: 0.6;
+    }
+    .mobile-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      background: var(--cream);
+      color: var(--green);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 16px 24px;
+      border-radius: 50px;
+      transition: opacity 0.2s;
+    }
+    .mobile-cta:hover { opacity: 0.88; }
+
+    @media (max-width: 768px) {
+      .nav-cta       { display: none; }
+      .nav-hamburger { display: flex; }
+      .mobile-menu   { display: block; }
+    }
   </style>
 </head>
 <body>
@@ -267,9 +373,12 @@
     <a href="../" class="nav-word">Rihdal</a>
     <div class="nav-right">
       <a href="../guides.html" class="nav-link">Guides</a>
+      <a href="../campus/" class="nav-link active">Campus Hub</a>
       <a href="../partners.html" class="nav-link">Partner with us</a>
-      <a href="../campus/" class="nav-link">Campus Hub</a>
-      <a href="../#download" class="nav-cta">Download App</a>
+      <a href="https://apps.apple.com/us/app/rihdal/id6767651676" target="_blank" rel="noopener noreferrer" class="nav-cta">Download</a>
+      <button class="nav-hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleMenu(this)">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
@@ -306,6 +415,46 @@
       <span class="footer-copy">&copy; 2026 Rihdal</span>
     </div>
   </footer>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <nav class="mobile-nav">
+      <div class="mobile-links">
+        <a href="../index.html" class="mobile-link">Home</a>
+        <a href="../guides.html" class="mobile-link">Guides</a>
+        <a href="../for-restaurants.html" class="mobile-link">For Restaurants</a>
+        <a href="../for-mosques.html" class="mobile-link">For Mosques</a>
+        <a href="../partners.html" class="mobile-link">Partner with us</a>
+      </div>
+      <div class="mobile-bottom">
+        <p class="mobile-eyebrow">Guide Your Journey</p>
+        <a href="https://apps.apple.com/us/app/rihdal/id6767651676" target="_blank" rel="noopener noreferrer" class="mobile-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download on the App Store
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    function toggleMenu(btn) {
+      const menu = document.getElementById('mobileMenu');
+      const open = menu.classList.toggle('open');
+      btn.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    // Close on nav link tap
+    document.querySelectorAll('.mobile-link, .mobile-cta').forEach(el => {
+      el.addEventListener('click', () => {
+        const menu = document.getElementById('mobileMenu');
+        const btn  = document.querySelector('.nav-hamburger');
+        menu.classList.remove('open');
+        btn && btn.classList.remove('open');
+        btn && btn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      });
+    });
+  </script>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -407,7 +556,7 @@
       const qlEl = document.getElementById('quick-links');
       if (qlEl) {
         const links = [];
-        if (msa.instagram_handle) links.push(`<a class="quick-link" href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener" title="@${esc(msa.instagram_handle)}"><img src="../assets/instagram.png" alt="Instagram" /></a>`);
+        if (msa.instagram_handle) links.push(`<a class="quick-link" href="https://instagram.com/${esc(msa.instagram_handle)}" target="_blank" rel="noopener" title="@${esc(msa.instagram_handle)}"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(247,242,231,0.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="5.5" ry="5.5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="rgba(247,242,231,0.85)" stroke="none"/></svg></a>`);
         if (msa.website) links.push(`<a class="quick-link" href="${esc(msa.website)}" target="_blank" rel="noopener" title="Website"><svg viewBox="0 0 20 20" fill="none" stroke="rgba(247,242,231,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2a13 13 0 0 1 0 16M10 2a13 13 0 0 0 0 16"/></svg></a>`);
         if (msa.email) links.push(`<a class="quick-link" href="mailto:${esc(msa.email)}" title="Email MSA"><svg viewBox="0 0 20 20" fill="none" stroke="rgba(247,242,231,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="16" height="13" rx="2"/><polyline points="2,4 10,12 18,4"/></svg></a>`);
         qlEl.innerHTML = links.join('');

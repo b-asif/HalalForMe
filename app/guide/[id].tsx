@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../components/InstagramIcon';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -534,7 +535,7 @@ export default function GuideDetailScreen() {
                   <View style={s.campusActions}>
                     {guide.instagram_handle ? (
                       <TouchableOpacity style={s.campusInstaBtn} activeOpacity={0.75} onPress={handleInstagram}>
-                        <Ionicons name="logo-instagram" size={13} color="#C13584" />
+                        <InstagramIcon size={13} color="#C13584" />
                         <Text style={s.campusInstaText}>@{guide.instagram_handle.replace(/^@/, '')}</Text>
                         <Ionicons name="open-outline" size={11} color="#C13584" />
                       </TouchableOpacity>
@@ -671,7 +672,7 @@ export default function GuideDetailScreen() {
                       onPress={handleInstagram}
                     >
                       <View style={s.instaIcon}>
-                        <Ionicons name="logo-instagram" size={16} color="#C13584" />
+                        <InstagramIcon size={16} color="#C13584" />
                       </View>
                       <Text style={s.instaHandle}>
                         @{guide.instagram_handle.replace(/^@/, '')}

@@ -52,12 +52,12 @@ export default function TabLayout() {
           tabBarIcon: tabIcon('scan', 'scan-outline'),
         }}
       />
+      {/* Guides is no longer a bottom tab — it is now discoverable through
+          the Explore screen. The route (/guides, /guide/[id], /guides/[cat])
+          remains fully functional; only the tab bar entry is removed. */}
       <Tabs.Screen
         name="guides"
-        options={{
-          title: 'Guides',
-          tabBarIcon: tabIcon('book', 'book-outline'),
-        }}
+        options={{ href: null }}
       />
       {/* Community deliberately removed from the tab bar — deferred until
           there's real user activity to populate it (see the "keep it simple

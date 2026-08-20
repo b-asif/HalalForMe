@@ -96,6 +96,21 @@ interface NearbyFood {
 
 type NearbyItem = (Mosque & { kind: 'mosque' }) | NearbyFood;
 
+interface ExploreGuide {
+  id: string;
+  title: string;
+  cover_image_url: string | null;
+  category: string;
+}
+
+const GUIDE_CATEGORY_LABEL: Record<string, string> = {
+  certification: 'Certification',
+  ingredients:   'Ingredients',
+  travel:        'Travel',
+  dining:        'Dining',
+  lifestyle:     'Lifestyle',
+};
+
 // ─── data helpers ─────────────────────────────────────────────────────────────
 
 async function fetchNearbyFood(lat: number, lng: number, limit: number): Promise<NearbyFood[]> {
@@ -154,6 +169,18 @@ export default function ExploreHub() {
   const [showDropdown,   setShowDropdown]   = useState(false);
   const hasLoadedOnce = useRef(false);
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [guideItems,     setGuideItems]     = useState<ExploreGuide[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('guides')
+      .select('id, title, cover_image_url, category')
+      .eq('is_published', true)
+      .order('is_featured', { ascending: false })
+      .order('position')
+      .limit(4)
+      .then(({ data }) => setGuideItems((data as ExploreGuide[]) ?? []));
+  }, []);
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
@@ -541,6 +568,24 @@ export default function ExploreHub() {
             )}
           </View>
 
+          {/* Guides — secondary discovery entry point */}
+          {guideItems.length > 0 && (
+            <View style={s.section}>
+              <View style={s.sectionHeader}>
+                <Text style={s.sectionTitle}>Guides</Text>
+                <TouchableOpacity onPress={() => router.push('/guides' as any)} hitSlop={8} style={s.seeAllRow}>
+                  <Text style={s.seeAll}>See all</Text>
+                  <Ionicons name="chevron-forward" size={14} color={GREEN} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.nearbyScroll}>
+                {guideItems.map(g => (
+                  <GuidePreviewCard key={g.id} guide={g} onPress={() => router.push(`/guide/${g.id}` as any)} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -766,6 +811,31 @@ const s = StyleSheet.create({
   },
 });
 
+// ─── guide preview card ───────────────────────────────────────────────────────
+
+function GuidePreviewCard({ guide, onPress }: { guide: ExploreGuide; onPress: () => void }) {
+  const catLabel = GUIDE_CATEGORY_LABEL[guide.category] ?? guide.category;
+  return (
+    <TouchableOpacity style={gc.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={gc.imageArea}>
+        {guide.cover_image_url ? (
+          <Image source={{ uri: guide.cover_image_url }} style={gc.image} />
+        ) : (
+          <View style={[gc.image, { backgroundColor: DEEP_GREEN, alignItems: 'center', justifyContent: 'center' }]}>
+            <Ionicons name="book-outline" size={32} color="rgba(255,255,255,0.5)" />
+          </View>
+        )}
+      </View>
+      <View style={gc.info}>
+        <Text style={gc.cat}>{catLabel}</Text>
+        <Text style={gc.title} numberOfLines={2}>{guide.title}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const CARD_W       = 162;
 const CARD_IMAGE_H = 112;
 
@@ -802,4 +872,18 @@ const nc = StyleSheet.create({
   detail: { fontSize: 11, color: TEXT_MUTED },
   zabihahBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 20, marginTop: 2 },
   zabihahText:  { fontSize: 10, fontWeight: '600' },
+});
+
+const gc = StyleSheet.create({
+  card: {
+    width: CARD_W, borderRadius: 18, backgroundColor: '#fff', marginRight: 12,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  imageArea: { width: CARD_W, height: 104, overflow: 'hidden' },
+  image:     { width: CARD_W, height: 104, resizeMode: 'cover' },
+  info:      { padding: 10, gap: 3 },
+  cat:       { fontSize: 10, fontWeight: '700', color: GREEN, textTransform: 'uppercase', letterSpacing: 0.4 },
+  title:     { fontSize: 13, fontWeight: '700', color: TEXT_DARK, lineHeight: 17 },
 });

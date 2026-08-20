@@ -22,32 +22,105 @@ import { Brand } from '../../lib/theme';
 
 const CREAM      = Brand.cream;
 const DEEP_GREEN = Brand.deepGreen;
-const GREEN = Brand.green;
-const RED   = Brand.red;
-const AMBER = Brand.amber;
+const GREEN      = Brand.green;
+const RED        = Brand.red;
+const AMBER      = Brand.amber;
 const TEXT_DARK  = Brand.textDark;
 const TEXT_MUTED = Brand.textMuted;
 const HAIRLINE   = Brand.hairline;
 
-interface MenuItem {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface OwnedOrg {
+  id: string;
+  name: string;
+  type: 'restaurant' | 'mosque' | 'msa';
+  role: string;
+  route: string;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <Text style={s.sectionHeader}>{label}</Text>
+  );
+}
+
+function MenuRow({
+  icon,
+  label,
+  subtitle,
+  onPress,
+  isLast = false,
+}: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
+  subtitle?: string;
   onPress: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[s.menuItem, !isLast && s.menuItemBorder]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={s.menuIcon}>
+        <Ionicons name={icon} size={19} color={GREEN} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.menuLabel}>{label}</Text>
+        {subtitle ? <Text style={s.menuSub}>{subtitle}</Text> : null}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
+    </TouchableOpacity>
+  );
 }
+
+function OrgRow({ org, isLast }: { org: OwnedOrg; isLast: boolean }) {
+  const router = useRouter();
+  const iconMap: Record<OwnedOrg['type'], React.ComponentProps<typeof Ionicons>['name']> = {
+    restaurant: 'storefront-outline',
+    mosque:     'business-outline',
+    msa:        'school-outline',
+  };
+  return (
+    <TouchableOpacity
+      style={[s.menuItem, !isLast && s.menuItemBorder]}
+      onPress={() => router.push(org.route as any)}
+      activeOpacity={0.7}
+    >
+      <View style={s.menuIcon}>
+        <Ionicons name={iconMap[org.type]} size={19} color={GREEN} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.menuLabel}>{org.name}</Text>
+        <Text style={s.menuSub}>{org.role}</Text>
+      </View>
+      <Text style={s.manageChip}>Manage</Text>
+      <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut, isAdmin } = useAuth();
-  const { activeMembership } = useMsa();
+  const { memberships } = useMsa();
   const [signingOut, setSigningOut] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
 
   // Profile data loaded from DB
   const [profileName,      setProfileName]      = useState<string>('');
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileLoading,   setProfileLoading]   = useState(true);
   const [submissionCount,  setSubmissionCount]  = useState<number | null>(null);
-  const [businessType,     setBusinessType]     = useState<string | null>(null);
+
+  // Organizations the user manages
+  const [ownedOrgs, setOwnedOrgs] = useState<OwnedOrg[]>([]);
 
   // Edit modal state
   const [editVisible, setEditVisible] = useState(false);
@@ -58,23 +131,26 @@ export default function ProfileScreen() {
   const [saveError,   setSaveError]   = useState<string | null>(null);
 
   // Email change OTP modal state
-  const [otpVisible,      setOtpVisible]      = useState(false);
-  const [otpTargetEmail,  setOtpTargetEmail]  = useState('');
-  const [otpDigits,       setOtpDigits]       = useState(['', '', '', '', '', '']);
-  const [otpLoading,      setOtpLoading]      = useState(false);
-  const [otpError,        setOtpError]        = useState<string | null>(null);
+  const [otpVisible,     setOtpVisible]     = useState(false);
+  const [otpTargetEmail, setOtpTargetEmail] = useState('');
+  const [otpDigits,      setOtpDigits]      = useState(['', '', '', '', '', '']);
+  const [otpLoading,     setOtpLoading]     = useState(false);
+  const [otpError,       setOtpError]       = useState<string | null>(null);
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   // Load profile from DB
   const loadProfile = useCallback(async () => {
     if (!user) return;
     setProfileLoading(true);
-    const { data } = await supabase.from('profiles').select('name, avatar_url, business_type').eq('id', user.id).maybeSingle();
+    const { data } = await supabase
+      .from('profiles')
+      .select('name, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle();
 
     if (data) {
       setProfileName(data.name ?? user.user_metadata?.name ?? '');
       setProfileAvatarUrl(data.avatar_url ?? null);
-      setBusinessType((data as any).business_type ?? null);
     } else {
       setProfileName(user.user_metadata?.name ?? '');
     }
@@ -86,11 +162,41 @@ export default function ProfileScreen() {
       .from('submissions')
       .select('id', { count: 'exact', head: true })
       .eq('submitted_by', user.id)
-      .then(({ count }) => { if (count !== null) setSubmissionCount(count); })
-      .catch(() => {});
+      .then(({ count }) => { if (count !== null) setSubmissionCount(count); });
   }, [user]);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
+  // Load organizations the user manages
+  const loadOrgs = useCallback(async () => {
+    if (!user) { setOwnedOrgs([]); return; }
+
+    const [{ data: rData }, { data: mData }] = await Promise.all([
+      supabase.from('restaurants').select('id, name').eq('owner_id', user.id),
+      supabase.from('mosques').select('id, name').eq('owner_id', user.id),
+    ]);
+
+    const restaurants: OwnedOrg[] = (rData ?? []).map((r: any) => ({
+      id: r.id, name: r.name, type: 'restaurant', role: 'Owner',
+      route: `/restaurant/${r.id}`,
+    }));
+    const mosques: OwnedOrg[] = (mData ?? []).map((m: any) => ({
+      id: m.id, name: m.name, type: 'mosque', role: 'Owner',
+      route: `/mosque/${m.id}/manage`,
+    }));
+    const msaOrgs: OwnedOrg[] = memberships
+      .filter(m => m.status === 'active')
+      .map(m => ({
+        id: m.msaId, name: m.msaName, type: 'msa' as const,
+        role: m.role === 'admin' ? 'Administrator' : 'Editor',
+        route: getLastMsaRoute(),
+      }));
+
+    setOwnedOrgs([...restaurants, ...mosques, ...msaOrgs]);
+  }, [user, memberships]);
+
+  useEffect(() => {
+    loadProfile();
+    loadOrgs();
+  }, [loadProfile, loadOrgs]);
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -102,17 +208,12 @@ export default function ProfileScreen() {
           text: 'Continue',
           style: 'destructive',
           onPress: () => {
-            // Second confirmation to prevent accidental taps
             Alert.alert(
               'Are you absolutely sure?',
               'Your account, profile, reviews, and all uploaded photos will be permanently deleted.',
               [
                 { text: 'Go Back', style: 'cancel' },
-                {
-                  text: 'Yes, Delete Everything',
-                  style: 'destructive',
-                  onPress: performDeleteAccount,
-                },
+                { text: 'Yes, Delete Everything', style: 'destructive', onPress: performDeleteAccount },
               ],
             );
           },
@@ -124,18 +225,14 @@ export default function ProfileScreen() {
   const performDeleteAccount = async () => {
     setDeleting(true);
     try {
-      // Remove avatar from storage if one exists
       if (profileAvatarUrl) {
         const path = profileAvatarUrl.split('/avatars/')[1];
         if (path) {
           await supabase.storage.from('avatars').remove([decodeURIComponent(path)]);
         }
       }
-
-      // RPC deletes all user rows across every table then removes the auth user
       const { error } = await supabase.rpc('delete_user');
       if (error) throw new Error(error.message);
-
       await signOut();
     } catch (e: any) {
       setDeleting(false);
@@ -187,7 +284,6 @@ export default function ProfileScreen() {
   };
 
   const uploadAvatar = async (base64: string): Promise<string> => {
-    // ~5 MB limit: base64 is ~4/3× the binary size, so 6.7M chars ≈ 5 MB
     if (base64.length > 6_700_000) throw new Error('Photo is too large. Please choose an image under 5 MB.');
     const path = `${user!.id}/${Crypto.randomUUID()}.jpg`;
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
@@ -214,14 +310,12 @@ export default function ProfileScreen() {
         avatarUrl = await uploadAvatar(newAvatar.base64);
       }
 
-      // DB first — most likely to fail (RLS, schema); if it fails, auth is untouched
       const { error: dbErr } = await supabase
         .from('profiles')
         .update({ name: trimmed, avatar_url: avatarUrl })
         .eq('id', user!.id);
       if (dbErr) throw new Error(formatError(dbErr));
 
-      // Auth second — update metadata and optionally email
       const emailChanged = trimmedEmail !== user?.email;
       const { error: authErr } = await supabase.auth.updateUser({
         data: { name: trimmed },
@@ -231,7 +325,6 @@ export default function ProfileScreen() {
         } : {}),
       });
 
-      // DB already saved successfully — commit UI state regardless of auth result
       setProfileName(trimmed);
       setProfileAvatarUrl(avatarUrl);
       setEditVisible(false);
@@ -244,7 +337,6 @@ export default function ProfileScreen() {
             : 'Your profile was saved.',
         );
       } else if (emailChanged) {
-        // Open OTP modal so the user confirms in-app — no browser redirect needed
         setOtpTargetEmail(trimmedEmail);
         setOtpDigits(['', '', '', '', '', '']);
         setOtpError(null);
@@ -256,7 +348,6 @@ export default function ProfileScreen() {
       setSaving(false);
     }
   };
-
 
   const handleOtpDigit = (value: string, index: number) => {
     if (value.length > 1) {
@@ -325,7 +416,6 @@ export default function ProfileScreen() {
           <Text style={s.title}>Profile</Text>
         </View>
         <ScrollView contentContainerStyle={s.guestWrap} showsVerticalScrollIndicator={false}>
-          {/* hero */}
           <View style={s.guestHero}>
             <View style={s.guestHeroIcon}>
               <Ionicons name="person" size={32} color={CREAM} />
@@ -336,7 +426,6 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          {/* locked feature teasers */}
           <View style={s.lockedCard}>
             {LOCKED_FEATURES.map((f, idx) => (
               <View key={f.label} style={[s.lockedRow, idx < LOCKED_FEATURES.length - 1 && s.lockedRowBorder]}>
@@ -354,7 +443,6 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* CTAs */}
           <TouchableOpacity style={s.guestSignInBtn} onPress={() => { setGuestLoginIntent(true); router.push('/(auth)/signup'); }}>
             <Text style={s.guestSignInText}>Create Free Account</Text>
           </TouchableOpacity>
@@ -362,7 +450,6 @@ export default function ProfileScreen() {
             <Text style={s.guestSignUpText}>Sign In</Text>
           </TouchableOpacity>
 
-          {/* links */}
           <View style={s.guestLinks}>
             <TouchableOpacity style={s.guestLink} onPress={() => router.push('/onboarding')}>
               <Ionicons name="play-circle-outline" size={16} color={GREEN} />
@@ -390,31 +477,12 @@ export default function ProfileScreen() {
     );
   }
 
+  // ── Authenticated ─────────────────────────────────────────────────────────
   const email      = user?.email ?? '';
   const isVerified = Boolean(user?.email_confirmed_at);
   const initials   = profileName
     ? profileName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
     : email.slice(0, 2).toUpperCase();
-
-  const menuItems: MenuItem[] = [
-    { icon: 'heart-outline',            label: 'Saved Restaurants',         onPress: () => router.push('/saved') },
-    { icon: 'bookmark-outline',         label: 'Saved Guides',              onPress: () => router.push('/saved-guides') },
-    { icon: 'storefront-outline',       label: 'My Submissions',            onPress: () => router.push('/my-submissions') },
-    ...(businessType === null || businessType === 'restaurant' || businessType === 'other'
-      ? [{ icon: 'add-circle-outline' as const,  label: 'Add My Business', onPress: () => router.push('/add-my-business') }]
-      : []),
-    ...(businessType === null || businessType === 'mosque'
-      ? [{ icon: 'business-outline' as const,    label: 'Manage a Mosque', onPress: () => router.push('/redeem-mosque') }]
-      : []),
-    { icon: 'school-outline' as const, label: 'Manage Campus MSA', onPress: () => router.push(activeMembership ? getLastMsaRoute() as any : '/msa/manage-campus') },
-    { icon: 'shield-checkmark-outline', label: 'Halal Certification Guide', onPress: () => router.push('/certification-guide') },
-    { icon: 'notifications-outline',    label: 'Notifications',             onPress: () => router.push('/notifications') },
-    { icon: 'play-circle-outline',      label: 'View App Tour',             onPress: () => router.push('/onboarding') },
-    { icon: 'help-circle-outline',      label: 'Help & Support',            onPress: () => router.push('/help') },
-    { icon: 'document-text-outline',    label: 'Privacy Policy',            onPress: () => router.push('/privacy-policy') },
-    { icon: 'reader-outline',           label: 'Terms of Service',          onPress: () => router.push('/terms-of-service') },
-    ...(isAdmin ? [{ icon: 'settings-outline' as const, label: 'Admin Panel', onPress: () => router.push('/(admin)') }] : []),
-  ];
 
   return (
     <SafeAreaView style={s.flex} edges={['top', 'left', 'right']}>
@@ -423,20 +491,15 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── User card ── */}
+        {/* ── Profile header ── */}
         <View style={s.profileCard}>
-          {/* Avatar */}
           <TouchableOpacity style={s.avatarWrap} onPress={openEdit} activeOpacity={0.85}>
             {profileLoading ? (
               <View style={s.avatar}>
                 <ActivityIndicator size="small" color="#fff" />
               </View>
             ) : profileAvatarUrl ? (
-              <Image
-                source={profileAvatarUrl}
-                style={s.avatarImage}
-                contentFit="cover"
-              />
+              <Image source={profileAvatarUrl} style={s.avatarImage} contentFit="cover" />
             ) : (
               <View style={s.avatar}>
                 <Text style={s.avatarText}>{initials}</Text>
@@ -448,9 +511,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <View style={s.userInfo}>
-            {profileName ? (
-              <Text style={s.displayName}>{profileName}</Text>
-            ) : null}
+            {profileName ? <Text style={s.displayName}>{profileName}</Text> : null}
             <Text style={s.email} numberOfLines={1}>{email}</Text>
             <View style={s.verifiedRow}>
               <Ionicons
@@ -481,23 +542,73 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Menu ── */}
+        {/* ── YOUR STUFF ── */}
+        <SectionHeader label="Your Stuff" />
         <View style={s.menuCard}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.label}
-              style={[s.menuItem, index < menuItems.length - 1 && s.menuItemBorder]}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-            >
-              <View style={s.menuIcon}>
-                <Ionicons name={item.icon} size={19} color={GREEN} />
-              </View>
-              <Text style={s.menuLabel}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
-            </TouchableOpacity>
-          ))}
+          <MenuRow
+            icon="heart-outline"
+            label="Saved"
+            onPress={() => router.push('/saved-hub')}
+          />
+          <MenuRow
+            icon="storefront-outline"
+            label="My Submissions"
+            onPress={() => router.push('/my-submissions')}
+            isLast
+          />
         </View>
+
+        {/* ── YOUR ORGANIZATIONS (conditional) ── */}
+        {ownedOrgs.length > 0 && (
+          <>
+            <SectionHeader label="Your Organizations" />
+            <View style={s.menuCard}>
+              {ownedOrgs.map((org, i) => (
+                <OrgRow key={org.id} org={org} isLast={i === ownedOrgs.length - 1} />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* ── PREFERENCES ── */}
+        <SectionHeader label="Preferences" />
+        <View style={s.menuCard}>
+          <MenuRow
+            icon="settings-outline"
+            label="Settings"
+            onPress={() => router.push('/settings')}
+            isLast
+          />
+        </View>
+
+        {/* ── RIHDAL ── */}
+        <SectionHeader label="Rihdal" />
+        <View style={s.menuCard}>
+          <MenuRow
+            icon="shield-checkmark-outline"
+            label="Halal Certification Guide"
+            onPress={() => router.push('/certification-guide')}
+          />
+          <MenuRow
+            icon="play-circle-outline"
+            label="App Tour"
+            onPress={() => router.push('/onboarding')}
+            isLast
+          />
+        </View>
+
+        {/* ── Contribute CTA ── */}
+        <TouchableOpacity
+          style={s.ctaBlock}
+          onPress={() => router.push('/manage-organization')}
+          activeOpacity={0.85}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={s.ctaTitle}>Want to contribute to Rihdal?</Text>
+            <Text style={s.ctaSub}>Add or manage an organization →</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={18} color={GREEN} />
+        </TouchableOpacity>
 
         {/* ── Sign out ── */}
         <TouchableOpacity
@@ -627,7 +738,6 @@ export default function ProfileScreen() {
 
               <Text style={m.title}>Edit Profile</Text>
 
-              {/* Avatar picker */}
               <TouchableOpacity style={m.avatarPicker} onPress={pickAvatar} activeOpacity={0.85}>
                 {newAvatar ? (
                   <Image source={newAvatar.uri} style={m.avatarPickerImage} contentFit="cover" />
@@ -644,7 +754,6 @@ export default function ProfileScreen() {
                 </View>
               </TouchableOpacity>
 
-              {/* Name field */}
               <Text style={m.label}>Display Name</Text>
               <TextInput
                 style={m.input}
@@ -656,7 +765,6 @@ export default function ProfileScreen() {
                 returnKeyType="next"
               />
 
-              {/* Email field */}
               <Text style={[m.label, { marginTop: 16 }]}>Email</Text>
               <TextInput
                 style={m.input}
@@ -695,6 +803,8 @@ export default function ProfileScreen() {
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: CREAM },
   header: {
@@ -703,6 +813,7 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
 
+  // Profile header card
   profileCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', margin: 16, borderRadius: 16, padding: 16,
@@ -714,9 +825,7 @@ const s = StyleSheet.create({
     width: 60, height: 60, borderRadius: 30,
     backgroundColor: GREEN, alignItems: 'center', justifyContent: 'center',
   },
-  avatarImage: {
-    width: 60, height: 60, borderRadius: 30,
-  },
+  avatarImage: { width: 60, height: 60, borderRadius: 30 },
   avatarText: { color: '#fff', fontSize: 22, fontWeight: '700' },
   avatarEditBadge: {
     position: 'absolute', bottom: 0, right: 0,
@@ -739,6 +848,14 @@ const s = StyleSheet.create({
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
   },
 
+  // Section headers
+  sectionHeader: {
+    fontSize: 12, fontWeight: '700', color: TEXT_MUTED,
+    letterSpacing: 0.5, textTransform: 'uppercase',
+    marginHorizontal: 20, marginTop: 24, marginBottom: 8,
+  },
+
+  // Section cards
   menuCard: {
     backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 16,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
@@ -746,18 +863,31 @@ const s = StyleSheet.create({
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 15,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
   menuItemBorder: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
   menuIcon: {
     width: 34, height: 34, borderRadius: 9,
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center', marginRight: 13,
   },
-  menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: TEXT_DARK },
+  menuLabel: { fontSize: 15, fontWeight: '500', color: TEXT_DARK },
+  menuSub:   { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  manageChip: { fontSize: 13, fontWeight: '600', color: GREEN, marginRight: 6 },
 
+  // Contribute CTA
+  ctaBlock: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#f0faf6', marginHorizontal: 16, marginTop: 20,
+    borderRadius: 16, padding: 16,
+    borderWidth: 1.5, borderColor: '#c3e8d8',
+  },
+  ctaTitle: { fontSize: 14, fontWeight: '700', color: TEXT_DARK, marginBottom: 2 },
+  ctaSub:   { fontSize: 13, color: GREEN, fontWeight: '500' },
+
+  // Sign out
   signOutCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 16, borderRadius: 16,
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 20, borderRadius: 16,
     padding: 16,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
@@ -767,6 +897,8 @@ const s = StyleSheet.create({
     backgroundColor: '#fff5f5', alignItems: 'center', justifyContent: 'center', marginRight: 13,
   },
   signOutLabel: { fontSize: 15, fontWeight: '600', color: RED },
+
+  // Footer
   version: { textAlign: 'center', fontSize: 12, color: TEXT_MUTED, marginTop: 24, marginBottom: 8 },
   dangerZoneBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -774,7 +906,7 @@ const s = StyleSheet.create({
   },
   dangerZoneText: { fontSize: 12, color: TEXT_MUTED },
 
-  // guest state
+  // Guest state
   guestWrap: {
     alignItems: 'center', paddingTop: 32, paddingHorizontal: 20, paddingBottom: 40,
   },

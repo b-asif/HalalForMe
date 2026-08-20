@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../components/InstagramIcon';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -441,7 +442,7 @@ export default function RestaurantDetailScreen() {
               onPress={() => Linking.openURL(`https://www.instagram.com/${restaurant.instagram_handle!.replace(/^@/, '')}`)}
               activeOpacity={0.75}
             >
-              <Ionicons name="logo-instagram" size={11} color="rgba(255,255,255,0.9)" />
+              <InstagramIcon size={11} color="rgba(255,255,255,0.9)" />
               <Text style={s.photoCreditText}>
                 @{restaurant.instagram_handle!.replace(/^@/, '')}
               </Text>

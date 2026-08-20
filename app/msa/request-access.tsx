@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../components/InstagramIcon';
 
 import { supabase } from '../../lib/supabase';
 import { searchUniversities } from '../../lib/campus';
@@ -103,7 +104,21 @@ export default function RequestAccessScreen() {
         .eq('university_id', prefillUniversityId!)
         .order('name')
         .then(({ data }) => {
-          setMsas((data as Msa[]) ?? []);
+          const fetched = (data as Msa[]) ?? [];
+          setMsas(fetched);
+          if (prefillMsaId) {
+            // Replace the constructed stub with the real DB record
+            const match = fetched.find(m => m.id === prefillMsaId);
+            if (match) setSelectedMsa(match);
+          } else if (fetched.length === 1) {
+            // Only one MSA for this university — select it automatically
+            setSelectedMsa(fetched[0]);
+          } else if (fetched.length === 0) {
+            // No MSAs exist yet — drop straight into "propose new" so the user
+            // can type a name and hit Continue without a redundant extra tap
+            setProposingNew(true);
+            if (prefillMsaName) setProposedName(prefillMsaName);
+          }
           setMsaLoading(false);
         });
     } else {
@@ -169,7 +184,7 @@ export default function RequestAccessScreen() {
   }, []);
 
   const uniReady = selectedUni !== null || (proposingNewUni && proposedUniName.trim().length > 0);
-  const msaReady = selectedMsa !== null || (proposingNew && proposedName.trim().length > 0);
+  const msaReady = selectedMsa !== null || proposingNew;
   const canAdvanceStep1 = uniReady && msaReady;
 
   // ── Submit ───────────────────────────────────────────────────────────────────
@@ -530,7 +545,7 @@ export default function RequestAccessScreen() {
               </View>
               <View style={s.contactDivider} />
               <View style={s.contactRow}>
-                <Ionicons name="logo-instagram" size={18} color={TEXT_MUTED} />
+                <InstagramIcon size={18} color={TEXT_MUTED} />
                 <TextInput
                   style={s.contactInput}
                   placeholder="Instagram handle (optional)"

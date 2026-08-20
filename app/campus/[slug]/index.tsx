@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { InstagramIcon } from '../../../components/InstagramIcon';
 
 import {
   fetchCampusDetail,
@@ -639,7 +640,7 @@ export default function CampusDetailScreen() {
                 onPress={() => Linking.openURL(`https://instagram.com/${msa.instagram_handle}`)}
                 activeOpacity={0.75}
               >
-                <Ionicons name="logo-instagram" size={16} color={DEEP_GREEN} />
+                <InstagramIcon size={16} color={DEEP_GREEN} />
               </TouchableOpacity>
             )}
             {!!websiteUrl && (
