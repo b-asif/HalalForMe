@@ -4,14 +4,14 @@
  * MSA admin announcements. Inline create (tap "+") and inline edit (tap to expand).
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Switch, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useMsa } from '../../contexts/MsaContext';
@@ -36,6 +36,7 @@ export default function AnnouncementsScreen() {
   const { activeMembership } = useMsa();
   const { user } = useAuth();
   const msaId = activeMembership?.msaId ?? '';
+  const { openNew } = useLocalSearchParams<{ openNew?: string }>();
 
   const [items,      setItems]      = useState<Announcement[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -50,6 +51,11 @@ export default function AnnouncementsScreen() {
 
   // Edit drafts keyed by id
   const [editDrafts, setEditDrafts] = useState<Record<string, Partial<Announcement>>>({});
+
+  // Auto-open create form when navigated from dashboard quick action
+  useEffect(() => {
+    if (openNew === '1') setAddingNew(true);
+  }, []);
 
   // ── Load ──────────────────────────────────────────────────────────────────
 

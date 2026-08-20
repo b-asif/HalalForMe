@@ -9,6 +9,7 @@ const DEEP_GREEN = Brand.deepGreen;
 const TEXT_DARK  = Brand.textDark;
 const TEXT_MUTED = Brand.textMuted;
 const HAIRLINE   = Brand.hairline;
+const CREAM      = Brand.cream;
 
 interface CampusCardProps {
   university: University;
@@ -16,97 +17,102 @@ interface CampusCardProps {
 }
 
 export default function CampusCard({ university, onPress }: CampusCardProps) {
-  const location   = [university.city, university.state].filter(Boolean).join(', ');
-  const imageUrl   = university.msa_logo_url ?? university.logo_url;
+  const location = [university.city, university.state].filter(Boolean).join(', ');
+  const imageUrl = university.msa_logo_url ?? university.logo_url;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
+      {/* Square thumbnail */}
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.cardImage} contentFit="cover" />
+        <Image source={{ uri: imageUrl }} style={styles.thumb} contentFit="cover" />
       ) : (
-        <View style={styles.cardImagePlaceholder}>
-          <Ionicons name="school" size={28} color={GREEN} />
+        <View style={styles.thumbPlaceholder}>
+          <Ionicons name="school" size={26} color={GREEN} />
         </View>
       )}
 
+      {/* Info */}
       <View style={styles.body}>
-        <View style={styles.row}>
-          <View style={styles.text}>
-            <Text style={styles.name} numberOfLines={1}>{university.name}</Text>
-            {!!location && (
-              <Text style={styles.location} numberOfLines={1}>
-                <Ionicons name="location-outline" size={12} color={TEXT_MUTED} /> {location}
-              </Text>
-            )}
+        <Text style={styles.name} numberOfLines={2}>{university.name}</Text>
+        {!!location && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={TEXT_MUTED} />
+            <Text style={styles.locationText} numberOfLines={1}>{location}</Text>
           </View>
-
-          {university.is_verified && (
-            <View style={styles.badge}>
-              <Ionicons name="checkmark-circle" size={16} color={GREEN} />
-              <Text style={styles.badgeText}>Verified</Text>
-            </View>
-          )}
-
-          <Ionicons name="chevron-forward" size={18} color={HAIRLINE} style={styles.chevron} />
-        </View>
+        )}
+        {university.is_verified && (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={13} color={GREEN} />
+            <Text style={styles.verifiedText}>Verified MSA</Text>
+          </View>
+        )}
       </View>
+
+      <Ionicons name="chevron-forward" size={16} color={HAIRLINE} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: Radius.card,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
-    overflow: 'hidden',
+    padding: Spacing.sm + 2,
+    gap: Spacing.md,
     borderWidth: 1,
-    borderColor: Brand.hairline,
+    borderColor: HAIRLINE,
+    ...Shadow.light,
   },
-  cardImage: {
-    width: '100%',
-    height: 130,
+  thumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: CREAM,
+    flexShrink: 0,
   },
-  cardImagePlaceholder: {
-    width: '100%',
-    height: 100,
-    backgroundColor: Brand.cream,
+  thumbPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: CREAM,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   body: {
-    paddingVertical: Spacing.sm + 2,
-    paddingHorizontal: Spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  text: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   name: {
-    ...Type.cardTitle,
-    color: TEXT_DARK,
+    fontSize: 16,
+    fontWeight: '700',
+    color: DEEP_GREEN,
+    lineHeight: 21,
   },
-  location: {
-    ...Type.caption,
-    color: TEXT_MUTED,
-  },
-  badge: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
   },
-  badgeText: {
+  locationText: {
+    ...Type.caption,
+    color: TEXT_MUTED,
+    flex: 1,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  verifiedText: {
     ...Type.tiny,
-    color: DEEP_GREEN,
-    fontWeight: '600',
-  },
-  chevron: {
-    marginLeft: Spacing.xs,
+    color: GREEN,
+    fontWeight: '700',
   },
 });

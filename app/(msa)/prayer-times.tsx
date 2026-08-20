@@ -129,7 +129,16 @@ export default function PrayerTimesScreen() {
   const confirmPicker = () => {
     if (!pickerPrayer) return;
     update(pickerPrayer, 'time', formatTime(pickerTempDate));
-    setPickerPrayer(null);
+    const idx = PRAYERS.findIndex(p => p.key === pickerPrayer);
+    const next = PRAYERS[idx + 1];
+    if (next) {
+      const d = parseTime(rows[next.key].time);
+      setPickerDate(d);
+      setPickerTempDate(d);
+      setPickerPrayer(next.key);
+    } else {
+      setPickerPrayer(null);
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -227,53 +236,40 @@ export default function PrayerTimesScreen() {
         </ScrollView>
       )}
 
-      {/* Android: render directly (shows native dialog) */}
-      {Platform.OS === 'android' && pickerPrayer !== null && (
-        <DateTimePicker
-          mode="time"
-          display="clock"
-          value={pickerDate}
-          onChange={(_, date) => {
-            setPickerPrayer(null);
-            if (date && pickerPrayer) update(pickerPrayer, 'time', formatTime(date));
-          }}
+      {/* Time picker — spinner in a bottom sheet modal (iOS + Android) */}
+      <Modal
+        visible={pickerPrayer !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerPrayer(null)}
+      >
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPickerPrayer(null)}
         />
-      )}
-
-      {/* iOS: spinner in a bottom sheet modal */}
-      {Platform.OS === 'ios' && (
-        <Modal
-          visible={pickerPrayer !== null}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setPickerPrayer(null)}
-        >
-          <TouchableOpacity
-            style={s.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setPickerPrayer(null)}
-          />
-          <View style={[s.sheet, { paddingBottom: insets.bottom + 8 }]}>
-            <View style={s.sheetHandle} />
-            <View style={s.sheetHeader}>
-              <Text style={s.sheetTitle}>
-                {pickerPrayer ? PRAYERS.find(p => p.key === pickerPrayer)?.label : ''} Time
+        <View style={[s.sheet, { paddingBottom: insets.bottom + 8 }]}>
+          <View style={s.sheetHandle} />
+          <View style={s.sheetHeader}>
+            <Text style={s.sheetTitle}>
+              {pickerPrayer ? PRAYERS.find(p => p.key === pickerPrayer)?.label : ''} Time
+            </Text>
+            <TouchableOpacity onPress={confirmPicker} style={s.doneBtn}>
+              <Text style={s.doneBtnText}>
+                {PRAYERS.findIndex(p => p.key === pickerPrayer) < PRAYERS.length - 1 ? 'Next' : 'Done'}
               </Text>
-              <TouchableOpacity onPress={confirmPicker} style={s.doneBtn}>
-                <Text style={s.doneBtnText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              mode="time"
-              display="spinner"
-              value={pickerTempDate}
-              onChange={(_, date) => { if (date) setPickerTempDate(date); }}
-              textColor={Brand.textDark}
-              style={{ height: 180 }}
-            />
+            </TouchableOpacity>
           </View>
-        </Modal>
-      )}
+          <DateTimePicker
+            mode="time"
+            display="spinner"
+            value={pickerTempDate}
+            onChange={(_, date) => { if (date) setPickerTempDate(date); }}
+            textColor={Platform.OS === 'ios' ? Brand.textDark : undefined}
+            style={{ height: 180 }}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }

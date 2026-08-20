@@ -31,8 +31,8 @@ interface QuickAction {
 const ACTIONS: QuickAction[] = [
   { icon: 'time-outline',       label: 'Prayer Times',   description: 'Daily iqama schedule',       route: '/(msa)/prayer-times',   color: DEEP_GREEN, bg: '#e6f4ec' },
   { icon: 'people-outline',     label: 'Jummah',         description: 'Friday prayer details',      route: '/(msa)/jummah',         color: '#7c3aed',  bg: '#f3f0ff' },
-  { icon: 'calendar-outline',   label: 'Events',         description: 'Create & manage events',     route: '/(msa)/events',         color: '#0891b2',  bg: '#e0f7fa' },
-  { icon: 'megaphone-outline',  label: 'Announcements',  description: 'Post updates',               route: '/(msa)/announcements',  color: '#b45309',  bg: '#fef3c7' },
+  { icon: 'calendar-outline',   label: 'New Event',       description: 'Create a campus event',      route: '/(msa)/events/new',              color: '#0891b2',  bg: '#e0f7fa' },
+  { icon: 'megaphone-outline',  label: 'New Announcement', description: 'Post an update',            route: '/(msa)/announcements?openNew=1', color: '#b45309',  bg: '#fef3c7' },
   { icon: 'location-outline',   label: 'Prayer Spaces',  description: 'Rooms & wudu areas',         route: '/(msa)/prayer-spaces',  color: '#059669',  bg: '#d1fae5' },
   { icon: 'bookmark-outline',   label: 'Resources',      description: 'Halal food, links & more',   route: '/(msa)/resources',      color: '#dc2626',  bg: '#fee2e2' },
   { icon: 'person-add-outline', label: 'Members',        description: 'Manage team access',         route: '/(msa)/members',        color: '#6d28d9',  bg: '#ede9fe' },

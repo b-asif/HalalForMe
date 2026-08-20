@@ -32,12 +32,13 @@ interface EventForm {
   event_end: Date | null;
   location: string;
   category: Category | '';
+  rsvp_url: string;
   is_published: boolean;
 }
 
 const EMPTY_FORM: EventForm = {
   title: '', body: '', event_start: null, event_end: null,
-  location: '', category: '', is_published: false,
+  location: '', category: '', rsvp_url: '', is_published: false,
 };
 
 // ── Date picker field state ────────────────────────────────────────────────────
@@ -83,12 +84,13 @@ export default function EventEditScreen() {
     }
 
     setForm({
-      title:        data.title ?? '',
-      body:         data.body  ?? '',
+      title:        data.title    ?? '',
+      body:         data.body     ?? '',
       event_start:  data.event_start ? new Date(data.event_start) : null,
       event_end:    data.event_end   ? new Date(data.event_end)   : null,
-      location:     data.location    ?? '',
+      location:     data.location  ?? '',
       category:     (data.category as Category | '') ?? '',
+      rsvp_url:     data.rsvp_url  ?? '',
       is_published: data.is_published ?? false,
     });
     setLoading(false);
@@ -140,6 +142,7 @@ export default function EventEditScreen() {
       event_end:    form.event_end?.toISOString()   ?? null,
       location:     form.location.trim() || null,
       category:     form.category        || null,
+      rsvp_url:     form.rsvp_url.trim() || null,
       is_published: form.is_published,
     };
 
@@ -272,6 +275,23 @@ export default function EventEditScreen() {
                 placeholderTextColor={Brand.textMuted}
                 value={form.location}
                 onChangeText={v => set('location', v)}
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+
+          {/* RSVP URL */}
+          <Text style={s.sectionLabel}>RSVP LINK</Text>
+          <View style={s.card}>
+            <View style={s.fieldBlock}>
+              <TextInput
+                style={s.input}
+                placeholder="https://forms.gle/... or Eventbrite link"
+                placeholderTextColor={Brand.textMuted}
+                value={form.rsvp_url}
+                onChangeText={v => set('rsvp_url', v)}
+                autoCapitalize="none"
+                keyboardType="url"
                 returnKeyType="done"
               />
             </View>

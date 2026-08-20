@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Linking, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,7 @@ import type {
   CampusResource,
 } from '../../../lib/campus';
 import { useAuth } from '../../../contexts/AuthContext';
+import { setGuestLoginIntent } from '../../../lib/guestLoginIntent';
 import { Brand, Radius, Shadow, Spacing, Type } from '../../../lib/theme';
 
 const GREEN      = Brand.green;
@@ -56,6 +58,56 @@ const RESOURCE_ICONS: Record<string, string> = {
   academic:   'book-outline',       other:  'link-outline',
 };
 
+const PRAYER_ORDER_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
+
+function parsePrayerMins(timeStr: string): number | null {
+  const m = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (m[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (m[3].toUpperCase() === 'AM' && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+interface NextPrayerResult {
+  prayer: CampusPrayerTime;
+  label: string;
+  timeStr: string;
+  countdownText: string;
+  nextIndex: number;
+}
+
+function getNextPrayer(times: CampusPrayerTime[], now: Date): NextPrayerResult | null {
+  if (times.length === 0) return null;
+  const curMins = now.getHours() * 60 + now.getMinutes();
+  const sorted = [...times].sort(
+    (a, b) => PRAYER_ORDER_KEYS.indexOf(a.prayer) - PRAYER_ORDER_KEYS.indexOf(b.prayer),
+  );
+  let nextIndex = sorted.findIndex(pt => {
+    const m = parsePrayerMins(pt.time);
+    return m !== null && m > curMins;
+  });
+  if (nextIndex === -1) nextIndex = 0;
+  const prayer = sorted[nextIndex];
+  const prayerMins = parsePrayerMins(prayer.time);
+  let countdownText = '';
+  if (prayerMins !== null) {
+    let diffMins = prayerMins - curMins;
+    if (diffMins <= 0) diffMins += 24 * 60;
+    const h = Math.floor(diffMins / 60);
+    const mn = diffMins % 60;
+    countdownText = h > 0 ? `${h}h ${mn}m` : `${mn}m`;
+  }
+  return {
+    prayer,
+    label: PRAYER_LABELS[prayer.prayer] ?? prayer.prayer,
+    timeStr: prayer.time,
+    countdownText,
+    nextIndex,
+  };
+}
+
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
@@ -73,54 +125,216 @@ function fmtRelative(iso: string): string {
   return fmtDate(iso);
 }
 
-// ─── Section components ───────────────────────────────────────────────────────
+function fmtEventDateParts(iso: string): { month: string; day: string } {
+  const d = new Date(iso);
+  return {
+    month: d.toLocaleDateString('en-US', { month: 'short' }),
+    day: String(d.getDate()),
+  };
+}
 
-function SectionHeader({ icon, title }: { icon: string; title: string }) {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function NextPrayerCard({ info }: { info: NextPrayerResult }) {
   return (
-    <View style={sectionStyles.header}>
-      <Ionicons name={icon as any} size={18} color={GREEN} />
-      <Text style={sectionStyles.title}>{title}</Text>
+    <View style={styles.nextPrayerCard}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.nextPrayerLabel}>NEXT PRAYER</Text>
+        <Text style={styles.nextPrayerName}>{info.label}</Text>
+        <Text style={styles.nextPrayerTime}>{info.timeStr}</Text>
+        {!!info.countdownText && (
+          <Text style={styles.nextPrayerCountdown}>in {info.countdownText}</Text>
+        )}
+      </View>
+      <View style={styles.nextPrayerDeco}>
+        <Text style={{ fontSize: 44 }}>🌅</Text>
+      </View>
     </View>
   );
 }
 
-const sectionStyles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
-  title:  { ...Type.sectionLabel, color: DEEP_GREEN, textTransform: 'uppercase' as const },
-});
-
-function PrayerTimesSection({ times }: { times: CampusPrayerTime[] }) {
-  if (times.length === 0) return null;
+function PrayerTimesCard({
+  times,
+  nextIndex,
+  jummah,
+  mapsUrl,
+}: {
+  times: CampusPrayerTime[];
+  nextIndex: number;
+  jummah: CampusJummah[];
+  mapsUrl: string;
+}) {
   return (
-    <View style={styles.section}>
-      <SectionHeader icon="time-outline" title="Prayer Times" />
-      {times.map(pt => (
-        <View key={pt.id} style={styles.prayerRow}>
-          <Ionicons name={PRAYER_ICONS[pt.prayer] as any} size={16} color={DEEP_GREEN} style={styles.prayerIcon} />
-          <Text style={styles.prayerLabel}>{PRAYER_LABELS[pt.prayer]}</Text>
-          <Text style={styles.prayerTime}>{pt.time}</Text>
-          {!!pt.location && <Text style={styles.prayerLocation}> · {pt.location}</Text>}
-        </View>
-      ))}
+    <View style={styles.prayerTimesRowCard}>
+      {/* Five daily prayers */}
+      <View style={styles.prayerTimesRow}>
+        {times.map((pt, idx) => {
+          const active = idx === nextIndex;
+          return (
+            <View key={pt.id} style={[styles.prayerCell, active && styles.prayerCellActive]}>
+              <Ionicons
+                name={PRAYER_ICONS[pt.prayer] as any}
+                size={15}
+                color={active ? DEEP_GREEN : TEXT_MUTED}
+              />
+              <Text style={[styles.prayerCellName, active && styles.prayerCellActiveText]}>
+                {PRAYER_LABELS[pt.prayer]}
+              </Text>
+              <Text style={[styles.prayerCellTime, active && styles.prayerCellActiveText]}>
+                {pt.time}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Jummah subsection */}
+      {jummah.length > 0 && (
+        <>
+          <View style={styles.prayerJummahDivider} />
+          <View style={styles.prayerJummahSection}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.prayerJummahLabel}>JUMU'AH</Text>
+              {jummah.map((j, idx) => (
+                <View
+                  key={j.id}
+                  style={[styles.prayerJummahRow, idx > 0 && { marginTop: 6 }]}
+                >
+                  <Text style={styles.prayerJummahTime}>{j.time}</Text>
+                  {!!(j.location || j.building) && (
+                    <Text style={styles.prayerJummahDetail}>
+                      <Ionicons name="location-outline" size={11} color={TEXT_MUTED} />{' '}
+                      {j.location || j.building}
+                    </Text>
+                  )}
+                  {!!j.khateeb && (
+                    <Text style={styles.prayerJummahDetail}>{j.khateeb}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.directionsBtn}
+              onPress={() => Linking.openURL(mapsUrl)}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="navigate-outline" size={13} color={DEEP_GREEN} />
+              <Text style={styles.directionsBtnText}>Directions</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
-function JummahSection({ jummah }: { jummah: CampusJummah[] }) {
-  if (jummah.length === 0) return null;
+function UpcomingEventsSection({ events }: { events: CampusEvent[] }) {
   return (
-    <View style={styles.section}>
-      <SectionHeader icon="podium-outline" title="Jummah" />
-      {jummah.map((j, idx) => (
-        <View key={j.id} style={[styles.jummahCard, idx < jummah.length - 1 && styles.jummahDivider]}>
-          <Text style={styles.jummahTime}>{j.time}</Text>
-          {!!j.khateeb   && <Text style={styles.jummahDetail}>Khateeb: {j.khateeb}</Text>}
-          {!!j.location  && <Text style={styles.jummahDetail}><Ionicons name="location-outline" size={12} /> {j.location}</Text>}
-          {!!j.building  && <Text style={styles.jummahDetail}>{j.building}</Text>}
-          {j.language !== 'English' && <Text style={styles.jummahDetail}>Language: {j.language}</Text>}
-          {!!j.notes     && <Text style={styles.jummahNotes}>{j.notes}</Text>}
-        </View>
-      ))}
+    <View style={{ marginBottom: Spacing.md }}>
+      <View style={styles.eventsHeaderRow}>
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <Text style={styles.seeAllText}>See all</Text>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.eventsScroll}
+      >
+        {events.map(ev => {
+          const catColor = CATEGORY_COLORS[ev.category ?? 'other'] ?? CATEGORY_COLORS.other;
+          const dateParts = ev.event_start ? fmtEventDateParts(ev.event_start) : null;
+          const hasRsvp = !!ev.rsvp_url;
+          return (
+            <TouchableOpacity
+              key={ev.id}
+              style={styles.eventCard}
+              onPress={() => hasRsvp && Linking.openURL(ev.rsvp_url!)}
+              activeOpacity={hasRsvp ? 0.85 : 1}
+              disabled={!hasRsvp}
+            >
+              {ev.image_url ? (
+                <Image source={{ uri: ev.image_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              ) : (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: catColor }]} />
+              )}
+              {dateParts && (
+                <View style={styles.eventDateBadge}>
+                  <Text style={styles.eventDateMonth}>{dateParts.month.toUpperCase()}</Text>
+                  <Text style={styles.eventDateDay}>{dateParts.day}</Text>
+                </View>
+              )}
+              {hasRsvp && (
+                <View style={styles.eventRsvpBadge}>
+                  <Text style={styles.eventRsvpText}>RSVP</Text>
+                </View>
+              )}
+              <View style={styles.eventCardOverlay}>
+                <Text style={styles.eventCardTitle} numberOfLines={2}>{ev.title}</Text>
+                {!!ev.event_start && (
+                  <Text style={styles.eventCardMeta}>
+                    {fmtDate(ev.event_start)} · {fmtTime(ev.event_start)}
+                  </Text>
+                )}
+                {!!ev.location && (
+                  <Text style={styles.eventCardMeta} numberOfLines={1}>
+                    <Ionicons name="location-outline" size={10} color="rgba(255,255,255,0.8)" /> {ev.location}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function AroundCampusSection({
+  onPressPrayerSpaces,
+  onPressWudu,
+  onPressHalalFood,
+  onPressResources,
+}: {
+  onPressPrayerSpaces: () => void;
+  onPressWudu: () => void;
+  onPressHalalFood: () => void;
+  onPressResources: () => void;
+}) {
+  const chips = [
+    { label: 'Prayer\nSpaces',    icon: 'man-outline',        onPress: onPressPrayerSpaces },
+    { label: 'Wudu\nLocations',   icon: 'water-outline',      onPress: onPressWudu },
+    { label: 'Halal\nFood',       icon: 'restaurant-outline', onPress: onPressHalalFood },
+    { label: 'Resources',         icon: 'book-outline',       onPress: onPressResources },
+  ] as const;
+  return (
+    <View style={styles.aroundWrapper}>
+      <Text style={styles.sectionTitle}>Around Campus</Text>
+      <View style={styles.aroundRow}>
+        {chips.map(c => (
+          <TouchableOpacity key={c.label} style={styles.aroundChip} onPress={c.onPress} activeOpacity={0.75}>
+            <Ionicons name={c.icon as any} size={20} color={DEEP_GREEN} />
+            <Text style={styles.aroundChipText}>{c.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function AboutSection({ name, description }: { name: string; description: string }) {
+  return (
+    <View style={styles.aboutWrapper}>
+      <Text style={styles.sectionTitle}>About {name}</Text>
+      <Text style={styles.aboutBody}>{description}</Text>
+    </View>
+  );
+}
+
+function AmenityChip({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={styles.chip}>
+      <Ionicons name={icon as any} size={12} color={GREEN} />
+      <Text style={styles.chipText}>{label}</Text>
     </View>
   );
 }
@@ -129,7 +343,10 @@ function PrayerSpacesSection({ spaces }: { spaces: CampusPrayerSpace[] }) {
   if (spaces.length === 0) return null;
   return (
     <View style={styles.section}>
-      <SectionHeader icon="location-outline" title="Prayer Spaces" />
+      <View style={sectionStyles.header}>
+        <Ionicons name="location-outline" size={18} color={GREEN} />
+        <Text style={sectionStyles.title}>Prayer Spaces</Text>
+      </View>
       {spaces.map(s => (
         <View key={s.id} style={styles.spaceCard}>
           <Text style={styles.spaceName}>{s.name}</Text>
@@ -151,69 +368,14 @@ function PrayerSpacesSection({ spaces }: { spaces: CampusPrayerSpace[] }) {
   );
 }
 
-function AmenityChip({ icon, label }: { icon: string; label: string }) {
-  return (
-    <View style={styles.chip}>
-      <Ionicons name={icon as any} size={12} color={GREEN} />
-      <Text style={styles.chipText}>{label}</Text>
-    </View>
-  );
-}
-
-function EventsSection({ events }: { events: CampusEvent[] }) {
-  if (events.length === 0) return null;
-  return (
-    <View style={styles.section}>
-      <SectionHeader icon="calendar-outline" title="Upcoming Events" />
-      {events.map(ev => {
-        const catColor = CATEGORY_COLORS[ev.category ?? 'other'] ?? CATEGORY_COLORS.other;
-        return (
-          <View key={ev.id} style={styles.eventCard}>
-            <View style={styles.eventMeta}>
-              {!!ev.category && (
-                <View style={[styles.catChip, { backgroundColor: catColor + '18' }]}>
-                  <Text style={[styles.catChipText, { color: catColor }]}>
-                    {ev.category.charAt(0).toUpperCase() + ev.category.slice(1)}
-                  </Text>
-                </View>
-              )}
-              {!!ev.event_start && (
-                <Text style={styles.eventDate}>{fmtDate(ev.event_start)}</Text>
-              )}
-            </View>
-            <Text style={styles.eventTitle}>{ev.title}</Text>
-            {!!ev.event_start && (
-              <Text style={styles.eventTime}>
-                {fmtTime(ev.event_start)}{ev.event_end ? ` – ${fmtTime(ev.event_end)}` : ''}
-              </Text>
-            )}
-            {!!ev.location && (
-              <Text style={styles.eventLocation}>
-                <Ionicons name="location-outline" size={12} /> {ev.location}
-              </Text>
-            )}
-            {!!ev.body && <Text style={styles.eventBody} numberOfLines={2}>{ev.body}</Text>}
-            {!!ev.rsvp_url && (
-              <TouchableOpacity
-                style={styles.rsvpBtn}
-                onPress={() => Linking.openURL(ev.rsvp_url!)}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.rsvpText}>RSVP →</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function AnnouncementsSection({ announcements }: { announcements: CampusAnnouncement[] }) {
   if (announcements.length === 0) return null;
   return (
     <View style={styles.section}>
-      <SectionHeader icon="megaphone-outline" title="Announcements" />
+      <View style={sectionStyles.header}>
+        <Ionicons name="megaphone-outline" size={18} color={GREEN} />
+        <Text style={sectionStyles.title}>Announcements</Text>
+      </View>
       {announcements.map(a => (
         <View key={a.id} style={styles.announcementCard}>
           <View style={styles.announcementHeader}>
@@ -231,7 +393,10 @@ function ResourcesSection({ resources }: { resources: CampusResource[] }) {
   if (resources.length === 0) return null;
   return (
     <View style={styles.section}>
-      <SectionHeader icon="grid-outline" title="Halal & Campus Resources" />
+      <View style={sectionStyles.header}>
+        <Ionicons name="grid-outline" size={18} color={GREEN} />
+        <Text style={sectionStyles.title}>Halal &amp; Campus Resources</Text>
+      </View>
       {resources.map(r => (
         <TouchableOpacity
           key={r.id}
@@ -255,6 +420,11 @@ function ResourcesSection({ resources }: { resources: CampusResource[] }) {
   );
 }
 
+const sectionStyles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  title:  { ...Type.sectionLabel, color: DEEP_GREEN, textTransform: 'uppercase' as const },
+});
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CampusDetailScreen() {
@@ -272,6 +442,22 @@ export default function CampusDetailScreen() {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [isMsaAdmin, setIsMsaAdmin] = useState(false);
 
+  // Clock for next prayer countdown
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Refs for "Around Campus" navigation
+  const scrollViewRef = useRef<ScrollView>(null);
+  const prayerSpacesY = useRef(0);
+  const resourcesY    = useRef(0);
+
+  // Filter states
+  const [wuduFilter,      setWuduFilter]      = useState(false);
+  const [halalFoodFilter, setHalalFoodFilter] = useState(false);
+
   const load = useCallback(async () => {
     if (!slug) return;
     setLoading(true);
@@ -286,7 +472,6 @@ export default function CampusDetailScreen() {
     setCampus(detail);
     setLoading(false);
 
-    // Check follow state, notification prefs, and MSA role in background
     if (user) {
       const followed = await getCampusFollowStatus(detail.university.id);
       setFollowing(followed);
@@ -360,148 +545,169 @@ export default function CampusDetailScreen() {
   const location = [university.city, university.state].filter(Boolean).join(', ');
   const hasContent = msa !== null;
 
+  const websiteUrl = msa?.website || university.website;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(university.name)}`;
+
+  const sortedPrayerTimes = [...prayerTimes].sort(
+    (a, b) => PRAYER_ORDER_KEYS.indexOf(a.prayer) - PRAYER_ORDER_KEYS.indexOf(b.prayer),
+  );
+  const nextPrayerInfo = prayerTimes.length > 0 ? getNextPrayer(sortedPrayerTimes, now) : null;
+
+  const showAroundCampus = prayerSpaces.length > 0 || resources.length > 0;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Back button */}
-      <View style={styles.loadingHeader}>
-        <TouchableOpacity
-          style={styles.backCircle}
-          onPress={() => router.back()}
-          hitSlop={12}
-        >
-          <Ionicons name="chevron-back" size={22} color={DEEP_GREEN} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* University hero */}
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="school" size={32} color={GREEN} />
-          </View>
-          <View style={styles.heroText}>
-            <Text style={styles.heroName}>{university.name}</Text>
-            {!!location && (
-              <Text style={styles.heroLocation}>
-                <Ionicons name="location-outline" size={13} color={TEXT_MUTED} /> {location}
-              </Text>
+        {/* ── Hero banner ── */}
+        <View style={styles.heroBanner}>
+          {msa?.logo_url ? (
+            <Image source={{ uri: msa.logo_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          ) : null}
+          <View style={[StyleSheet.absoluteFill, styles.heroBannerOverlay]} />
+          <TouchableOpacity style={styles.heroBack} onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          {user && msa && (
+            <TouchableOpacity
+              style={styles.heroBookmark}
+              onPress={onToggleFollow}
+              disabled={followLoading}
+              hitSlop={12}
+            >
+              {followLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons
+                  name={following ? 'bookmark' : 'bookmark-outline'}
+                  size={20}
+                  color="#fff"
+                />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Profile sheet (curved white strip emerging from hero bottom) ── */}
+        <View style={styles.profileCard}>
+          {/* Name row + verified badge */}
+          <View style={styles.profileNameRow}>
+            <Text style={styles.profileName} numberOfLines={1}>
+              {msa?.name || university.name}
+            </Text>
+            {msa?.is_verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={13} color={GREEN} />
+                <Text style={styles.verifiedBadgeText}>Verified</Text>
+              </View>
             )}
-            {!!university.website && (
-              <TouchableOpacity onPress={() => Linking.openURL(university.website!)}>
-                <Text style={styles.heroLink}>{university.website.replace(/^https?:\/\//, '')}</Text>
+          </View>
+
+          {/* University full name */}
+          <Text style={styles.profileUniversity} numberOfLines={1}>{university.name}</Text>
+
+          {/* Location + website inline */}
+          <View style={styles.profileMeta}>
+            {!!location && (
+              <View style={styles.profileMetaItem}>
+                <Ionicons name="location-outline" size={12} color={TEXT_MUTED} />
+                <Text style={styles.profileMetaText}>{location}</Text>
+              </View>
+            )}
+            {!!websiteUrl && (
+              <TouchableOpacity
+                style={styles.profileMetaItem}
+                onPress={() => Linking.openURL(websiteUrl!)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-redo-outline" size={12} color={GREEN} />
+                <Text style={[styles.profileMetaText, { color: GREEN }]} numberOfLines={1}>
+                  {websiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Social icons + follow button on one row */}
+          <View style={styles.socialRow}>
+            {!!msa?.instagram_handle && (
+              <TouchableOpacity
+                style={styles.socialCircle}
+                onPress={() => Linking.openURL(`https://instagram.com/${msa.instagram_handle}`)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="logo-instagram" size={16} color={DEEP_GREEN} />
+              </TouchableOpacity>
+            )}
+            {!!websiteUrl && (
+              <TouchableOpacity
+                style={styles.socialCircle}
+                onPress={() => Linking.openURL(websiteUrl!)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="globe-outline" size={16} color={DEEP_GREEN} />
+              </TouchableOpacity>
+            )}
+            {!!msa?.email && (
+              <TouchableOpacity
+                style={styles.socialCircle}
+                onPress={() => Linking.openURL(`mailto:${msa.email}`)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="mail-outline" size={16} color={DEEP_GREEN} />
+              </TouchableOpacity>
+            )}
+
+            {/* Follow pill — right-aligned */}
+            {!isMsaAdmin && (
+              <TouchableOpacity
+                style={[styles.followPill, following && styles.followPillActive]}
+                onPress={() => {
+                  if (!user) {
+                    setGuestLoginIntent(true);
+                    router.push('/(auth)/login');
+                    return;
+                  }
+                  onToggleFollow();
+                }}
+                disabled={followLoading}
+                activeOpacity={0.8}
+              >
+                {followLoading ? (
+                  <ActivityIndicator color={following ? GREEN : '#fff'} size="small" style={{ width: 16, height: 16 }} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={following ? 'checkmark' : 'add'}
+                      size={14}
+                      color={following ? GREEN : '#fff'}
+                    />
+                    <Text style={[styles.followPillText, following && styles.followPillTextActive]}>
+                      {following ? 'Following' : 'Follow'}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        {/* MSA info card */}
-        {msa && (
-          <View style={styles.msaCard}>
-            <View style={styles.msaHeader}>
-              <View style={styles.msaBadge}>
-                <Ionicons name="people" size={16} color={GREEN} />
-              </View>
-              <View style={styles.msaInfo}>
-                <Text style={styles.msaName}>{msa.name}</Text>
-                {msa.is_verified && (
-                  <View style={styles.verifiedRow}>
-                    <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-                    <Text style={styles.verifiedText}>Verified MSA</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            {!!msa.description && (
-              <Text style={styles.msaDesc}>{msa.description}</Text>
-            )}
-            <View style={styles.msaLinks}>
-              {!!msa.email && (
-                <TouchableOpacity style={styles.msaLinkBtn} onPress={() => Linking.openURL(`mailto:${msa.email}`)}>
-                  <Ionicons name="mail-outline" size={15} color={GREEN} />
-                  <Text style={styles.msaLinkText}>Email</Text>
-                </TouchableOpacity>
-              )}
-              {!!msa.website && (
-                <TouchableOpacity style={styles.msaLinkBtn} onPress={() => Linking.openURL(msa.website!)}>
-                  <Ionicons name="globe-outline" size={15} color={GREEN} />
-                  <Text style={styles.msaLinkText}>Website</Text>
-                </TouchableOpacity>
-              )}
-              {!!msa.instagram_handle && (
-                <TouchableOpacity
-                  style={styles.msaLinkBtn}
-                  onPress={() => Linking.openURL(`https://instagram.com/${msa.instagram_handle}`)}
-                >
-                  <Ionicons name="logo-instagram" size={15} color={GREEN} />
-                  <Text style={styles.msaLinkText}>Instagram</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Follow CTA */}
-        {user && msa && (
+        {/* ── Manage this page (admins only) ── */}
+        {user && isMsaAdmin && (
           <TouchableOpacity
-            style={[styles.followBtn, following && styles.followBtnActive]}
-            onPress={onToggleFollow}
-            disabled={followLoading}
+            style={styles.manageBtn}
+            onPress={() => router.push('/(msa)/dashboard' as any)}
             activeOpacity={0.8}
           >
-            {followLoading ? (
-              <ActivityIndicator color={following ? GREEN : '#fff'} size="small" />
-            ) : (
-              <>
-                <Ionicons
-                  name={following ? 'notifications' : 'notifications-outline'}
-                  size={18}
-                  color={following ? GREEN : '#fff'}
-                />
-                <Text style={[styles.followBtnText, following && styles.followBtnTextActive]}>
-                  {following ? 'Following' : 'Follow Campus'}
-                </Text>
-              </>
-            )}
+            <Ionicons name="settings-outline" size={16} color={DEEP_GREEN} />
+            <Text style={styles.manageBtnText}>Manage this page</Text>
           </TouchableOpacity>
         )}
 
-        {/* Manage / Claim this page */}
-        {user && campus?.university && (
-          isMsaAdmin ? (
-            <TouchableOpacity
-              style={styles.manageBtn}
-              onPress={() => router.push('/(msa)/dashboard' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={16} color={DEEP_GREEN} />
-              <Text style={styles.manageBtnText}>Manage this page</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.claimBtn}
-              onPress={() => router.push({
-                pathname: '/msa/request-access',
-                params: {
-                  prefillUniversityId: campus.university.id,
-                  prefillUniversityName: campus.university.name,
-                  prefillMsaId: campus.msa?.id ?? '',
-                  prefillMsaName: campus.msa?.name ?? '',
-                },
-              } as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="ribbon-outline" size={16} color={GREEN} />
-              <Text style={styles.claimBtnText}>
-                {campus.msa ? 'Claim this page' : 'Set up MSA for this campus'}
-              </Text>
-            </TouchableOpacity>
-          )
-        )}
-
-        {/* No MSA claimed yet */}
+        {/* ── No MSA claimed yet ── */}
         {!hasContent && !campus?.msa && (
           <View style={styles.noMsa}>
             <Ionicons name="information-circle-outline" size={22} color={TEXT_MUTED} />
@@ -511,18 +717,94 @@ export default function CampusDetailScreen() {
           </View>
         )}
 
-        {/* Content sections */}
-        <PrayerTimesSection  times={prayerTimes}       />
-        <JummahSection       jummah={jummah}           />
-        <PrayerSpacesSection spaces={prayerSpaces}     />
-        <EventsSection       events={events}           />
-        <AnnouncementsSection announcements={announcements} />
-        <ResourcesSection    resources={resources}     />
+        {/* ── Next Prayer card ── */}
+        {nextPrayerInfo && (
+          <NextPrayerCard info={nextPrayerInfo} />
+        )}
 
-        {/* All sections empty but MSA exists */}
+        {/* ── Prayer times + Jummah combined card ── */}
+        {sortedPrayerTimes.length > 0 && nextPrayerInfo && (
+          <PrayerTimesCard
+            times={sortedPrayerTimes}
+            nextIndex={nextPrayerInfo.nextIndex}
+            jummah={jummah}
+            mapsUrl={mapsUrl}
+          />
+        )}
+
+        {/* ── Upcoming Events ── */}
+        {events.length > 0 && (
+          <UpcomingEventsSection events={events} />
+        )}
+
+        {/* ── Around Campus chips ── */}
+        {showAroundCampus && (
+          <AroundCampusSection
+            onPressPrayerSpaces={() => {
+              setWuduFilter(false);
+              scrollViewRef.current?.scrollTo({ y: prayerSpacesY.current, animated: true });
+            }}
+            onPressWudu={() => {
+              setWuduFilter(true);
+              scrollViewRef.current?.scrollTo({ y: prayerSpacesY.current, animated: true });
+            }}
+            onPressHalalFood={() => {
+              setHalalFoodFilter(true);
+              scrollViewRef.current?.scrollTo({ y: resourcesY.current, animated: true });
+            }}
+            onPressResources={() => {
+              setHalalFoodFilter(false);
+              scrollViewRef.current?.scrollTo({ y: resourcesY.current, animated: true });
+            }}
+          />
+        )}
+
+        {/* ── Prayer Spaces (with wudu filter) ── */}
+        <View onLayout={e => { prayerSpacesY.current = e.nativeEvent.layout.y; }}>
+          <PrayerSpacesSection
+            spaces={wuduFilter ? prayerSpaces.filter(s => s.wudu_available) : prayerSpaces}
+          />
+          {wuduFilter && (
+            <TouchableOpacity
+              style={styles.filterBanner}
+              onPress={() => setWuduFilter(false)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.filterBannerText}>Showing wudu locations only</Text>
+              <Text style={styles.filterBannerDismiss}>Show all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Resources (with halal food filter) ── */}
+        <View onLayout={e => { resourcesY.current = e.nativeEvent.layout.y; }}>
+          <ResourcesSection
+            resources={halalFoodFilter ? resources.filter(r => r.category === 'halal_food') : resources}
+          />
+          {halalFoodFilter && (
+            <TouchableOpacity
+              style={styles.filterBanner}
+              onPress={() => setHalalFoodFilter(false)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.filterBannerText}>Showing halal food only</Text>
+              <Text style={styles.filterBannerDismiss}>Show all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Announcements ── */}
+        <AnnouncementsSection announcements={announcements} />
+
+        {/* ── About ── */}
+        {!!msa?.description && (
+          <AboutSection name={msa.name || university.name} description={msa.description} />
+        )}
+
+        {/* ── All sections empty but MSA exists ── */}
         {hasContent && prayerTimes.length === 0 && jummah.length === 0 &&
          prayerSpaces.length === 0 && events.length === 0 &&
-         announcements.length === 0 && resources.length === 0 && (
+         announcements.length === 0 && resources.length === 0 && !msa?.description && (
           <View style={styles.emptyContent}>
             <Ionicons name="leaf-outline" size={28} color={TEXT_MUTED} />
             <Text style={styles.emptyContentText}>
@@ -530,9 +812,30 @@ export default function CampusDetailScreen() {
             </Text>
           </View>
         )}
+
+        {/* ── Quiet claim link — only for unverified pages, non-admins ── */}
+        {user && !isMsaAdmin && !msa?.is_verified && (
+          <TouchableOpacity
+            style={styles.claimLink}
+            onPress={() => router.push({
+              pathname: '/msa/request-access',
+              params: {
+                prefillUniversityId: campus.university.id,
+                prefillUniversityName: campus.university.name,
+                prefillMsaId: campus.msa?.id ?? '',
+                prefillMsaName: campus.msa?.name ?? '',
+              },
+            } as any)}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.claimLinkText}>
+              Are you an MSA officer? Claim this page →
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
-      {/* Notification preferences modal — shown once after following */}
+      {/* ── Notification preferences modal ── */}
       <Modal
         visible={showNotifModal}
         transparent
@@ -547,10 +850,10 @@ export default function CampusDetailScreen() {
 
             {(
               [
-                { key: 'events',        label: 'Events',               sub: 'Upcoming MSA events' },
-                { key: 'announcements', label: 'Announcements',        sub: 'News and updates' },
-                { key: 'jummah',        label: 'Jummah',               sub: 'Time and location changes' },
-                { key: 'prayer',        label: 'Prayer Times',         sub: 'Iqama time updates' },
+                { key: 'events',        label: 'Events',        sub: 'Upcoming MSA events' },
+                { key: 'announcements', label: 'Announcements', sub: 'News and updates' },
+                { key: 'jummah',        label: 'Jummah',        sub: 'Time and location changes' },
+                { key: 'prayer',        label: 'Prayer Times',  sub: 'Iqama time updates' },
               ] as const
             ).map(({ key, label, sub }) => (
               <View key={key} style={styles.modalRow}>
@@ -584,7 +887,6 @@ export default function CampusDetailScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-
     </SafeAreaView>
   );
 }
@@ -604,10 +906,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
   },
-  backCircle: {
-    width: 36, height: 36, borderRadius: Radius.circle,
-    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
-  },
 
   center: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -623,60 +921,326 @@ const styles = StyleSheet.create({
 
   scroll: { paddingBottom: Spacing.xl },
 
-  // Hero
-  hero: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-    gap: Spacing.md,
+  // ── Hero ──
+  heroBanner: {
+    height: 220, backgroundColor: DEEP_GREEN, overflow: 'hidden',
   },
-  heroIcon: {
-    width: 56, height: 56, borderRadius: Radius.card,
-    backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center',
+  heroBannerOverlay: { backgroundColor: 'rgba(0,0,0,0.30)' },
+  heroBack: {
+    position: 'absolute', top: 12, left: 12,
+    width: 36, height: 36, borderRadius: Radius.circle,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroBookmark: {
+    position: 'absolute', top: 12, right: 12,
+    width: 36, height: 36, borderRadius: Radius.circle,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ── Profile sheet ──
+  profileCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  profileNameRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  profileName: {
+    fontSize: 18, fontWeight: '800', color: DEEP_GREEN, flex: 1,
+  },
+  verifiedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 7, paddingVertical: 3,
+    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
+  },
+  verifiedBadgeText: { fontSize: 11, fontWeight: '700', color: GREEN },
+  profileUniversity: {
+    ...Type.caption, color: TEXT_MUTED, marginTop: 3,
+  },
+  profileMeta: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  profileMetaItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+  },
+  profileMetaText: { ...Type.caption, color: TEXT_MUTED },
+  socialRow: {
+    flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm,
+  },
+  socialCircle: {
+    width: 32, height: 32, borderRadius: Radius.circle,
+    backgroundColor: CREAM, borderWidth: 1, borderColor: HAIRLINE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ── Next Prayer card ──
+  nextPrayerCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: DEEP_GREEN,
+    borderRadius: Radius.card,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+    padding: Spacing.md,
+    ...Shadow.strong,
+  },
+  nextPrayerLabel: {
+    ...Type.sectionLabel, color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase', marginBottom: 2,
+  },
+  nextPrayerName: {
+    fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 32,
+  },
+  nextPrayerTime: {
+    ...Type.cardTitle, color: '#fff', marginTop: 2,
+  },
+  nextPrayerCountdown: {
+    ...Type.bodySmall, color: 'rgba(255,255,255,0.75)', marginTop: 2,
+  },
+  nextPrayerDeco: {
+    width: 64, alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ── Prayer times + Jummah card ──
+  prayerTimesRowCard: {
+    backgroundColor: '#fff',
+    borderRadius: Radius.card,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.xs,
     ...Shadow.light,
   },
-  heroText:     { flex: 1, gap: 3 },
-  heroName:     { ...Type.screenTitle, color: DEEP_GREEN },
-  heroLocation: { ...Type.bodySmall, color: TEXT_MUTED },
-  heroLink:     { ...Type.caption, color: GREEN, textDecorationLine: 'underline' as const },
+  prayerTimesRow: {
+    flexDirection: 'row',
+  },
+  prayerCell: {
+    flex: 1, alignItems: 'center', gap: 3,
+    paddingVertical: 6, paddingHorizontal: 2,
+    borderRadius: Radius.chip,
+  },
+  prayerCellActive: {
+    backgroundColor: CREAM,
+  },
+  prayerCellName: {
+    ...Type.tiny, color: TEXT_MUTED, fontWeight: '600',
+  },
+  prayerCellTime: {
+    ...Type.tiny, color: TEXT_MUTED, fontWeight: '700',
+  },
+  prayerCellActiveText: {
+    color: DEEP_GREEN,
+  },
+  prayerJummahDivider: {
+    height: 1, backgroundColor: HAIRLINE,
+    marginHorizontal: Spacing.sm, marginTop: 6,
+  },
+  prayerJummahSection: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.sm, paddingTop: Spacing.sm, paddingBottom: 4,
+    gap: Spacing.sm,
+  },
+  prayerJummahLabel: {
+    ...Type.sectionLabel, color: TEXT_MUTED,
+    textTransform: 'uppercase', marginBottom: 4,
+  },
+  prayerJummahRow: { gap: 1 },
+  prayerJummahTime: {
+    fontSize: 15, fontWeight: '700', color: DEEP_GREEN,
+  },
+  prayerJummahDetail: {
+    ...Type.caption, color: TEXT_MUTED,
+  },
+  directionsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 9, paddingVertical: 6,
+    borderRadius: Radius.chip, borderWidth: 1, borderColor: HAIRLINE,
+    backgroundColor: '#fff',
+  },
+  directionsBtnText: { ...Type.label, color: DEEP_GREEN, fontSize: 12 },
 
-  // MSA card
-  msaCard: {
+  // ── Events ──
+  eventsHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: Spacing.md, marginBottom: 4,
+  },
+  sectionTitle: { ...Type.cardTitle, color: DEEP_GREEN },
+  seeAllText:   { ...Type.caption, color: GREEN, fontWeight: '600' },
+  eventsScroll: { paddingHorizontal: Spacing.md, gap: 10, paddingVertical: Spacing.sm },
+  eventCard: {
+    width: 176, height: 176,
+    borderRadius: Radius.card,
+    overflow: 'hidden',
+    backgroundColor: HAIRLINE,
+    ...Shadow.medium,
+  },
+  eventDateBadge: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3,
+    alignItems: 'center',
+  },
+  eventDateMonth: { ...Type.tiny, color: TEXT_MUTED, fontWeight: '700' },
+  eventDateDay:   { fontSize: 17, fontWeight: '800', color: TEXT_DARK, lineHeight: 20 },
+  eventRsvpBadge: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: Brand.gold,
+    borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
+  },
+  eventRsvpText: {
+    fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5,
+  },
+  eventCardOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: 8, backgroundColor: 'rgba(0,0,0,0.48)',
+  },
+  eventCardTitle: { ...Type.label, color: '#fff', lineHeight: 18 },
+  eventCardMeta:  { ...Type.tiny, color: 'rgba(255,255,255,0.82)', marginTop: 2 },
+
+  // ── Around Campus ──
+  aroundWrapper: { marginHorizontal: Spacing.md, marginBottom: Spacing.md },
+  aroundRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  aroundChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: CREAM,
+    borderRadius: Radius.card,
+    borderWidth: 1, borderColor: HAIRLINE,
+    gap: 7,
+    ...Shadow.light,
+  },
+  aroundChipText: {
+    ...Type.tiny, color: DEEP_GREEN, fontWeight: '600', flex: 1,
+  },
+
+  // ── About ──
+  aboutWrapper: { marginHorizontal: Spacing.md, marginBottom: Spacing.md },
+  aboutBody: { ...Type.bodySmall, color: TEXT_MUTED, lineHeight: 22, marginTop: Spacing.sm },
+
+  // ── Filter banner ──
+  filterBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginHorizontal: Spacing.md, marginTop: -Spacing.sm, marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md, paddingVertical: 8,
+    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
+    borderWidth: 1, borderColor: '#c3e8d8',
+  },
+  filterBannerText:    { ...Type.caption, color: DEEP_GREEN },
+  filterBannerDismiss: { ...Type.caption, color: GREEN, fontWeight: '700' },
+
+  // ── Follow pill (inside profile card) ──
+  followPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginLeft: 'auto' as any,
+    paddingHorizontal: 12, paddingVertical: 7,
+    backgroundColor: DEEP_GREEN,
+    borderRadius: Radius.chip,
+  },
+  followPillActive: {
+    backgroundColor: '#f0faf6',
+    borderWidth: 1, borderColor: '#c3e8d8',
+  },
+  followPillText:       { ...Type.tiny, color: '#fff', fontWeight: '700' },
+  followPillTextActive: { color: GREEN },
+
+  // ── Manage (admins only) ──
+  manageBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginHorizontal: Spacing.md, marginBottom: Spacing.sm,
+    paddingVertical: 10, paddingHorizontal: Spacing.md,
+    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
+    borderWidth: 1, borderColor: '#c3e8d8',
+    justifyContent: 'center',
+  },
+  manageBtnText: { ...Type.label, color: DEEP_GREEN, fontWeight: '700' },
+
+  // ── Quiet claim text link ──
+  claimLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  claimLinkText: {
+    ...Type.caption,
+    color: TEXT_MUTED,
+  },
+
+  // ── No MSA ──
+  noMsa: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    marginHorizontal: Spacing.md, marginBottom: Spacing.md,
+    padding: Spacing.md, backgroundColor: '#fffbeb',
+    borderRadius: Radius.card, borderWidth: 1, borderColor: '#f6d860',
+  },
+  noMsaText: { ...Type.bodySmall, color: TEXT_DARK, flex: 1, lineHeight: 20 },
+
+  // ── Generic section card (prayer spaces, announcements, resources) ──
+  section: {
     backgroundColor: '#fff', borderRadius: Radius.card,
     marginHorizontal: Spacing.md, marginBottom: Spacing.md,
     padding: Spacing.md, ...Shadow.light,
   },
-  msaHeader:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
-  msaBadge: {
+
+  // Prayer spaces
+  spaceCard: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  spaceName:    { ...Type.label, color: TEXT_DARK, marginBottom: 2 },
+  spaceDetail:  { ...Type.caption, color: TEXT_MUTED, marginTop: 1 },
+  spaceNotes:   { ...Type.caption, color: TEXT_MUTED, marginTop: Spacing.xs, fontStyle: 'italic' as const },
+  amenityRow:   { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.xs, flexWrap: 'wrap' as const },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
+  },
+  chipText: { ...Type.tiny, color: GREEN, fontWeight: '600' },
+
+  // Announcements
+  announcementCard: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  announcementHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+  announcementTitle:  { ...Type.label, color: TEXT_DARK, flex: 1, marginRight: Spacing.sm },
+  announcementDate:   { ...Type.tiny, color: TEXT_MUTED },
+  announcementBody:   { ...Type.bodySmall, color: TEXT_MUTED, lineHeight: 20 },
+
+  // Resources
+  resourceCard: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
+  },
+  resourceIcon: {
     width: 36, height: 36, borderRadius: Radius.chip,
     backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
   },
-  msaInfo:     { flex: 1 },
-  msaName:     { ...Type.cardTitle, color: TEXT_DARK },
-  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  verifiedText: { ...Type.tiny, color: DEEP_GREEN, fontWeight: '600' },
-  msaDesc:     { ...Type.bodySmall, color: TEXT_MUTED, lineHeight: 20, marginBottom: Spacing.sm },
-  msaLinks:    { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' as const },
-  msaLinkBtn:  {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: Spacing.sm, paddingVertical: 5,
-    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
-  },
-  msaLinkText: { ...Type.caption, color: GREEN, fontWeight: '600' },
+  resourceText:  { flex: 1 },
+  resourceTitle: { ...Type.label, color: TEXT_DARK },
+  resourceDesc:  { ...Type.caption, color: TEXT_MUTED, lineHeight: 16, marginTop: 2 },
+  resourceAddr:  { ...Type.tiny, color: TEXT_MUTED, marginTop: 2 },
 
-  // Follow button
-  followBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginHorizontal: Spacing.md, marginBottom: Spacing.md,
-    paddingVertical: Spacing.sm + 2, borderRadius: Radius.input,
-    backgroundColor: GREEN, gap: Spacing.sm,
-    ...Shadow.medium,
+  // Empty content
+  emptyContent: {
+    alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
   },
-  followBtnActive: {
-    backgroundColor: '#f0faf6',
-    borderWidth: 1, borderColor: GREEN,
-  },
-  followBtnText:       { ...Type.label, color: '#fff' },
-  followBtnTextActive: { color: GREEN },
+  emptyContentText: { ...Type.bodySmall, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
 
   // Notification modal
   modalOverlay: {
@@ -715,125 +1279,4 @@ const styles = StyleSheet.create({
     ...Type.tiny, color: TEXT_MUTED, textAlign: 'center',
     marginTop: Spacing.md, lineHeight: 16,
   },
-
-  // Manage / Claim buttons
-  manageBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    marginHorizontal: Spacing.md, marginBottom: Spacing.sm,
-    paddingVertical: 10, paddingHorizontal: Spacing.md,
-    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
-    borderWidth: 1, borderColor: '#c3e8d8',
-    justifyContent: 'center',
-  },
-  manageBtnText: { ...Type.label, color: DEEP_GREEN, fontWeight: '700' },
-  claimBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    marginHorizontal: Spacing.md, marginBottom: Spacing.sm,
-    paddingVertical: 10, paddingHorizontal: Spacing.md,
-    backgroundColor: CREAM, borderRadius: Radius.chip,
-    borderWidth: 1, borderColor: '#c3e8d8',
-    justifyContent: 'center',
-  },
-  claimBtnText: { ...Type.label, color: GREEN, fontWeight: '600' },
-
-  // No MSA
-  noMsa: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
-    marginHorizontal: Spacing.md, marginBottom: Spacing.md,
-    padding: Spacing.md, backgroundColor: '#fffbeb',
-    borderRadius: Radius.card, borderWidth: 1, borderColor: '#f6d860',
-  },
-  noMsaText: { ...Type.bodySmall, color: TEXT_DARK, flex: 1, lineHeight: 20 },
-
-  // Content sections
-  section: {
-    backgroundColor: '#fff', borderRadius: Radius.card,
-    marginHorizontal: Spacing.md, marginBottom: Spacing.md,
-    padding: Spacing.md, ...Shadow.light,
-  },
-
-  // Prayer times
-  prayerRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
-  },
-  prayerIcon:     { marginRight: Spacing.sm },
-  prayerLabel:    { ...Type.label, color: TEXT_DARK, width: 70 },
-  prayerTime:     { ...Type.body, color: DEEP_GREEN, fontWeight: '700' },
-  prayerLocation: { ...Type.caption, color: TEXT_MUTED, flex: 1, marginLeft: Spacing.xs },
-
-  // Jummah
-  jummahCard:    { paddingVertical: Spacing.sm },
-  jummahDivider: { borderBottomWidth: 1, borderBottomColor: HAIRLINE },
-  jummahTime:    { ...Type.cardTitle, color: DEEP_GREEN, marginBottom: 2 },
-  jummahDetail:  { ...Type.bodySmall, color: TEXT_MUTED, marginTop: 1 },
-  jummahNotes:   { ...Type.caption, color: TEXT_MUTED, marginTop: Spacing.xs, fontStyle: 'italic' as const },
-
-  // Prayer spaces
-  spaceCard: {
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
-  },
-  spaceName:    { ...Type.label, color: TEXT_DARK, marginBottom: 2 },
-  spaceDetail:  { ...Type.caption, color: TEXT_MUTED, marginTop: 1 },
-  spaceNotes:   { ...Type.caption, color: TEXT_MUTED, marginTop: Spacing.xs, fontStyle: 'italic' as const },
-  amenityRow:   { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.xs, flexWrap: 'wrap' as const },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 8, paddingVertical: 3,
-    backgroundColor: '#f0faf6', borderRadius: Radius.chip,
-  },
-  chipText: { ...Type.tiny, color: GREEN, fontWeight: '600' },
-
-  // Events
-  eventCard: {
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
-  },
-  eventMeta:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 },
-  catChip: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: Radius.chip,
-  },
-  catChipText:   { ...Type.tiny, fontWeight: '700' },
-  eventDate:     { ...Type.caption, color: TEXT_MUTED },
-  eventTitle:    { ...Type.label, color: TEXT_DARK },
-  eventTime:     { ...Type.caption, color: DEEP_GREEN, fontWeight: '600', marginTop: 2 },
-  eventLocation: { ...Type.caption, color: TEXT_MUTED, marginTop: 2 },
-  eventBody:     { ...Type.caption, color: TEXT_MUTED, lineHeight: 18, marginTop: Spacing.xs },
-  rsvpBtn:       { alignSelf: 'flex-start', marginTop: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 6, backgroundColor: GREEN, borderRadius: Radius.chip },
-  rsvpText:      { ...Type.tiny, color: '#fff', fontWeight: '700' },
-
-  // Announcements
-  announcementCard: {
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
-  },
-  announcementHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  announcementTitle:  { ...Type.label, color: TEXT_DARK, flex: 1, marginRight: Spacing.sm },
-  announcementDate:   { ...Type.tiny, color: TEXT_MUTED },
-  announcementBody:   { ...Type.bodySmall, color: TEXT_MUTED, lineHeight: 20 },
-
-  // Resources
-  resourceCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: HAIRLINE,
-  },
-  resourceIcon: {
-    width: 36, height: 36, borderRadius: Radius.chip,
-    backgroundColor: '#f0faf6', alignItems: 'center', justifyContent: 'center',
-  },
-  resourceText:  { flex: 1 },
-  resourceTitle: { ...Type.label, color: TEXT_DARK },
-  resourceDesc:  { ...Type.caption, color: TEXT_MUTED, lineHeight: 16, marginTop: 2 },
-  resourceAddr:  { ...Type.tiny, color: TEXT_MUTED, marginTop: 2 },
-
-  // Empty content
-  emptyContent: {
-    alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-  },
-  emptyContentText: { ...Type.bodySmall, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20 },
 });

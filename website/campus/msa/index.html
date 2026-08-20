@@ -131,6 +131,32 @@
     }
     .login-request-link:hover { opacity: 0.85; }
 
+    /* ─── Create profile screen ─── */
+    #profile-screen {
+      min-height: 100vh; display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--green); padding: 24px; gap: 28px;
+    }
+
+    /* ─── Claim code screen ─── */
+    #claim-screen {
+      min-height: 100vh; display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--green); padding: 24px; gap: 28px;
+    }
+    .claim-code-input {
+      width: 100%; padding: 14px; margin-bottom: 16px;
+      font-family: var(--font-display); font-size: 24px; font-weight: 700;
+      text-align: center; letter-spacing: 6px; text-transform: uppercase;
+      background: var(--cream); color: var(--text);
+      border: 1.5px solid var(--line); border-radius: 14px;
+      outline: none; transition: border-color 0.2s;
+    }
+    .claim-code-input:focus { border-color: var(--green-mid); }
+    #claim-error {
+      font-size: 13px; color: var(--red); margin-top: 10px; text-align: center; min-height: 18px;
+    }
+
     /* ─── App shell ─── */
     #app { display: none; height: 100vh; overflow: hidden; }
 
@@ -156,6 +182,7 @@
       color: #5c3c0d; background: var(--gold-accent);
       padding: 3px 8px; border-radius: 50px;
     }
+
     .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
     .nav-item {
       display: flex; align-items: center; gap: 10px;
@@ -224,6 +251,16 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .form-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
     .form-check input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--green); }
+    /* Icon-prefixed inputs */
+    .icon-field { position: relative; margin-bottom: 16px; }
+    .icon-field .icon-prefix {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .icon-field .icon-prefix img { width: 18px; height: 18px; object-fit: contain; opacity: 0.5; }
+    .icon-field .icon-prefix svg { width: 18px; height: 18px; }
+    .icon-field .form-input { padding-left: 38px; }
 
     /* Buttons */
     .btn {
@@ -376,46 +413,6 @@
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 
     /* ─── Clock Picker ─── */
-    .cp-wrap { position: relative; display: inline-block; width: 100%; }
-    .cp-display {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px;
-      cursor: pointer; background: #fff; width: 100%;
-      font-size: 15px; font-weight: 700; color: var(--text);
-      transition: border-color 0.2s; user-select: none;
-    }
-    .cp-display:hover, .cp-wrap.open .cp-display { border-color: var(--green-mid); }
-    .cp-placeholder { font-weight: 400; color: var(--muted); font-size: 14px; }
-    .cp-popup {
-      display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 300;
-      background: #fff; border-radius: 16px; padding: 14px 14px 12px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.16); border: 1px solid var(--line);
-      width: 228px;
-    }
-    .cp-wrap.open .cp-popup { display: block; }
-    .cp-head {
-      display: flex; align-items: center; gap: 2px;
-      justify-content: center; margin-bottom: 10px;
-    }
-    .cp-seg {
-      font-family: var(--font-display); font-size: 26px; font-weight: 800;
-      color: var(--muted); line-height: 1; padding: 4px 9px; border-radius: 8px;
-      cursor: pointer; transition: all 0.15s;
-    }
-    .cp-seg.active { color: var(--green); background: var(--sage); }
-    .cp-colon { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--text); margin: 0 1px; }
-    .cp-ampm { display: flex; flex-direction: column; gap: 3px; margin-left: 10px; }
-    .cp-ampm button {
-      font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-      padding: 3px 8px; border-radius: 6px; border: 1.5px solid var(--line);
-      cursor: pointer; background: #fff; color: var(--muted); transition: all 0.15s;
-    }
-    .cp-ampm button.active { background: var(--green); color: #fff; border-color: var(--green); }
-    .cp-face { display: block; margin: 0 auto; cursor: pointer; }
-    .cp-face .cp-num { cursor: pointer; }
-    .cp-face .cp-num circle { transition: fill 0.1s; }
-    .cp-face .cp-num:hover circle { fill: var(--sage-border) !important; }
-    .cp-face .cp-num.active:hover circle { fill: var(--green-mid) !important; }
 
     @media (max-width: 768px) {
       .sidebar { width: 60px; }
@@ -430,14 +427,12 @@
 
 <!-- ═══════════════════════════ LOGIN SCREEN ═══════════════════════════ -->
 <div id="login-screen">
-  <!-- Hero branding -->
   <div class="login-hero">
     <div class="login-wordmark">Rihdal</div>
     <div class="login-tagline">Campus Hub</div>
     <div class="login-divider"></div>
   </div>
 
-  <!-- Form card -->
   <div class="login-box">
     <h1 class="login-title">Sign in to manage your MSA</h1>
     <div class="field">
@@ -450,14 +445,65 @@
     </div>
     <button class="btn-primary" id="login-btn">Sign In</button>
     <p id="login-error"></p>
+    <p style="text-align:center;margin-top:10px;">
+      <a href="#" id="forgot-pw-link" style="font-size:12px;color:var(--muted);text-decoration:none;">Forgot password?</a>
+    </p>
   </div>
 
   <div class="login-request">
-    <p class="login-request-label">No account yet? School not listed?</p>
+    <p class="login-request-label">New to Rihdal? Request access for your MSA.</p>
     <a href="apply.html" class="login-request-link">Request MSA Access →</a>
   </div>
 
   <a href="../" class="login-back">← Back to Campus Hub</a>
+</div>
+
+<!-- Create profile screen — shown on first sign-up before claim code -->
+<div id="profile-screen">
+  <div class="login-hero">
+    <div class="login-wordmark">Rihdal</div>
+    <div class="login-tagline">Campus Hub</div>
+    <div class="login-divider"></div>
+  </div>
+
+  <div class="login-box">
+    <div style="font-size:36px;text-align:center;margin-bottom:12px;">👋</div>
+    <h1 class="login-title" style="text-align:center;margin-bottom:8px;">Create your account</h1>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px;text-align:center;line-height:1.5;">
+      You're almost in. Tell us your name so we know who's managing the page.
+    </p>
+    <div class="field">
+      <label for="profile-name">Full name</label>
+      <input type="text" id="profile-name" placeholder="Fatima Al-Hassan" autocomplete="name" />
+    </div>
+    <button class="btn-primary" id="profile-save-btn">Continue</button>
+    <p id="profile-error" style="font-size:13px;color:var(--red);margin-top:10px;text-align:center;min-height:18px;"></p>
+  </div>
+
+  <a href="#" id="profile-signout-btn" class="login-back">Sign out</a>
+</div>
+
+<!-- Claim code screen — shown after login when user has no MSA membership yet -->
+<div id="claim-screen">
+  <div class="login-hero">
+    <div class="login-wordmark">Rihdal</div>
+    <div class="login-tagline">Campus Hub</div>
+    <div class="login-divider"></div>
+  </div>
+
+  <div class="login-box">
+    <div style="font-size:36px;text-align:center;margin-bottom:12px;">🔑</div>
+    <h1 class="login-title" style="text-align:center;margin-bottom:8px;">Enter Claim Code</h1>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;text-align:center;line-height:1.5;">
+      Enter the 8-character code we sent you to claim your MSA page.
+    </p>
+    <input class="claim-code-input" type="text" id="claim-code-input"
+      placeholder="AB12CD34" maxlength="9" autocomplete="off" />
+    <button class="btn-primary" id="claim-btn">Claim Page</button>
+    <p id="claim-error"></p>
+  </div>
+
+  <a href="#" id="claim-signout-btn" class="login-back">Sign out</a>
 </div>
 
 <!-- ═══════════════════════════ APP SHELL ═══════════════════════════ -->
@@ -500,8 +546,8 @@
           <div class="dash-greeting-meta" id="dash-meta"></div>
         </div>
         <div class="dash-quick-btns">
-          <button class="btn btn-green" onclick="goPage('events')">+ New Event</button>
-          <button class="btn btn-outline" onclick="goPage('announcements')">+ Announcement</button>
+          <button class="btn btn-green" onclick="openNewEvent()">+ New Event</button>
+          <button class="btn btn-outline" onclick="openNewAnnouncement()">+ Announcement</button>
           <button class="btn btn-outline" onclick="goPage('prayer-times')">Update Times</button>
         </div>
       </div>
@@ -554,10 +600,31 @@
         <div class="form-field"><label class="form-label">MSA Name</label><input class="form-input" id="prof-name" /></div>
         <div class="form-field"><label class="form-label">Description</label><textarea class="form-textarea" id="prof-desc" placeholder="Brief description of your MSA…"></textarea></div>
         <div class="form-row">
-          <div class="form-field"><label class="form-label">Email</label><input class="form-input" type="email" id="prof-email" /></div>
-          <div class="form-field"><label class="form-label">Website</label><input class="form-input" type="url" id="prof-website" placeholder="https://…" /></div>
+          <div class="icon-field">
+            <span class="icon-prefix">
+              <svg viewBox="0 0 20 20" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="16" height="13" rx="2"/>
+                <polyline points="2,4 10,12 18,4"/>
+              </svg>
+            </span>
+            <input class="form-input" type="email" id="prof-email" placeholder="Email address" />
+          </div>
+          <div class="icon-field">
+            <span class="icon-prefix">
+              <svg viewBox="0 0 20 20" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="10" cy="10" r="8"/>
+                <path d="M2 10h16M10 2a13 13 0 0 1 0 16M10 2a13 13 0 0 0 0 16"/>
+              </svg>
+            </span>
+            <input class="form-input" type="url" id="prof-website" placeholder="https://…" />
+          </div>
         </div>
-        <div class="form-field"><label class="form-label">Instagram Handle</label><input class="form-input" id="prof-instagram" placeholder="@msaatuniversity" /></div>
+        <div class="icon-field">
+          <span class="icon-prefix">
+            <img src="../../../assets/instagram.png" alt="Instagram" />
+          </span>
+          <input class="form-input" id="prof-instagram" placeholder="@msaatuniversity" />
+        </div>
         <div class="btn-row">
           <button class="btn btn-green" id="prof-save-btn">Save Profile</button>
         </div>
@@ -684,9 +751,12 @@ function goPage(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
+  sessionStorage.setItem('msa-last-page', name);
   loadPage(name);
 }
 window.goPage = goPage;
+window.openNewEvent        = () => document.getElementById('events-add-btn').click();
+window.openNewAnnouncement = () => document.getElementById('ann-add-btn').click();
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => goPage(item.dataset.page));
@@ -712,20 +782,94 @@ document.getElementById('modal-save').addEventListener('click', async () => {
 });
 
 // ── Auth ──
+function showLoginScreen() {
+  hideAllScreens();
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
 document.getElementById('login-btn').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   const pw    = document.getElementById('password').value;
-  const btn   = document.getElementById('login-btn');
   const err   = document.getElementById('login-error');
-  err.textContent = '';
+  err.textContent = ''; err.style.color = '';
+  if (!email || !pw) { err.textContent = 'Enter your email and password.'; return; }
+  const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.textContent = 'Signing in…';
   const { error } = await sb.auth.signInWithPassword({ email, password: pw });
   btn.disabled = false; btn.textContent = 'Sign In';
   if (error) { err.textContent = error.message; }
+  // onAuthStateChange handles success
 });
 
-['email','password'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
+['email', 'password'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+});
+
+document.getElementById('forgot-pw-link').addEventListener('click', async e => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const err   = document.getElementById('login-error');
+  if (!email) { err.textContent = 'Enter your email above first.'; return; }
+  await sb.auth.resetPasswordForEmail(email);
+  err.style.color = 'var(--green-mid)';
+  err.textContent  = 'Password reset email sent — check your inbox.';
+});
+
+// ── Create profile screen ────────────────────────────────────────────────────
+document.getElementById('profile-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('profile-save-btn').click();
+});
+
+document.getElementById('profile-save-btn').addEventListener('click', async () => {
+  const name = document.getElementById('profile-name').value.trim();
+  const err  = document.getElementById('profile-error');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Please enter your name.'; return; }
+  const btn = document.getElementById('profile-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await sb.from('profiles').upsert({ id: user.id, name });
+  btn.disabled = false; btn.textContent = 'Continue';
+  if (error) { err.textContent = error.message; return; }
+  // Profile saved — continue to claim or portal
+  hideAllScreens();
+  await initApp();
+});
+
+document.getElementById('profile-signout-btn').addEventListener('click', async e => {
+  e.preventDefault();
+  await sb.auth.signOut();
+});
+
+// ── Claim code screen ─────────────────────────────────────────────────────────
+document.getElementById('claim-code-input').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  document.getElementById('claim-error').textContent = '';
+});
+
+document.getElementById('claim-btn').addEventListener('click', async () => {
+  const code = document.getElementById('claim-code-input').value.trim().replace(/-/g, '');
+  const err  = document.getElementById('claim-error');
+  err.textContent = '';
+  if (code.length < 8) { err.textContent = 'Enter the full 8-character claim code.'; return; }
+  const btn = document.getElementById('claim-btn');
+  btn.disabled = true; btn.textContent = 'Claiming…';
+  const { error } = await sb.rpc('redeem_msa_claim_code', { p_code: code });
+  btn.disabled = false; btn.textContent = 'Claim Page';
+  if (error) {
+    err.textContent = error.message.replace('ERROR: ', '') || 'Invalid or already-used code.';
+    return;
+  }
+  // Membership now exists — reload app
+  document.getElementById('claim-screen').style.display = 'none';
+  await initApp();
+});
+
+document.getElementById('claim-signout-btn').addEventListener('click', async e => {
+  e.preventDefault();
+  await sb.auth.signOut();
 });
 
 document.getElementById('signout-btn').addEventListener('click', async () => {
@@ -738,31 +882,46 @@ sb.auth.onAuthStateChange(async (event, session) => {
     await initApp();
   } else {
     user = null; msaId = null;
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('login-error').textContent = '';
+    showLoginScreen();
   }
 });
 
+function hideAllScreens() {
+  document.getElementById('login-screen').style.display   = 'none';
+  document.getElementById('profile-screen').style.display = 'none';
+  document.getElementById('claim-screen').style.display   = 'none';
+  document.getElementById('app').style.display            = 'none';
+}
+
 // ── Init app after auth ──
 async function initApp() {
-  // Fetch membership
-  const { data: membership } = await sb
-    .from('msa_members')
-    .select('msa_id, role, status, msas(id, name, university_id, universities(name, slug))')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .order('requested_at')
-    .limit(1)
-    .maybeSingle();
+  // Fetch profile + membership in parallel
+  const [{ data: profile }, { data: membership }] = await Promise.all([
+    sb.from('profiles').select('name, is_admin').eq('id', user.id).maybeSingle(),
+    sb.from('msa_members')
+      .select('msa_id, role, status, msas(id, name, university_id, universities(name, slug))')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .order('requested_at')
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  // Check global admin
-  const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
   const isGlobalAdmin = profile?.is_admin === true;
 
+  // New user — no name yet → profile creation step
+  if (!profile?.name) {
+    hideAllScreens();
+    document.getElementById('profile-screen').style.display = 'flex';
+    setTimeout(() => document.getElementById('profile-name')?.focus(), 50);
+    return;
+  }
+
   if (!membership && !isGlobalAdmin) {
-    document.getElementById('login-error').textContent = 'Your account has no active MSA membership. Contact a Rihdal admin.';
-    await sb.auth.signOut();
+    // Has profile but no MSA linked yet — claim code step
+    hideAllScreens();
+    document.getElementById('claim-screen').style.display = 'flex';
+    setTimeout(() => document.getElementById('claim-code-input')?.focus(), 50);
     return;
   }
 
@@ -787,12 +946,19 @@ async function initApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   if (window.lucide) window.lucide.createIcons();
-  goPage('dashboard');
+  goPage(sessionStorage.getItem('msa-last-page') ?? 'dashboard');
 }
 
 // ── Page loaders ──
 async function loadPage(name) {
-  if (!msaId) return;
+  if (!msaId) {
+    // Show a nudge in the prayer-times form; other pages have their own empty states
+    if (name === 'prayer-times') {
+      document.getElementById('pt-form').innerHTML =
+        `<p style="color:var(--muted);padding:8px 0">Select an MSA using the sidebar picker to manage prayer times.</p>`;
+    }
+    return;
+  }
   if (name === 'dashboard')     await loadDashboard();
   if (name === 'profile')       await loadProfile();
   if (name === 'prayer-times')  await loadPrayerTimes();
@@ -912,147 +1078,27 @@ document.getElementById('prof-save-btn').addEventListener('click', async () => {
 const PRAYERS = ['fajr','dhuhr','asr','maghrib','isha'];
 const PRAYER_LABELS = { fajr:'Fajr', dhuhr:'Dhuhr', asr:'Asr', maghrib:'Maghrib', isha:'Isha' };
 
-// ── Clock Picker ──
-const _clocks = {};
+// ── Time helpers (12h ↔ 24h) ──
+function to24h(str) {
+  if (!str) return '';
+  const m = str.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (!m) return '';
+  let h = parseInt(m[1]);
+  const min = m[2];
+  const p = m[3].toUpperCase();
+  if (p === 'PM' && h !== 12) h += 12;
+  if (p === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${min}`;
+}
 
-// Global handlers called from SVG/inline onclick attributes
-window.cpSelect   = (id, v) => _clocks[id]?.select(v);
-window.cpMode     = (id, m) => _clocks[id]?.switchMode(m);
-window.cpAmPm     = (id, a) => _clocks[id]?.setAmPm(a);
-window.cpToggle   = (id)    => { const w = document.getElementById(id); w?.classList.toggle('open'); };
-
-// Close any open picker when clicking outside
-document.addEventListener('click', e => {
-  document.querySelectorAll('.cp-wrap.open').forEach(w => {
-    if (!w.contains(e.target)) w.classList.remove('open');
-  });
-});
-
-class ClockPicker {
-  constructor(containerId, hiddenId, initial) {
-    this.id        = containerId;
-    this.container = document.getElementById(containerId);
-    this.hidden    = document.getElementById(hiddenId);
-    this.mode      = 'hour';
-    this.h = 12; this.m = 0; this.ampm = 'AM';
-    this.hasValue  = false;
-
-    if (initial) {
-      const mt = initial.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (mt) {
-        this.h = parseInt(mt[1]);
-        this.m = parseInt(mt[2]);
-        this.ampm = mt[3].toUpperCase();
-        this.hasValue = true;
-      }
-    }
-    _clocks[containerId] = this;
-    this._render();
-  }
-
-  _fmt() { return `${this.h}:${String(this.m).padStart(2, '0')} ${this.ampm}`; }
-
-  _writeHidden() {
-    if (this.hidden) this.hidden.value = this.hasValue ? this._fmt() : '';
-  }
-
-  select(val) {
-    if (this.mode === 'hour') {
-      this.h = val;
-      this.mode = 'minute';
-      this._renderHead();
-      this._renderFace();
-    } else {
-      this.m = val;
-      this.hasValue = true;
-      this._writeHidden();
-      // Update the display button text
-      const t = this.container.querySelector('.cp-time');
-      if (t) { t.textContent = this._fmt(); t.style.display = ''; }
-      const ph = this.container.querySelector('.cp-placeholder');
-      if (ph) ph.style.display = 'none';
-      // Auto-close
-      this.container.classList.remove('open');
-      this._renderHead();
-      this._renderFace();
-    }
-  }
-
-  switchMode(mode) { this.mode = mode; this._renderHead(); this._renderFace(); }
-
-  setAmPm(ampm) {
-    this.ampm = ampm;
-    if (this.hasValue) this._writeHidden();
-    // Refresh AM/PM button states only
-    this.container.querySelectorAll('.cp-ampm button').forEach(b => {
-      b.classList.toggle('active', b.textContent === ampm);
-    });
-    // Also refresh display
-    const t = this.container.querySelector('.cp-time');
-    if (t && this.hasValue) t.textContent = this._fmt();
-  }
-
-  _render() {
-    this.container.innerHTML = `
-      <div class="cp-display" onclick="cpToggle('${this.id}')">
-        <span class="cp-time" style="${this.hasValue ? '' : 'display:none'}">${this.hasValue ? this._fmt() : ''}</span>
-        <span class="cp-placeholder" style="${this.hasValue ? 'display:none' : ''}">Set time</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--muted)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div class="cp-popup">
-        <div class="cp-head" id="${this.id}-head"></div>
-        <svg class="cp-face" id="${this.id}-face" width="200" height="200" viewBox="0 0 200 200"></svg>
-      </div>`;
-    this._renderHead();
-    this._renderFace();
-  }
-
-  _renderHead() {
-    const el = document.getElementById(`${this.id}-head`);
-    if (!el) return;
-    el.innerHTML = `
-      <span class="cp-seg${this.mode === 'hour' ? ' active' : ''}" onclick="cpMode('${this.id}','hour')">${String(this.h).padStart(2, '0')}</span>
-      <span class="cp-colon">:</span>
-      <span class="cp-seg${this.mode === 'minute' ? ' active' : ''}" onclick="cpMode('${this.id}','minute')">${String(this.m).padStart(2, '0')}</span>
-      <div class="cp-ampm">
-        <button class="${this.ampm === 'AM' ? 'active' : ''}" onclick="cpAmPm('${this.id}','AM')">AM</button>
-        <button class="${this.ampm === 'PM' ? 'active' : ''}" onclick="cpAmPm('${this.id}','PM')">PM</button>
-      </div>`;
-  }
-
-  _renderFace() {
-    const svg = document.getElementById(`${this.id}-face`);
-    if (!svg) return;
-    const cx = 100, cy = 100, nr = 70;
-    const items = this.mode === 'hour'
-      ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-      : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-    const selected = this.mode === 'hour' ? this.h : this.m;
-    const selIdx = items.indexOf(selected);
-    const handA = selIdx >= 0 ? (selIdx / 12) * Math.PI * 2 - Math.PI / 2 : -Math.PI / 2;
-    const hx = (cx + nr * Math.cos(handA)).toFixed(1);
-    const hy = (cy + nr * Math.sin(handA)).toFixed(1);
-
-    const ticks = items.map((n, i) => {
-      const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
-      const x = (cx + nr * Math.cos(a)).toFixed(1);
-      const y = (cy + nr * Math.sin(a)).toFixed(1);
-      const active = n === selected;
-      const label = this.mode === 'hour' ? n : String(n).padStart(2, '0');
-      return `<g class="cp-num${active ? ' active' : ''}" onclick="cpSelect('${this.id}',${n})">
-        <circle cx="${x}" cy="${y}" r="17" fill="${active ? 'var(--green)' : 'transparent'}" stroke="none"/>
-        <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central"
-          font-family="inherit" font-size="12" font-weight="${active ? '700' : '500'}"
-          fill="${active ? '#fff' : 'var(--text)'}" style="pointer-events:none">${label}</text>
-      </g>`;
-    }).join('');
-
-    svg.innerHTML = `
-      <circle cx="${cx}" cy="${cy}" r="85" fill="var(--cream)" stroke="var(--line)" stroke-width="1.5"/>
-      ${selIdx >= 0 ? `<line x1="${cx}" y1="${cy}" x2="${hx}" y2="${hy}" stroke="var(--green)" stroke-width="2" stroke-linecap="round"/>` : ''}
-      <circle cx="${cx}" cy="${cy}" r="4" fill="var(--green)"/>
-      ${ticks}`;
-  }
+function to12h(str) {
+  if (!str) return '';
+  const [hh, mm] = str.split(':');
+  let h = parseInt(hh);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return `${h}:${mm} ${ampm}`;
 }
 
 async function loadPrayerTimes() {
@@ -1063,17 +1109,13 @@ async function loadPrayerTimes() {
     <div class="form-row" style="margin-bottom:16px;align-items:end;">
       <div class="form-field" style="margin:0;">
         <label class="form-label">${PRAYER_LABELS[p]}</label>
-        <div class="cp-wrap" id="cp-${p}"></div>
-        <input type="hidden" id="pt-${p}-time" value="${esc(existing[p]?.time ?? '')}" />
+        <input type="time" class="form-input" id="pt-${p}-time" value="${to24h(existing[p]?.time ?? '')}" />
       </div>
       <div class="form-field" style="margin:0;">
         <label class="form-label">Location</label>
         <input class="form-input" id="pt-${p}-loc" placeholder="Room, building…" value="${esc(existing[p]?.location ?? '')}" />
       </div>
     </div>`).join('');
-
-  // Mount a clock picker for each prayer
-  PRAYERS.forEach(p => new ClockPicker(`cp-${p}`, `pt-${p}-time`, existing[p]?.time ?? ''));
 }
 
 document.getElementById('pt-save-btn').addEventListener('click', async () => {
@@ -1083,7 +1125,7 @@ document.getElementById('pt-save-btn').addEventListener('click', async () => {
     .map(p => ({
       msa_id:   msaId,
       prayer:   p,
-      time:     document.getElementById(`pt-${p}-time`)?.value.trim(),
+      time:     to12h(document.getElementById(`pt-${p}-time`)?.value.trim()),
       location: document.getElementById(`pt-${p}-loc`)?.value.trim() || null,
       updated_at: new Date().toISOString(),
     }))
